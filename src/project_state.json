@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 43,
-  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system: guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. Support Google OAuth and passwordless Email Magic Link (Magic.link SDK loginWithMagicLink using import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY). After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Add an Admin/Artist role system enforced in both backend and frontend using a hard-coded allowlist of admin Principal IDs in the canister: admins can manage songs, official playlists, app settings/layout/banners; all other authenticated users are normal users. Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
+  "projectStateVersion": 57,
+  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system using Internet Identity only for normal user authentication; guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Replace the existing Internet Identity `adminPrincipal`-based Admin/Artist role system entirely with a Hidden Admin Mode that is activated via a secret key combo (Ctrl+Shift+U) and ALWAYS requires a passcode to enable. The backend must store only a hashed passcode and must verify admin authorization server-side for every admin-only mutation (song upload/manage, banner/home layout edits, official playlist management, and app settings/updates). When Admin Mode is OFF, all admin UI and capabilities must be completely hidden/blocked for normal users.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
     "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
@@ -11,8 +11,8 @@
     "Night mode sidebar interactive items: active (neon background) => black text/icons; inactive/dark => white text/icons; apply consistently across all sidebar items.",
     "Song model/UI: add a separate per-song Title Image (file upload or URL) in addition to existing Cover Image; show Title Image on song card alongside cover image and in player.",
     "Bottom navigation/tab bar color rules update (apply to BOTH mobile + desktop): Night mode inactive icon/label = #FFFFFF; active tab bg = #1ED760 with icon/label #000000. Day mode inactive icon/label = #000000; active tab bg = #1ED760 with icon/label #000000. Colors only; keep existing icon assets/sizes; smooth transitions; no other layout/behavior changes.",
-    "Bottom navigation color rules: override existing rules to match spec (Night: inactive icon/label #FFFFFF; active tab bg #1ED760 with icon/label #000000; Day mode unchanged). Only color changes—no layout/spacing/animation changes.",
-    "Desktop: BottomTabBar should render and be always visible (same as mobile; layout/spacing unchanged, only scaled for desktop)."
+    "Desktop: BottomTabBar should render and be always visible (same as mobile; layout/spacing unchanged, only scaled for desktop).",
+    "Admin authorization model change: remove/disable Internet Identity principal-based admin checks; Admin Mode is unlocked via hidden key combo (Ctrl+Shift+U) + required passcode modal, with backend-side verification against a stored passcode hash."
   ],
   "known_issues": [
     "Build/update attempt failed with “The AI couldn't implement your request. Please simplify or rephrase your prompt.” (prompt complexity may be triggering tooling limits).",
@@ -20,7 +20,9 @@
     "Build failed due to internal complexity/tooling limits when attempting to implement advanced song interactions + playlist system + favorites + deep links + download/share + official playlists in one pass; may require splitting into smaller builds.",
     "Deployment step failed with generic “Deployment error” after code generation; likely due to deploy-service hiccup or platform/internal deployment limits rather than app logic.",
     "Like button is not working; it must toggle like/unlike on repeated taps.",
-    "Add Song flow: after successful uploads, clicking “Add Song” fails with message “failed to upload” (final submit/save step failing)."
+    "Add Song flow: after successful uploads, clicking “Add Song” fails with message “failed to upload” (final submit/save step failing).",
+    "After Hidden Admin Mode update: Add Song fails with admin auth error “You do not have permission to perform this action.” even when Admin Mode is ON and passcode entry succeeded; banner editing works, suggesting Add Song mutation is not including/using the admin passcode credential.",
+    "Build failed with generic tooling limit (“AI was unable to fulfill your request”) when attempting to implement playlist card → playlist detail screen + playlist-level controls (Play/Shuffle/Repeat/Modes) + Admin-Mode-only 'Create Official Playlist' button in one pass; may require splitting into smaller builds."
   ],
   "isFixRequest": false,
   "existing_features": [
@@ -744,6 +746,182 @@
         "REQ-105"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-gate-all-admin-only-ui-entry-points-in-the-react-app-so-normal-users-including-signed-in-non-admin-users-cannot-see-or-interact-with-admin-artist-only-controls-add-song-delete-song-home-banner-editing-controls-and-any-other-admin-only-controls-currently-rendered-in-screens-components",
+      "title": "Gate all admin-only UI entry points in the React app so normal users (including signed-in non-admin users) cannot see or interact with Admin/Artist-only controls: Add Song, Delete Song, Home banner editing controls, and any other admin-only controls currently rendered in screens/components.",
+      "reqIds": [
+        "REQ-108"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-standardize-frontend-error-handling-for-admin-authorization-failures-when-a-non-admin-user-attempts-an-admin-action-via-ui-workaround-or-direct-call-show-a-clear-english-error-message-exactly-you-do-not-have-permission-to-perform-this-action-and-do-not-route-the-user-into-the-guest-soft-sign-in-flow-for-this-case",
+      "title": "Standardize frontend error handling for admin authorization failures: when a non-admin user attempts an admin action (via UI workaround or direct call), show a clear English error message exactly: “You do not have permission to perform this action.” (and do not route the user into the guest soft sign-in flow for this case).",
+      "reqIds": [
+        "REQ-109"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-frontend-admin-detection-and-gating-uses-the-backend-s-single-principal-admin-check-without-changing-any-guest-mode-behavior-the-existing-useisadmin-hook-and-admincontext-must-correctly-reflect-admin-status-for-the-hard-coded-adminprincipal-and-remain-false-for-all-other-principals",
+      "title": "Ensure the frontend admin detection and gating uses the backend’s single-principal admin check without changing any guest-mode behavior. The existing `useIsAdmin()` hook and `AdminContext` must correctly reflect admin status for the hard-coded `adminPrincipal` and remain `false` for all other principals.",
+      "reqIds": [
+        "REQ-111"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-home-screen-so-that-the-new-songs-row-always-shows-the-newest-songs-first-newly-added-songs-appear-at-the-front-left-of-the-row-derived-from-the-full-songs-list-using-a-deterministic-newest-first-sort",
+      "title": "Update the Home screen so that the “New Songs” row always shows the newest songs first (newly added songs appear at the front/left of the row), derived from the full songs list using a deterministic newest-first sort.",
+      "reqIds": [
+        "REQ-112"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-home-screen-top-songs-row-ordering-so-that-top-songs-are-determined-by-number-of-likes-highest-likescount-first-and-the-row-updates-automatically-when-likes-change",
+      "title": "Implement the Home screen “Top Songs” row ordering so that Top Songs are determined by number of likes (highest likesCount first), and the row updates automatically when likes change.",
+      "reqIds": [
+        "REQ-113"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-the-all-songs-section-from-the-home-screen-so-home-is-only-for-discovery-banner-new-songs-top-songs-and-users-access-the-full-catalog-from-the-songs-bottom-tab",
+      "title": "Remove the “All Songs” section from the Home screen so Home is only for discovery (banner + New Songs + Top Songs), and users access the full catalog from the Songs bottom tab.",
+      "reqIds": [
+        "REQ-114"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-hidden-admin-mode-activation-flow-in-the-react-app-that-is-triggered-by-the-secret-key-combo-ctrl-shift-u-and-always-prompts-for-a-passcode-in-a-modal-before-enabling-admin-mode-the-passcode-must-be-exactly-a1b2d3abd",
+      "title": "Implement a Hidden Admin Mode activation flow in the React app that is triggered by the secret key combo Ctrl + Shift + U and ALWAYS prompts for a passcode in a modal before enabling Admin Mode. The passcode must be exactly: A1B2D3ABD.",
+      "reqIds": [
+        "REQ-115"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-new-frontend-admin-mode-state-manager-context-provider-that-replaces-the-current-adminprincipal-based-admin-detection-admin-mode-state-must-be-independent-of-internet-identity-no-principal-based-admin-checks",
+      "title": "Create a new frontend Admin Mode state manager (context/provider) that replaces the current adminPrincipal-based admin detection. Admin Mode state must be independent of Internet Identity (no principal-based admin checks).",
+      "reqIds": [
+        "REQ-116"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-persist-hidden-admin-mode-enabled-state-in-a-storage-backed-way-session-only-or-localstorage-so-that-admin-mode-remains-enabled-according-to-the-chosen-persistence-behavior-and-can-be-explicitly-cleared-by-the-user",
+      "title": "Persist Hidden Admin Mode enabled state in a storage-backed way (session-only or localStorage) so that Admin Mode remains enabled according to the chosen persistence behavior, and can be explicitly cleared by the user.",
+      "reqIds": [
+        "REQ-117"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-all-existing-frontend-admin-gating-admincontext-useisadmin-adminonly-admingate-usages-so-that-admin-only-ui-elements-are-shown-hidden-solely-based-on-the-new-hidden-admin-mode-state-this-must-include-admin-entry-points-currently-gated-in-components-like-the-add-song-ui-and-home-banner-editing-controls",
+      "title": "Replace all existing frontend admin gating (AdminContext/useIsAdmin/AdminOnly/AdminGate usages) so that admin-only UI elements are shown/hidden solely based on the new Hidden Admin Mode state. This must include admin entry points currently gated in components like the Add Song UI and Home banner editing controls.",
+      "reqIds": [
+        "REQ-118"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-actor-calls-and-react-query-mutations-for-all-admin-only-backend-methods-so-they-supply-the-admin-passcode-or-equivalent-verified-admin-credential-as-required-by-the-updated-backend-api-using-the-new-hidden-admin-mode-state-as-the-source-of-truth",
+      "title": "Update frontend actor calls and React Query mutations for all admin-only backend methods so they supply the admin passcode (or equivalent verified admin credential) as required by the updated backend API, using the new Hidden Admin Mode state as the source of truth.",
+      "reqIds": [
+        "REQ-121"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-existing-internet-identity-based-authentication-flows-remain-intact-for-normal-user-restricted-actions-likes-favorites-playlists-downloads-and-that-hidden-admin-mode-does-not-replace-or-break-these-user-authentication-requirements",
+      "title": "Ensure existing Internet Identity-based authentication flows remain intact for normal user-restricted actions (likes, favorites, playlists, downloads), and that Hidden Admin Mode does not replace or break these user authentication requirements.",
+      "reqIds": [
+        "REQ-122"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-authorization-error-parsing-mapping-so-that-admin-passcode-related-backend-authorization-failures-are-recognized-as-admin-required-not-sign-in-required-and-display-appropriate-english-user-facing-messaging-without-routing-into-the-soft-sign-in-modal-flow",
+      "title": "Update authorization error parsing/mapping so that admin-passcode-related backend authorization failures are recognized as admin-required (not sign-in-required), and display appropriate English user-facing messaging without routing into the soft sign-in modal flow.",
+      "reqIds": [
+        "REQ-123"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-hidden-admin-mode-enable-flow-so-that-admin-mode-is-only-considered-enabled-after-the-backend-confirms-the-passcode-is-valid-for-admin-operations-i-e-prevent-a-frontend-says-admin-mode-on-state-when-the-backend-will-still-reject-admin-mutations",
+      "title": "Update the frontend Hidden Admin Mode enable flow so that Admin Mode is only considered enabled after the backend confirms the passcode is valid for admin operations (i.e., prevent a “frontend says Admin Mode ON” state when the backend will still reject admin mutations).",
+      "reqIds": [
+        "REQ-126"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-add-song-submission-path-so-that-when-admin-mode-is-enabled-and-the-user-adds-a-song-including-cases-where-audio-title-image-were-provided-via-file-upload-data-url-conversion-the-request-includes-the-admin-passcode-credential-required-by-the-backend-and-the-song-is-created-successfully",
+      "title": "Fix the Add Song submission path so that when Admin Mode is enabled and the user adds a song (including cases where audio/title image were provided via file upload -> data URL conversion), the request includes the admin passcode credential required by the backend and the song is created successfully.",
+      "reqIds": [
+        "REQ-127"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-admin-authorization-error-messaging-for-admin-only-actions-so-the-ui-can-distinguish-between-a-admin-mode-not-enabled-b-missing-passcode-credential-and-c-backend-passcode-rejection-while-keeping-the-existing-exact-message-text-you-do-not-have-permission-to-perform-this-action-for-true-admin-authorization-failures-where-required-by-existing-behavior",
+      "title": "Improve admin authorization error messaging for admin-only actions so the UI can distinguish between (a) Admin Mode not enabled, (b) missing passcode credential, and (c) backend passcode rejection, while keeping the existing exact message text “You do not have permission to perform this action.” for true admin authorization failures where required by existing behavior.",
+      "reqIds": [
+        "REQ-128"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-new-login-logout-control-to-the-existing-sidebar-navigation-frontend-src-components-navigation-sidebar-tsx-that-uses-the-current-internet-identity-hook-for-authentication-when-the-user-is-not-authenticated-show-a-button-labeled-login-that-triggers-internet-identity-login-when-the-user-is-authenticated-show-a-button-labeled-logout-that-logs-the-user-out-this-control-must-work-in-both-the-mobile-drawer-sidebar-and-the-desktop-sidebar-and-clicking-it-must-close-the-mobile-drawer-same-behavior-as-navigation-and-add-to-home-screen",
+      "title": "Add a new Login/Logout control to the existing sidebar navigation (`frontend/src/components/navigation/Sidebar.tsx`) that uses the current Internet Identity hook for authentication: when the user is not authenticated, show a button labeled “Login” that triggers Internet Identity login; when the user is authenticated, show a button labeled “Logout” that logs the user out. This control must work in both the mobile drawer sidebar and the desktop sidebar, and clicking it must close the mobile drawer (same behavior as navigation and Add to Home Screen).",
+      "reqIds": [
+        "REQ-129"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-each-playlist-card-in-library-playlists-fully-clickable-so-clicking-tapping-the-card-opens-a-dedicated-playlist-detail-view-that-shows-the-songs-inside-that-playlist",
+      "title": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
+      "reqIds": [
+        "REQ-130"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-playlist-detail-view-to-render-all-songs-in-the-playlist-using-existing-song-row-components-and-existing-playback-behavior-so-that-selecting-a-song-from-the-playlist-starts-playback-in-the-existing-musicplayer-within-the-playlist-context",
+      "title": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
+      "reqIds": [
+        "REQ-131"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-playlist-detail-view-add-a-playlist-level-play-button-and-spotify-like-controls-for-shuffle-repeat-and-play-mode-these-controls-must-affect-the-playlist-s-playback-order-when-using-next-previous-and-when-starting-playback-from-the-playlist-level-play-button",
+      "title": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
+      "reqIds": [
+        "REQ-132"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-admin-mode-only-create-official-playlist-button-in-library-playlists-positioned-beside-the-official-playlists-section-header-it-must-only-appear-when-hidden-admin-mode-is-enabled-and-must-not-be-visible-to-normal-users-or-guests",
+      "title": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
+      "reqIds": [
+        "REQ-133"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-support-listing-and-opening-official-playlists-show-a-real-list-of-official-playlists-in-the-official-playlists-section-allow-clicking-an-official-playlist-card-to-open-the-same-playlist-detail-view-and-load-its-songs-using-backend-apis-intended-for-official-playlists",
+      "title": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
+      "reqIds": [
+        "REQ-134"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -1034,12 +1212,6 @@
       "status": "pending"
     },
     {
-      "id": "AR-65",
-      "summary": "Implement full authentication system: Guest read-only access; restricted actions (Like/Create Playlist/Add to Playlist/Download) trigger soft sign-in modal; support Google OAuth + Email Magic Link (Magic.link loginWithMagicLink); global AuthContext state (userAuthState/pendingAction/loginReturnPath); post-login return to exact screen+scroll with automatic pending-action retry; keep existing UI and behaviors unchanged",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
       "id": "AR-66",
       "summary": "Home channel banner update: enlarge banner image area (wider + taller) while keeping the original image fully visible (no stretching, no cropping) and overlay artist name “THE MVRIO” in neon green inside the right-side (green-outlined) area on top of the banner",
       "reqIds": [],
@@ -1076,34 +1248,84 @@
       "status": "pending"
     },
     {
-      "id": "AR-72",
-      "summary": "Implement Admin/Artist role system with hard-coded admin Principal allowlist in Motoko canister; enforce backend authorization and frontend gating across all admin-only features (song upload/edit/delete, official playlists, app settings/layout/banner changes). Non-admin authenticated users default to normal role.",
+      "id": "AR-80",
+      "summary": "Songs list ordering: always show newest songs first so newly added songs appear at the top/front of the Songs list; ordering updates automatically after each add",
       "reqIds": [],
       "status": "pending"
     },
     {
-      "id": "AR-73",
-      "summary": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister and expose a query method that returns whether the caller is an Admin/Artist.",
+      "id": "AR-81",
+      "summary": "Home Top Songs: show a Top Songs section on Home determined by likeCount (highest likes first) and auto-update when likes change",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-82",
+      "summary": "Home discovery layout: remove the “All Songs” list from Home; Home should focus on New Songs + Top Songs while the full catalog remains in the Songs bottom-tab",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-84",
+      "summary": "Hidden Admin Mode replaces adminPrincipal: secret key combo (Ctrl+Shift+U) opens passcode modal (required) with passcode A1B2D3ABD; enable Admin Mode only after backend verifies passcode hash; persist optionally via session/localStorage; gate BOTH frontend admin UI visibility and ALL backend admin-only mutation methods (songs/banner/home layout/official playlists/app settings)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-89",
+      "summary": "Implement backend support for Hidden Admin Mode verification by storing only a hashed version of the admin passcode and providing a canister method to verify an entered passcode against the stored hash.",
       "reqIds": [
-        "REQ-100"
+        "REQ-119"
       ],
       "status": "pending"
     },
     {
-      "id": "AR-74",
-      "summary": "Enforce Admin/Artist-only permissions in the backend for all admin-only song management operations, so normal signed-in users cannot upload/add songs or delete songs.",
+      "id": "AR-90",
+      "summary": "Replace the existing backend adminPrincipal/adminArtists-based authorization for admin-only operations with passcode-hash verification for every admin-only mutation. Admin-only operations must require server-side verification of the passcode on each call.",
       "reqIds": [
-        "REQ-101"
+        "REQ-120"
       ],
       "status": "pending"
     },
     {
-      "id": "AR-75",
-      "summary": "Enforce Admin/Artist-only permissions in the backend for all official playlist management operations (create/add/remove), while keeping official playlist reads accessible to everyone.",
+      "id": "AR-91",
+      "summary": "Fix backend Hidden Admin Mode passcode verification so admin-only song mutations (at minimum: `addSong` and `deleteSong`) succeed when the correct passcode `A1B2D3ABD` is provided, and fail when an incorrect passcode is provided.",
       "reqIds": [
-        "REQ-102"
+        "REQ-124"
       ],
       "status": "pending"
+    },
+    {
+      "id": "AR-92",
+      "summary": "Implement a safe initialization/upgrade path for the backend admin passcode verifier so existing deployments do not remain stuck with an empty/unset passcode value. Use the platform’s conditional migration policy so upgrades preserve existing song data.",
+      "reqIds": [
+        "REQ-125"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-93",
+      "summary": "Add a Login/Logout button in the sidebar using Internet Identity for normal users; admins also use Internet Identity and must separately unlock Hidden Admin Mode (Ctrl+Shift+U + passcode A1B2D3ABD) to access admin-only features; normal users/guests cannot access admin features",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-94",
+      "summary": "Playlists: make each playlist card clickable to open a dedicated playlist detail screen/page showing all songs in that playlist (Spotify-style detail view).",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-95",
+      "summary": "Playlist detail screen controls: add playlist-level Play button plus Shuffle, Repeat, and Play Mode controls (Spotify-like) within the playlist detail screen.",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-96",
+      "summary": "Admin-only Official Playlists: add a 'Create Official Playlist' button visible only when Hidden Admin Mode is enabled, placed in Library → Playlists beside the Official Playlists section; normal users can create only their own playlists and must not see/use the official playlist button.",
+      "reqIds": [],
+      "status": "in_progress"
     }
   ],
   "gameProjectType": "none",

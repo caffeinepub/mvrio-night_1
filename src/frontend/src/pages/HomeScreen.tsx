@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGetAllSongs, useDeleteSong } from '../hooks/useQueries';
-import { SongCard } from '../components/songs/SongCard';
 import { SongEditor } from '../components/songs/SongEditor';
 import { MusicPlayer } from '../components/player/MusicPlayer';
 import { HomeChannelBanner } from '../components/home/HomeChannelBanner';
@@ -10,7 +9,7 @@ import { useAdminContext } from '../context/AdminContext';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthErrorMessage } from '../utils/authorizationErrors';
-import type { SongView } from '../backend';
+import { sortByNewest, sortByTopSongs } from '../utils/songSort';
 
 export function HomeScreen() {
   const { data: songs, isLoading } = useGetAllSongs();
@@ -22,7 +21,7 @@ export function HomeScreen() {
 
   const handleDelete = async (id: bigint) => {
     if (!isAdmin) {
-      toast.error('Admin access required');
+      toast.error('You do not have permission to perform this action.');
       return;
     }
 
@@ -61,11 +60,11 @@ export function HomeScreen() {
     );
   }
 
-  // Get new songs (last 4 by id)
-  const newSongs = songs ? [...songs].reverse().slice(0, 4) : [];
+  // Get new songs (newest-first, consistent with Songs screen 'Latest' sort)
+  const newSongs = songs ? sortByNewest(songs).slice(0, 4) : [];
   
-  // Get top songs (first 4 as a simple heuristic)
-  const topSongs = songs ? songs.slice(0, 4) : [];
+  // Get top songs (sorted by likesCount descending with deterministic tie-breaker)
+  const topSongs = songs ? sortByTopSongs(songs).slice(0, 4) : [];
 
   return (
     <div className="space-y-8">
@@ -94,8 +93,8 @@ export function HomeScreen() {
               <HorizontalSongCard
                 key={song.id.toString()}
                 song={song}
-                onPlay={() => setCurrentSongId(song.id)}
                 isPlaying={currentSongId === song.id}
+                onPlay={() => setCurrentSongId(song.id)}
               />
             ))}
           </HorizontalSongRow>
@@ -105,31 +104,15 @@ export function HomeScreen() {
               <HorizontalSongCard
                 key={song.id.toString()}
                 song={song}
-                onPlay={() => setCurrentSongId(song.id)}
                 isPlaying={currentSongId === song.id}
+                onPlay={() => setCurrentSongId(song.id)}
               />
             ))}
           </HorizontalSongRow>
-
-          <div>
-            <h2 className="text-2xl font-bold mb-4">All Songs</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {songs.map((song) => (
-                <SongCard
-                  key={song.id.toString()}
-                  song={song}
-                  onPlay={() => setCurrentSongId(song.id)}
-                  onDelete={() => handleDelete(song.id)}
-                  isPlaying={currentSongId === song.id}
-                  showDelete={isAdmin}
-                />
-              ))}
-            </div>
-          </div>
         </>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No songs yet. Add your first song to get started!</p>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No songs yet. Add your first song to get started!</p>
         </div>
       )}
     </div>

@@ -1,120 +1,139 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend admin role detection, UI gating, and authorization error handling",
+  "title": "Playlist detail view with playback controls and admin-only official playlist creation",
   "requirements": [
     {
-      "id": "REQ-103",
-      "summary": "Add frontend admin/artist role detection with caching and correct updates on identity changes (including guest mode).",
+      "id": "REQ-130",
+      "summary": "Make playlist cards fully clickable to open a playlist detail view with a Back control that preserves the Library tab selection.",
       "acceptanceCriteria": [
-        "Frontend calls the backend admin-check query (from REQ-100) and derives an `isAdmin` boolean for the current session.",
-        "When the user is signed out / in guest mode, `isAdmin` is treated as `false` and the app continues to function normally in read-only mode.",
-        "Switching identities (sign in / sign out) correctly updates the derived `isAdmin` state and any dependent UI."
+        "In Library → Playlists, clicking a playlist card opens a playlist detail view without triggering any unintended playback.",
+        "The playlist detail view shows the playlist name and a list of songs contained in that playlist.",
+        "A clear Back control returns the user to the Library → Playlists list with the prior tab selection preserved."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useIsAdmin.ts",
-          "operation": "create",
-          "description": "Create a React Query hook that uses the existing actor (core-infrastructure) to call the backend admin-check query and cache/derive an `isAdmin` boolean, defaulting to false when actor/identity is not available. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/context/AdminContext.tsx",
-          "operation": "create",
-          "description": "Add a lightweight AdminContext provider/consumer to expose `isAdmin` (and loading state) app-wide, powered by `useIsAdmin`, so dependent UI can reactively update on identity changes without breaking guest mode."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/LibraryScreen.tsx",
           "operation": "modify",
-          "description": "Wire the new AdminContext provider into the existing app provider tree so all screens/components can access the derived `isAdmin` state, and ensure it updates when Internet Identity changes."
+          "description": "Add Library-internal navigation state (Playlists list vs Playlist detail) so playlist cards open a detail view while keeping BottomTabBar/Sidebar behavior intact and preserving the active Library tab on Back."
+        },
+        {
+          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "operation": "modify",
+          "description": "Make each playlist card clickable (entire card surface) and call a passed-in handler to open the playlist detail view; ensure no playback is triggered on card click. Use existing shadcn-ui primitives already in the app (e.g., Button/Dialog where applicable). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
+          "operation": "create",
+          "description": "Create a PlaylistDetailView component that renders playlist title, a clear Back button, and a song list for the selected playlist. Use shadcn-ui Button (and other existing UI primitives as needed) to match current design. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-104",
-      "summary": "Gate admin-only UI entry points (song add/upload, song delete, and Home banner editing controls) based on `isAdmin`, while keeping read-only browsing visible.",
+      "id": "REQ-131",
+      "summary": "Render playlist songs using existing song row UI and wire selection into existing MusicPlayer behavior with playlist-context Next/Previous ordering.",
       "acceptanceCriteria": [
-        "If the current user is not admin, all UI entry points that open/trigger song upload/add (e.g., the `SongEditor` trigger) are not shown or are disabled with clear feedback.",
-        "If the current user is not admin, all UI entry points that delete songs (e.g., delete buttons on song cards/rows) are not shown or are disabled with clear feedback.",
-        "If the current user is not admin, Home banner editing controls in `HomeChannelBanner` (upload, URL set, clear/reset) are not shown or are disabled with clear feedback; the banner display remains visible.",
-        "If a non-admin user somehow triggers an admin-only action (e.g., stale UI state), the frontend shows an English error message (toast/dialog) such as \"Admin access required\" and does not crash.",
-        "Admin users continue to see and use the admin-only controls as before."
+        "Playlist detail song list renders using the existing Song UI patterns (e.g., SongListRow) including title image/title and the existing per-song controls (play/⋮/like) where applicable.",
+        "Clicking a song row in the playlist detail view starts playback using the existing player behavior (no new audio implementation).",
+        "Next/Previous from the MusicPlayer navigates within the playlist’s song list while the playlist detail view is open."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/auth/AdminOnly.tsx",
+          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
+          "operation": "modify",
+          "description": "Render songs with the existing SongListRow component and forward song selection to the parent so playback uses the existing MusicPlayer (no new audio implementation)."
+        },
+        {
+          "path": "frontend/src/pages/LibraryScreen.tsx",
+          "operation": "modify",
+          "description": "Extend playback state to support a 'playlist context' queue while the playlist detail view is open so MusicPlayer Next/Previous advances within the selected playlist’s song list (falling back to the existing all-songs behavior outside playlist detail)."
+        },
+        {
+          "path": "frontend/src/utils/playlistPlayback.ts",
           "operation": "create",
-          "description": "Create an AdminOnly wrapper/utility component that uses AdminContext and either renders children for admins or renders a disabled/blocked affordance with clear English feedback using existing shadcn-ui building blocks (e.g., Button) and toast messaging. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/songs/SongEditor.tsx",
-          "operation": "modify",
-          "description": "Gate the \"Add Song\" trigger so it is hidden/disabled for non-admin users, and ensure any attempt to submit while non-admin shows an English \"Admin access required\" message (instead of crashing). Use the AdminOnly/AdminContext capability to support gating. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/HomeScreen.tsx",
-          "operation": "modify",
-          "description": "Use the derived `isAdmin` state to gate the SongEditor entry point and to ensure delete actions are only wired for admins (non-admins should not see delete entry points). Keep song browsing/playback unchanged."
-        },
-        {
-          "path": "frontend/src/pages/SongsScreen.tsx",
-          "operation": "modify",
-          "description": "Use the derived `isAdmin` state to gate the SongEditor entry point and to ensure delete actions are only wired for admins (non-admins should not see delete entry points). Keep song browsing/playback/sorting unchanged."
-        },
-        {
-          "path": "frontend/src/components/songs/SongCard.tsx",
-          "operation": "modify",
-          "description": "Update the song card to support hiding/disabling the delete control for non-admin users (e.g., via a prop or AdminContext) while keeping play and overflow menu available."
-        },
-        {
-          "path": "frontend/src/components/songs/SongListRow.tsx",
-          "operation": "modify",
-          "description": "Update the song list row to support hiding/disabling the delete control for non-admin users (e.g., via a prop or AdminContext) while keeping play and overflow menu available."
-        },
-        {
-          "path": "frontend/src/components/home/HomeChannelBanner.tsx",
-          "operation": "modify",
-          "description": "Gate banner editing controls (upload, URL set, clear/reset) behind `isAdmin` while always rendering the banner display for everyone. Ensure non-admin users see no editing entry points or see disabled controls with clear English feedback."
+          "description": "Add small pure helpers for playlist playback ordering (e.g., mapping songIds to SongView, computing next/previous indices safely) to keep LibraryScreen logic readable."
         }
       ]
     },
     {
-      "id": "REQ-105",
-      "summary": "Improve frontend authorization error handling for admin-only operations to show clear English messages for signed-in non-admins and avoid triggering guest sign-in flows or retry loops.",
+      "id": "REQ-132",
+      "summary": "Add playlist-level Play button and Spotify-like Shuffle/Repeat/Play Mode controls that affect playlist playback ordering and behavior.",
       "acceptanceCriteria": [
-        "When a signed-in non-admin attempts an admin-only action and the backend returns an authorization error, the UI displays an English message indicating admin permission is required (and does not open the sign-in modal).",
-        "When a guest attempts a sign-in-required (non-admin) restricted action (like creating a personal playlist, liking, favorites, downloads), the existing soft sign-in modal behavior remains unchanged.",
-        "No infinite retry loops occur via pending-action retry for admin-only actions when the user is signed in but not admin."
+        "Playlist detail view includes a prominent Play button plus distinct controls labeled or iconified for Shuffle, Repeat, and Play Mode.",
+        "Toggling Shuffle changes the order used when starting playlist playback from the Play button and when navigating Next/Previous.",
+        "Repeat control supports at minimum Off and Repeat All for playlist playback behavior within the playlist detail view.",
+        "Play Mode control is present and changes playback behavior/state in a visible way (e.g., a dropdown or cycle button) without breaking existing player UI or other screens.",
+        "All user-facing labels for these controls are in English."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/authorizationErrors.ts",
-          "operation": "create",
-          "description": "Add shared helpers to classify backend authorization failures (e.g., trap messages containing \"Unauthorized\") and map them to user-facing English messages, including a distinct \"Admin access required\" path for admin-only actions."
+          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
+          "operation": "modify",
+          "description": "Add a prominent playlist-level Play button plus Shuffle/Repeat/Play Mode controls in English. Use shadcn-ui Button and (if needed) shadcn-ui DropdownMenu/Toggle-style patterns already present in the codebase for Spotify-like controls. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/LibraryScreen.tsx",
+          "operation": "modify",
+          "description": "Wire the playlist-level controls into the LibraryScreen playlist playback context: Shuffle must change queue order for Play and Next/Previous; Repeat must support Off and Repeat All; Play Mode must be visible and adjust behavior/state without impacting other screens."
+        },
+        {
+          "path": "frontend/src/utils/playlistPlayback.ts",
+          "operation": "modify",
+          "description": "Implement ordering helpers for shuffle and repeat behavior used by playlist-level Play and by Next/Previous navigation within the playlist context."
+        }
+      ]
+    },
+    {
+      "id": "REQ-133",
+      "summary": "Show an Admin-Mode-only Create Official Playlist button beside the Official Playlists header, opening a name dialog and toasting success/failure in English.",
+      "acceptanceCriteria": [
+        "When Hidden Admin Mode is disabled, the “Create Official Playlist” button is not rendered anywhere in the Library UI.",
+        "When Hidden Admin Mode is enabled, the “Create Official Playlist” button is rendered beside the “Official Playlists” header in Library → Playlists.",
+        "Normal users (not in Hidden Admin Mode) can still create their own playlists via the existing “Create Playlist” flow and cannot see the official playlist creation control.",
+        "Clicking “Create Official Playlist” opens a dialog to enter a playlist name and confirms creation with an English success toast; errors show an English failure toast."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "operation": "modify",
+          "description": "Render an Admin-Mode-only “Create Official Playlist” button beside the “Official Playlists” header using the existing AdminGate/AdminOnly pattern (Hidden Admin Mode). Use shadcn-ui Dialog, Input, Label, and Button for the name prompt, and show English success/failure toasts. Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update admin-only mutations (addSong/deleteSong) to interpret authorization failures using the shared helper and surface a consistent English \"Admin access required\" message for signed-in non-admin users; do not route these errors into the soft sign-in modal behavior."
+          "description": "Add a React Query mutation hook to create an official playlist that is gated by Hidden Admin Mode (passcode), and invalidates the official playlists list on success. Ensure error handling maps to English toast messages."
+        }
+      ]
+    },
+    {
+      "id": "REQ-134",
+      "summary": "List and open Official Playlists in Library → Playlists, allowing guests to browse official playlists and their songs read-only using official-playlist backend methods.",
+      "acceptanceCriteria": [
+        "Backend exposes a query method to list all official playlists (names + songIds) so the frontend can render the “Official Playlists” section without hardcoded placeholders.",
+        "Frontend renders official playlist cards with name + song count in the “Official Playlists” section.",
+        "Clicking an official playlist card opens the playlist detail view and displays the songs for that official playlist using the backend’s official-playlist details API.",
+        "Guests can view official playlists and their contents (read-only) without being forced into sign-in, while user playlists remain restricted to signed-in users per existing authorization behavior."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add React Query hooks for official playlists: list official playlists (guest-accessible) and fetch official playlist song details via the backend’s official-playlist read functions; keep user-playlist queries auth-restricted as they are today."
         },
         {
-          "path": "frontend/src/components/songs/SongEditor.tsx",
+          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
           "operation": "modify",
-          "description": "Adjust submit error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message when backend authorization fails."
+          "description": "Replace the Official Playlists placeholder with a real list (name + song count) sourced from the official playlists query; allow guest rendering of the Official section while keeping the user playlists section gated behind sign-in. Use existing UI patterns (cards/grid) and shadcn-ui Button/Dialog where applicable. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/pages/HomeScreen.tsx",
+          "path": "frontend/src/pages/LibraryScreen.tsx",
           "operation": "modify",
-          "description": "Adjust delete error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message and the UI does not crash if a stale delete action is triggered."
+          "description": "Support opening an official playlist card into the same playlist detail view and ensure the detail view selects the correct data source (official vs user) while preserving existing authorization behavior (no forced sign-in for official reads)."
         },
         {
-          "path": "frontend/src/pages/SongsScreen.tsx",
+          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
           "operation": "modify",
-          "description": "Adjust delete error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message and the UI does not crash if a stale delete action is triggered."
-        },
-        {
-          "path": "frontend/src/hooks/usePendingAction.ts",
-          "operation": "modify",
-          "description": "Ensure pending-action retry behavior remains scoped to sign-in-required user actions only, and that admin-only authorization failures are not treated as authentication-required (preventing retry loops for signed-in non-admin users)."
+          "description": "Allow PlaylistDetailView to render either user-playlist songs or official-playlist songs based on the selected playlist type, without exposing any mutation controls for guests (read-only browsing for official playlists)."
         }
       ]
     }

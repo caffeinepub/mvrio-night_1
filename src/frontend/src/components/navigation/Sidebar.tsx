@@ -1,8 +1,9 @@
-import { Home, User, Palette, Settings, Coffee, Music, Mail, Download } from 'lucide-react';
+import { Home, User, Palette, Settings, Coffee, Music, Mail, Download, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import { useA2HS } from '../../hooks/useA2HS';
+import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import type { Screen } from '../../App';
 import { useState } from 'react';
 
@@ -13,6 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const { promptInstall } = useA2HS();
+  const { login, clear, loginStatus, identity } = useInternetIdentity();
   const [open, setOpen] = useState(false);
 
   const menuItems = [
@@ -34,6 +36,18 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     promptInstall();
     setOpen(false);
   };
+
+  const handleAuth = async () => {
+    if (identity) {
+      await clear();
+    } else {
+      await login();
+    }
+    setOpen(false);
+  };
+
+  const isAuthenticated = !!identity;
+  const isLoggingIn = loginStatus === 'logging-in';
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -59,7 +73,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
             );
           })}
           
-          <div className="pt-4 border-t border-border/50 mt-4">
+          <div className="pt-4 border-t border-border/50 mt-4 space-y-1">
             <Button
               variant="outline"
               className="w-full justify-start dark:!text-white dark:hover:bg-white/10"
@@ -67,6 +81,25 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
             >
               <Download className="w-4 h-4 mr-3" />
               Add to Home Screen
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start dark:!text-white dark:hover:bg-white/10"
+              onClick={handleAuth}
+              disabled={isLoggingIn}
+            >
+              {isAuthenticated ? (
+                <>
+                  <LogOut className="w-4 h-4 mr-3" />
+                  Logout
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4 mr-3" />
+                  {isLoggingIn ? 'Logging in...' : 'Login'}
+                </>
+              )}
             </Button>
           </div>
         </nav>

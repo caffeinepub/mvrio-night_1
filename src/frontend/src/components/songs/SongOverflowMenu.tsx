@@ -21,6 +21,7 @@ import { hasUsableAudioUrl, downloadSong } from '@/utils/download';
 import { cacheAudioForOffline } from '@/utils/offlineAudioCache';
 import { buildSongDeepLink } from '@/utils/deepLinks';
 import { isWebShareSupported, shareViaWebShare, copyToClipboard } from '@/utils/share';
+import { isSignInRequiredError } from '@/utils/authorizationErrors';
 import { toast } from 'sonner';
 import { PlaylistChooserDialog } from './PlaylistChooserDialog';
 import { CreatePlaylistDialog } from './CreatePlaylistDialog';
@@ -75,10 +76,8 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
       }
       setOpen(false);
     } catch (error: any) {
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can')
-      ) {
+      // Only trigger auth flow for sign-in-required errors, not admin-only errors
+      if (isSignInRequiredError(error)) {
         setOpen(false);
         requireAuth({
           type: 'like',
@@ -147,10 +146,8 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
       toast.success('Saved for offline');
       setDownloadChooserOpen(false);
     } catch (error: any) {
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can')
-      ) {
+      // Only trigger auth flow for sign-in-required errors, not admin-only errors
+      if (isSignInRequiredError(error)) {
         setDownloadChooserOpen(false);
         requireAuth({
           type: 'offline-cache',
@@ -182,10 +179,8 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
       toast.success('Download started');
       setDownloadChooserOpen(false);
     } catch (error: any) {
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can')
-      ) {
+      // Only trigger auth flow for sign-in-required errors, not admin-only errors
+      if (isSignInRequiredError(error)) {
         setDownloadChooserOpen(false);
         requireAuth({
           type: 'device-download',

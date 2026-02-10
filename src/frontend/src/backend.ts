@@ -132,15 +132,15 @@ export interface backendInterface {
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addSong(title: string, artist: string, albumArt: ExternalBlob, titleImage: ExternalBlob, audioFile: ExternalBlob, lyrics: string): Promise<bigint>;
-    addToOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
+    addSong(title: string, artist: string, albumArt: ExternalBlob, titleImage: ExternalBlob, audioFile: ExternalBlob, lyrics: string, passcode: string): Promise<bigint>;
+    addToOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     addToPlaylist(playlistName: string, songId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkAuthorization(): Promise<boolean>;
     clearFavorites(): Promise<void>;
-    createOfficialPlaylist(name: string): Promise<void>;
+    createOfficialPlaylist(name: string, passcode: string): Promise<void>;
     createPlaylist(name: string): Promise<void>;
-    deleteSong(id: bigint): Promise<void>;
+    deleteSong(id: bigint, passcode: string): Promise<void>;
     getAllSongs(): Promise<Array<SongView>>;
     getAllSongsByTitle(): Promise<Array<SongView>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -153,10 +153,10 @@ export interface backendInterface {
     getSong(id: bigint): Promise<SongView>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    isAdminArtist(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    listOfficialPlaylists(): Promise<Array<PlaylistView>>;
     playSong(id: bigint): Promise<void>;
-    removeFromOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
+    removeFromOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     removeFromPlaylist(playlistName: string, songId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchSongs(keyword: string): Promise<Array<SongView>>;
@@ -264,31 +264,31 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addSong(arg0: string, arg1: string, arg2: ExternalBlob, arg3: ExternalBlob, arg4: ExternalBlob, arg5: string): Promise<bigint> {
+    async addSong(arg0: string, arg1: string, arg2: ExternalBlob, arg3: ExternalBlob, arg4: ExternalBlob, arg5: string, arg6: string): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.addSong(arg0, arg1, await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg2), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg3), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg4), arg5);
+                const result = await this.actor.addSong(arg0, arg1, await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg2), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg3), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg4), arg5, arg6);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addSong(arg0, arg1, await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg2), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg3), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg4), arg5);
+            const result = await this.actor.addSong(arg0, arg1, await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg2), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg3), await to_candid_ExternalBlob_n8(this._uploadFile, this._downloadFile, arg4), arg5, arg6);
             return result;
         }
     }
-    async addToOfficialPlaylist(arg0: string, arg1: bigint): Promise<void> {
+    async addToOfficialPlaylist(arg0: string, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addToOfficialPlaylist(arg0, arg1);
+                const result = await this.actor.addToOfficialPlaylist(arg0, arg1, arg2);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addToOfficialPlaylist(arg0, arg1);
+            const result = await this.actor.addToOfficialPlaylist(arg0, arg1, arg2);
             return result;
         }
     }
@@ -348,17 +348,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createOfficialPlaylist(arg0: string): Promise<void> {
+    async createOfficialPlaylist(arg0: string, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.createOfficialPlaylist(arg0);
+                const result = await this.actor.createOfficialPlaylist(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createOfficialPlaylist(arg0);
+            const result = await this.actor.createOfficialPlaylist(arg0, arg1);
             return result;
         }
     }
@@ -376,17 +376,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async deleteSong(arg0: bigint): Promise<void> {
+    async deleteSong(arg0: bigint, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteSong(arg0);
+                const result = await this.actor.deleteSong(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteSong(arg0);
+            const result = await this.actor.deleteSong(arg0, arg1);
             return result;
         }
     }
@@ -558,20 +558,6 @@ export class Backend implements backendInterface {
             return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
         }
     }
-    async isAdminArtist(): Promise<boolean> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.isAdminArtist();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.isAdminArtist();
-            return result;
-        }
-    }
     async isCallerAdmin(): Promise<boolean> {
         if (this.processError) {
             try {
@@ -583,6 +569,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async listOfficialPlaylists(): Promise<Array<PlaylistView>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listOfficialPlaylists();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listOfficialPlaylists();
             return result;
         }
     }
@@ -600,17 +600,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async removeFromOfficialPlaylist(arg0: string, arg1: bigint): Promise<void> {
+    async removeFromOfficialPlaylist(arg0: string, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.removeFromOfficialPlaylist(arg0, arg1);
+                const result = await this.actor.removeFromOfficialPlaylist(arg0, arg1, arg2);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.removeFromOfficialPlaylist(arg0, arg1);
+            const result = await this.actor.removeFromOfficialPlaylist(arg0, arg1, arg2);
             return result;
         }
     }

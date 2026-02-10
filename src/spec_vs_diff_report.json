@@ -1,69 +1,56 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T05:15:48.481Z",
-  "summary": "Frontend adds admin-role detection via a new backend query, caches it with React Query, and gates several admin-only UI controls with clear English toasts. Backend adds an isAdminArtist query and enforces admin-only on addSong (shown), but the admin allowlist is not hard-coded as requested, and enforcement for deleteSong and official playlist writes is not evidenced in the truncated diff.",
+  "generatedAt": "2026-02-10T11:34:39.146Z",
+  "summary": "The diff adds a new PlaylistDetailView, introduces playlist-context playback handling (next/previous within a playlist queue) in LibraryScreen, adds React Query hooks and UI plumbing for user vs official playlist fetching, and adds backend playlist data structure changes plus a migration module. However, some requested UI/behavior (notably the Play Mode control) and backend official-playlist listing/details APIs cannot be confirmed from the provided diff summary.",
   "missing_requirements": [
     {
-      "id": "REQ-100",
-      "requirement": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister (not user-editable at runtime).",
-      "reason": "The backend defines `adminArtists` as an empty `Set` with a comment about persistence after migration, but the diff does not show any hard-coded Principal IDs being populated into this allowlist.",
+      "id": "REQ-132",
+      "requirement": "Add Spotify-like controls for Shuffle, Repeat, and Play Mode on the playlist detail view; Play Mode must be present and visibly change state/behavior.",
+      "reason": "Shuffle and Repeat controls are visible in the added PlaylistDetailView, but there is no clear evidence (in the truncated component) of any 'Play Mode' control being rendered or handled.",
       "evidence": [
+        "frontend/src/components/library/PlaylistDetailView.tsx"
+      ]
+    },
+    {
+      "id": "REQ-134",
+      "requirement": "Backend exposes a query method to list all official playlists (names + songIds) and an official-playlist details API used by the frontend to load official playlist songs; guests can read official playlists without sign-in.",
+      "reason": "Frontend introduces hooks named useGetOfficialPlaylists and useGetOfficialPlaylistDetails, but the backend diff snippet does not show any new/updated public query methods for listing official playlists or fetching official playlist details, nor any explicit guest-access read behavior for these APIs. The backend changes shown are primarily type/storage changes and migration wiring.",
+      "evidence": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/components/library/PlaylistDetailView.tsx",
         "backend/main.mo"
       ]
     },
     {
-      "id": "REQ-101",
-      "requirement": "Enforce Admin/Artist-only permissions in the backend for deleteSong (non-admin authenticated users must fail).",
-      "reason": "The diff shows admin enforcement added to `addSong`, but `deleteSong` changes are not visible in the provided truncated backend excerpt, so backend enforcement for delete cannot be confirmed from the diff summary.",
+      "id": "REQ-133",
+      "requirement": "Render an Admin-Mode-only “Create Official Playlist” button beside the “Official Playlists” section header in Library → Playlists, opening a name dialog and showing English success/failure toasts.",
+      "reason": "LibraryPlaylistsPanel adds state and a createOfficialPlaylistMutation plus toast messages, and imports useHiddenAdminMode, but the diff snippet is truncated before showing the actual rendering of the button beside the section header and the conditional visibility tied to Hidden Admin Mode.",
       "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "id": "REQ-102",
-      "requirement": "Enforce Admin/Artist-only permissions in the backend for all official playlist write operations (create/add/remove), while keeping reads accessible to everyone.",
-      "reason": "The diff summary/excerpts do not show any modifications to official playlist write methods (create/add/remove) that check the admin allowlist, so this cannot be verified as implemented.",
-      "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "id": "REQ-104",
-      "requirement": "Gate all admin-only UI entry points for deleting songs so non-admin users do not see them or they are disabled with feedback.",
-      "reason": "While `SongCard` supports conditional delete display via `showDelete` and screens check `isAdmin` before executing delete, the diff excerpt does not clearly show that all delete UI entry points are actually hidden/disabled for non-admins across all song list/card components (the relevant call sites are truncated).",
-      "evidence": [
-        "frontend/src/components/songs/SongCard.tsx",
-        "frontend/src/pages/SongsScreen.tsx",
-        "frontend/src/pages/HomeScreen.tsx"
+        "frontend/src/components/library/LibraryPlaylistsPanel.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Extensive global visual/theming changes (OKLCH color system, neon/star effects utilities, night mode input overrides, twinkle animations).",
-      "reason": "The BuildRequest is scoped to implementing an Admin/Artist allowlist with backend enforcement and frontend gating, and explicitly calls out theming/navigation redesign as non-goals; these styling changes are not part of the requested admin gating work.",
+      "description": "Backend upgrade migration module added and wired to run on canister upgrades.",
+      "reason": "The BuildRequest did not request adding an explicit migration module or always-on upgrade migration wiring; this appears to be additional infrastructure beyond the stated requirements.",
       "evidence": [
-        "frontend/src/index.css (referenced in frontend-file-summaries.txt)"
+        "backend/migration.mo",
+        "backend/main.mo"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.56,
   "changed_files": [
     "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/auth/AdminOnly.tsx",
-    "frontend/src/components/home/HomeChannelBanner.tsx",
-    "frontend/src/components/songs/SongCard.tsx",
-    "frontend/src/components/songs/SongEditor.tsx",
-    "frontend/src/context/AdminContext.tsx",
-    "frontend/src/hooks/useIsAdmin.ts",
-    "frontend/src/hooks/usePendingAction.ts",
+    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+    "frontend/src/components/library/PlaylistDetailView.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/HomeScreen.tsx",
-    "frontend/src/pages/SongsScreen.tsx",
-    "frontend/src/utils/authorizationErrors.ts",
+    "frontend/src/pages/LibraryScreen.tsx",
+    "frontend/src/utils/playlistPlayback.ts",
     "project_state.json"
   ]
 }

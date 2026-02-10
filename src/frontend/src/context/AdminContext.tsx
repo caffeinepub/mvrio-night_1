@@ -4,16 +4,16 @@ import {
   type ReactNode,
   createElement,
 } from 'react';
-import { useIsAdmin } from '../hooks/useIsAdmin';
+import { useHiddenAdminMode } from './HiddenAdminModeContext';
 
 export interface AdminContextValue {
-  /** True if current user is admin/artist, false for guests and normal users */
+  /** True if Hidden Admin Mode is enabled, false otherwise */
   isAdmin: boolean;
   
-  /** True while checking admin status */
+  /** Always false for Hidden Admin Mode (no loading state) */
   isLoading: boolean;
   
-  /** True after admin check has completed */
+  /** Always true for Hidden Admin Mode (no async fetch) */
   isFetched: boolean;
 }
 
@@ -32,12 +32,12 @@ interface AdminProviderProps {
 }
 
 export function AdminProvider({ children }: AdminProviderProps) {
-  const { isAdmin, isLoading, isFetched } = useIsAdmin();
+  const { isAdminModeEnabled } = useHiddenAdminMode();
 
   const value: AdminContextValue = {
-    isAdmin,
-    isLoading,
-    isFetched,
+    isAdmin: isAdminModeEnabled,
+    isLoading: false,
+    isFetched: true,
   };
 
   return createElement(AdminContext.Provider, { value }, children);

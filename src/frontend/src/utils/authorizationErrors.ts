@@ -18,63 +18,64 @@ export function parseAuthorizationError(error: any): AuthorizationError {
   const errorMessage = error?.message || String(error);
   const lowerMessage = errorMessage.toLowerCase();
 
-  // Check for admin-only errors
-  const isAdminError =
-    lowerMessage.includes('only admins') ||
-    lowerMessage.includes('only artists') ||
-    lowerMessage.includes('admin access') ||
-    lowerMessage.includes('admins/artists');
-
-  // Check for sign-in required errors
-  const isSignInError =
+  // Check for admin-required errors (including passcode-related)
+  const isAdminRequired =
     lowerMessage.includes('unauthorized') ||
-    lowerMessage.includes('only users can') ||
-    lowerMessage.includes('authentication required') ||
-    lowerMessage.includes('sign in required');
+    lowerMessage.includes('admin') ||
+    lowerMessage.includes('permission') ||
+    lowerMessage.includes('passcode') ||
+    lowerMessage.includes('invalid passcode');
 
-  const isAuthError = isAdminError || isSignInError;
+  // Check for sign-in-required errors (but not admin-only errors)
+  const isSignInRequired =
+    !isAdminRequired &&
+    (lowerMessage.includes('only users') ||
+     lowerMessage.includes('must be authenticated') ||
+     lowerMessage.includes('sign in required'));
 
-  let message = 'An error occurred';
-  if (isAdminError) {
-    message = 'Admin access required';
-  } else if (isSignInError) {
-    message = 'Please sign in to continue';
-  } else if (isAuthError) {
-    message = 'Authorization required';
-  } else {
-    message = errorMessage;
-  }
+  const isAuthError = isAdminRequired || isSignInRequired;
 
   return {
     isAuthError,
-    isAdminRequired: isAdminError,
-    isSignInRequired: isSignInError && !isAdminError,
-    message,
+    isAdminRequired,
+    isSignInRequired,
+    message: errorMessage,
   };
 }
 
 /**
- * Gets a user-friendly error message for display in toasts/dialogs.
+ * Returns a user-friendly error message for authorization errors.
+ * Maps backend errors to consistent frontend messages.
  */
 export function getAuthErrorMessage(error: any): string {
-  const parsed = parseAuthorizationError(error);
-  return parsed.message;
+  const authError = parseAuthorizationError(error);
+
+  if (authError.isAdminRequired) {
+    return 'You do not have permission to perform this action.';
+  }
+
+  if (authError.isSignInRequired) {
+    return 'Please sign in to perform this action.';
+  }
+
+  // Generic error message for non-auth errors
+  return error?.message || 'An error occurred. Please try again.';
 }
 
 /**
- * Checks if an error is an admin-only authorization error.
- * Used to prevent retry loops for signed-in non-admin users.
- */
-export function isAdminOnlyError(error: any): boolean {
-  const parsed = parseAuthorizationError(error);
-  return parsed.isAdminRequired;
-}
-
-/**
- * Checks if an error requires sign-in (but not admin).
- * Used to trigger soft sign-in modal for guest users.
+ * Checks if an error is a sign-in-required error (not admin-only).
+ * Used to determine whether to trigger the soft sign-in modal.
  */
 export function isSignInRequiredError(error: any): boolean {
-  const parsed = parseAuthorizationError(error);
-  return parsed.isSignInRequired;
+  const authError = parseAuthorizationError(error);
+  return authError.isSignInRequired && !authError.isAdminRequired;
+}
+
+/**
+ * Checks if an error is an admin-required error.
+ * Used to prevent triggering sign-in modal for admin-only actions.
+ */
+export function isAdminRequiredError(error: any): boolean {
+  const authError = parseAuthorizationError(error);
+  return authError.isAdminRequired;
 }

@@ -10,16 +10,20 @@ import Set "mo:core/Set";
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
+import Migration "migration";
+
 import AccessControl "authorization/access-control";
 
+// Run data migration on every canister upgrade.
+(with migration = Migration.run)
 actor {
   // Initialize the access control system
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  // Admin artist principals (persistent after migration)
-  let adminArtists = Set.empty<Principal>();
+  // Admin passcode for Hidden Admin Mode
+  stable var adminPasscode : Text = "A1B2D3ABD";
 
   // User profile type
   public type UserProfile = {
@@ -118,8 +122,9 @@ actor {
     true;
   };
 
-  public query ({ caller }) func isAdminArtist() : async Bool {
-    adminArtists.contains(caller);
+  // Passcode verification
+  func verifyAdminPasscode(passcode : Text) : Bool {
+    passcode == adminPasscode;
   };
 
   public shared ({ caller }) func addSong(
@@ -129,9 +134,10 @@ actor {
     titleImage : Storage.ExternalBlob,
     audioFile : Storage.ExternalBlob,
     lyrics : Text,
+    passcode : Text,
   ) : async Nat {
-    if (not adminArtists.contains(caller)) {
-      Runtime.trap("Unauthorized: Only admins/artists can add songs");
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Unauthorized: Invalid admin passcode");
     };
 
     let song : Song = {
@@ -228,9 +234,9 @@ actor {
     songs.values().toArray().map(toSongView).sort(SongView.compareByTitle);
   };
 
-  public shared ({ caller }) func deleteSong(id : Nat) : async () {
-    if (not adminArtists.contains(caller)) {
-      Runtime.trap("Unauthorized: Only admins/artists can delete songs");
+  public shared ({ caller }) func deleteSong(id : Nat, passcode : Text) : async () {
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Unauthorized: Invalid admin passcode");
     };
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
@@ -436,9 +442,9 @@ actor {
   };
 
   // Official playlists
-  public shared ({ caller }) func createOfficialPlaylist(name : Text) : async () {
-    if (not adminArtists.contains(caller)) {
-      Runtime.trap("Unauthorized: Only admins/artists can create official playlists");
+  public shared ({ caller }) func createOfficialPlaylist(name : Text, passcode : Text) : async () {
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Unauthorized: Invalid admin passcode");
     };
 
     if (officialPlaylists.containsKey(name)) {
@@ -454,9 +460,9 @@ actor {
     );
   };
 
-  public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat) : async () {
-    if (not adminArtists.contains(caller)) {
-      Runtime.trap("Unauthorized: Only admins/artists can add to official playlists");
+  public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Unauthorized: Invalid admin passcode");
     };
 
     if (not songs.containsKey(songId)) {
@@ -473,9 +479,9 @@ actor {
     };
   };
 
-  public shared ({ caller }) func removeFromOfficialPlaylist(playlistName : Text, songId : Nat) : async () {
-    if (not adminArtists.contains(caller)) {
-      Runtime.trap("Unauthorized: Only admins/artists can remove from official playlists");
+  public shared ({ caller }) func removeFromOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Unauthorized: Invalid admin passcode");
     };
 
     switch (officialPlaylists.get(playlistName)) {
@@ -513,5 +519,12 @@ actor {
         );
       };
     };
+  };
+
+  public query ({ caller }) func listOfficialPlaylists() : async [PlaylistView] {
+    // No authorization check - accessible to all including guests
+    officialPlaylists.toArray().map(
+      func((name, playlist)) { toPlaylistView(name, playlist) }
+    );
   };
 };

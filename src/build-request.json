@@ -1,148 +1,119 @@
 {
   "kind": "build_request",
-  "title": "Implement Admin/Artist role allowlist with backend enforcement and frontend gating",
+  "title": "Playlist detail screen, Spotify-like playlist controls, and Admin-only Create Official Playlist",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-100",
-      "text": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister and expose a query method that returns whether the caller is an Admin/Artist.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Use a hard-coded list of admin Principal IDs in the backend canister. Any Principal ID in that list is treated as an Admin/Artist; all others are normal users."
-        ]
-      },
-      "acceptanceCriteria": [
-        "A hard-coded list/array of admin Principal IDs exists in the backend canister code (not user-editable at runtime).",
-        "A new backend query method (e.g., `isCallerAdmin`) returns `true` if and only if `caller` is in the allowlist; otherwise `false` (including anonymous/guest).",
-        "The method does not trap for guests; it returns `false` for non-authenticated callers."
-      ]
-    },
-    {
-      "id": "REQ-101",
-      "text": "Enforce Admin/Artist-only permissions in the backend for all admin-only song management operations, so normal signed-in users cannot upload/add songs or delete songs.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Admin / Artist can create official playlists, add or delete songs, change app settings, update banners, and modify the layout.",
-          "Normal users cannot make official playlists, edit songs, delete songs, or change app settings."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Calling `addSong` as a non-admin authenticated user traps/returns an authorization error (consistent with current backend error patterns).",
-        "Calling `deleteSong` as a non-admin authenticated user traps/returns an authorization error (even if they are the song owner).",
-        "Calling `addSong` and `deleteSong` as an admin succeeds (assuming valid inputs and song exists for delete).",
-        "Guest read-only operations (e.g., `getAllSongs`, `getSong`, `searchSongs`, `playSong`, and other existing read-only flows) continue to work without requiring admin or user permissions."
-      ]
-    },
-    {
-      "id": "REQ-102",
-      "text": "Enforce Admin/Artist-only permissions in the backend for all official playlist management operations (create/add/remove), while keeping official playlist reads accessible to everyone.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Admin / Artist can create official playlists...",
-          "Normal users cannot make official playlists..."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Official playlist write operations (create/add/remove) require Admin/Artist per the allowlist and fail for non-admin users.",
-        "Official playlist read operations (e.g., `getOfficialPlaylist`, `getOfficialPlaylistDetails`) remain available to guests and non-admin users and do not trap due to missing user permissions.",
-        "No change in behavior for user-owned playlist CRUD permissions (still restricted to signed-in users only, and only operating on caller-owned playlists)."
-      ]
-    },
-    {
-      "id": "REQ-103",
-      "text": "Add frontend role detection and caching so the React app can determine whether the currently signed-in identity is an Admin/Artist, without breaking guest mode.",
+      "id": "REQ-130",
+      "text": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Implement both frontend and backend checks so admin-only features are hidden or blocked for normal users."
+          "Make each playlist card clickable. When clicked, it opens a page showing all songs in that playlist."
         ]
       },
       "acceptanceCriteria": [
-        "Frontend calls the backend admin-check query (from REQ-100) and derives an `isAdmin` boolean for the current session.",
-        "When the user is signed out / in guest mode, `isAdmin` is treated as `false` and the app continues to function normally in read-only mode.",
-        "Switching identities (sign in / sign out) correctly updates the derived `isAdmin` state and any dependent UI."
+        "In Library → Playlists, clicking a playlist card opens a playlist detail view without triggering any unintended playback.",
+        "The playlist detail view shows the playlist name and a list of songs contained in that playlist.",
+        "A clear Back control returns the user to the Library → Playlists list with the prior tab selection preserved."
       ]
     },
     {
-      "id": "REQ-104",
-      "text": "Gate all admin-only UI entry points so Admin/Artist-only features are hidden or blocked for normal users: song upload/add, song delete, and Home banner editing controls.",
+      "id": "REQ-131",
+      "text": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Admin / Artist can... add or delete songs... update banners...",
-          "Implement both frontend and backend checks so admin-only features are hidden or blocked for normal users."
+          "...opens a page showing all songs in that playlist."
         ]
       },
       "acceptanceCriteria": [
-        "If the current user is not admin, all UI entry points that open/trigger song upload/add (e.g., the `SongEditor` trigger) are not shown or are disabled with clear feedback.",
-        "If the current user is not admin, all UI entry points that delete songs (e.g., delete buttons on song cards/rows) are not shown or are disabled with clear feedback.",
-        "If the current user is not admin, Home banner editing controls in `HomeChannelBanner` (upload, URL set, clear/reset) are not shown or are disabled with clear feedback; the banner display remains visible.",
-        "If a non-admin user somehow triggers an admin-only action (e.g., stale UI state), the frontend shows an English error message (toast/dialog) such as \"Admin access required\" and does not crash.",
-        "Admin users continue to see and use the admin-only controls as before."
+        "Playlist detail song list renders using the existing Song UI patterns (e.g., SongListRow) including title image/title and the existing per-song controls (play/⋮/like) where applicable.",
+        "Clicking a song row in the playlist detail view starts playback using the existing player behavior (no new audio implementation).",
+        "Next/Previous from the MusicPlayer navigates within the playlist’s song list while the playlist detail view is open."
       ]
     },
     {
-      "id": "REQ-105",
-      "text": "Ensure frontend error handling for admin-only operations properly interprets backend authorization failures and shows a clear English message for non-admin signed-in users, while preserving the existing soft sign-in modal flow for guest-only restrictions.",
+      "id": "REQ-132",
+      "text": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Normal users cannot make official playlists, edit songs, delete songs, or change app settings.",
-          "Implement both frontend and backend checks so admin-only features are hidden or blocked for normal users."
+          "On the playlist page, add a Play button with controls: Shuffle, Repeat, and Play Modes like Spotify."
         ]
       },
       "acceptanceCriteria": [
-        "When a signed-in non-admin attempts an admin-only action and the backend returns an authorization error, the UI displays an English message indicating admin permission is required (and does not open the sign-in modal).",
-        "When a guest attempts a sign-in-required (non-admin) restricted action (like creating a personal playlist, liking, favorites, downloads), the existing soft sign-in modal behavior remains unchanged.",
-        "No infinite retry loops occur via pending-action retry for admin-only actions when the user is signed in but not admin."
+        "Playlist detail view includes a prominent Play button plus distinct controls labeled or iconified for Shuffle, Repeat, and Play Mode.",
+        "Toggling Shuffle changes the order used when starting playlist playback from the Play button and when navigating Next/Previous.",
+        "Repeat control supports at minimum Off and Repeat All for playlist playback behavior within the playlist detail view.",
+        "Play Mode control is present and changes playback behavior/state in a visible way (e.g., a dropdown or cycle button) without breaking existing player UI or other screens.",
+        "All user-facing labels for these controls are in English."
+      ]
+    },
+    {
+      "id": "REQ-133",
+      "text": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Add a ‘Create Official Playlist’ button that only appears for admins when Hidden Admin Mode is enabled. Normal users can create their own playlists but cannot see or use the official playlist button."
+        ]
+      },
+      "acceptanceCriteria": [
+        "When Hidden Admin Mode is disabled, the “Create Official Playlist” button is not rendered anywhere in the Library UI.",
+        "When Hidden Admin Mode is enabled, the “Create Official Playlist” button is rendered beside the “Official Playlists” header in Library → Playlists.",
+        "Normal users (not in Hidden Admin Mode) can still create their own playlists via the existing “Create Playlist” flow and cannot see the official playlist creation control.",
+        "Clicking “Create Official Playlist” opens a dialog to enter a playlist name and confirms creation with an English success toast; errors show an English failure toast."
+      ]
+    },
+    {
+      "id": "REQ-134",
+      "text": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "...can go throught inside and see the songs added in the play list...",
+          "...inside library -> playlist -> side of the offical play list"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Backend exposes a query method to list all official playlists (names + songIds) so the frontend can render the “Official Playlists” section without hardcoded placeholders.",
+        "Frontend renders official playlist cards with name + song count in the “Official Playlists” section.",
+        "Clicking an official playlist card opens the playlist detail view and displays the songs for that official playlist using the backend’s official-playlist details API.",
+        "Guests can view official playlists and their contents (read-only) without being forced into sign-in, while user playlists remain restricted to signed-in users per existing authorization behavior."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in `backend/main.mo`; do not introduce additional canisters/services.",
-    "Do not edit files under `frontend/src/components/ui` or other immutable paths listed in SYSTEM_CONTEXT.",
-    "Do not remove or change existing guest read-only behaviors (browsing/searching/playing songs) beyond what is required for admin-only restrictions.",
-    "Use English for all user-facing text added or changed."
+    "Frontend immutable paths must not be edited: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Keep the existing BottomTabBar/Sidebar navigation behavior intact (no breaking changes to current screen switching).",
+    "Use English for all user-facing text.",
+    "Preserve existing authentication rules: user playlists and playlist mutations require Internet Identity; official playlist reads remain accessible to guests.",
+    "Do not introduce additional backend services or databases; keep Motoko single-actor architecture (all logic in backend/main.mo)."
   ],
   "nonGoals": [
-    "Implementing a UI to edit the admin allowlist at runtime.",
-    "Implementing third-party authentication or wallet integrations beyond the existing Internet Identity flow.",
-    "Redesigning app-wide theming, navigation, or layout beyond gating admin-only controls.",
-    "Adding new backend persistence for global app settings/layout (only gate existing UI controls as requested)."
+    "Implementing real audio queue persistence across app restarts for playlist playback.",
+    "Adding collaborative playlists or sharing playlists between users.",
+    "Adding playlist artwork upload/editing beyond what already exists.",
+    "Changing existing song playback UI outside what is necessary to support playlist-context next/previous ordering."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

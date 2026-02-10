@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
+import { useHiddenAdminMode } from '../context/HiddenAdminModeContext';
 import type { SongView, PlaylistView } from '../backend';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
@@ -36,6 +37,7 @@ export function useGetSong(id: bigint | null) {
 export function useAddSong() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
 
   return useMutation({
     mutationFn: async (data: {
@@ -47,6 +49,15 @@ export function useAddSong() {
       lyrics: string;
     }) => {
       if (!actor) throw new Error('Actor not initialized');
+      
+      if (!isAdminModeEnabled) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
       
       // Handle album art - convert data URLs to bytes
       let albumArt: ExternalBlob;
@@ -89,11 +100,13 @@ export function useAddSong() {
         albumArt,
         titleImage,
         audioFile,
-        data.lyrics
+        data.lyrics,
+        passcode
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+      toast.success('Song added successfully');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -106,14 +119,26 @@ export function useAddSong() {
 export function useDeleteSong() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
 
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not initialized');
-      return actor.deleteSong(id);
+      
+      if (!isAdminModeEnabled) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
+      
+      return actor.deleteSong(id, passcode);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+      toast.success('Song deleted successfully');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -172,13 +197,10 @@ export function useToggleLikeSong() {
       // Invalidate favorites to keep them in sync
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
-    onError: (err) => {
-      toast.error('Failed to update like');
-      console.error(err);
-    },
-    onSettled: () => {
-      // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['songs'] });
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Toggle like error:', error);
     },
   });
 }
@@ -193,21 +215,39 @@ export function usePlaySong() {
       await actor.playSong(songId);
       return songId;
     },
-    onSuccess: () => {
-      // Refetch to get updated play counts
-      queryClient.invalidateQueries({ queryKey: ['songs'] });
+    onSuccess: (songId) => {
+      // Update the play count in cache
+      queryClient.setQueriesData<SongView[]>({ queryKey: ['songs'] }, (old) => {
+        if (!old) return old;
+        return old.map((song) =>
+          song.id === songId
+            ? {
+                ...song,
+                playCount: song.playCount + BigInt(1),
+              }
+            : song
+        );
+      });
+      
+      // Also update individual song queries
+      queryClient.setQueryData<SongView>(['song', songId.toString()], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          playCount: old.playCount + BigInt(1),
+        };
+      });
     },
-    onError: (err) => {
-      console.error('Failed to increment play count:', err);
+    onError: (error: any) => {
+      console.error('Play song error:', error);
     },
   });
 }
 
-// Favorites hooks
+// Favorites
 export function useGetFavorites() {
   const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
 
   return useQuery<bigint[]>({
     queryKey: ['favorites'],
@@ -215,7 +255,7 @@ export function useGetFavorites() {
       if (!actor) return [];
       return actor.getFavorites();
     },
-    enabled: !!actor && !isFetching && isAuthenticated,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
@@ -227,19 +267,23 @@ export function useToggleFavorite() {
     mutationFn: async (songId: bigint) => {
       if (!actor) throw new Error('Actor not initialized');
       const wasRemoved = await actor.toggleFavorite(songId);
-      return wasRemoved;
+      return { songId, wasRemoved };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Toggle favorite error:', error);
+    },
   });
 }
 
-// Playlist hooks
+// Playlists
 export function useGetUserPlaylists() {
   const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
 
   return useQuery<PlaylistView[]>({
     queryKey: ['playlists', 'user'],
@@ -247,7 +291,7 @@ export function useGetUserPlaylists() {
       if (!actor) return [];
       return actor.getUserPlaylists();
     },
-    enabled: !!actor && !isFetching && isAuthenticated,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
@@ -263,6 +307,9 @@ export function useCreatePlaylist() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
     },
+    onError: (error: any) => {
+      throw error;
+    },
   });
 }
 
@@ -276,7 +323,12 @@ export function useAddToPlaylist() {
       return actor.addToPlaylist(playlistName, songId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Add to playlist error:', error);
     },
   });
 }
@@ -291,7 +343,12 @@ export function useRemoveFromPlaylist() {
       return actor.removeFromPlaylist(playlistName, songId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Remove from playlist error:', error);
     },
   });
 }
@@ -299,14 +356,69 @@ export function useRemoveFromPlaylist() {
 export function useGetPlaylistDetails(playlistName: string | null) {
   const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
 
   return useQuery<SongView[]>({
-    queryKey: ['playlists', 'details', playlistName],
+    queryKey: ['playlists', 'user', playlistName, 'details'],
     queryFn: async () => {
       if (!actor || !playlistName) return [];
       return actor.getPlaylistDetails(playlistName);
     },
-    enabled: !!actor && !isFetching && isAuthenticated && !!playlistName,
+    enabled: !!actor && !isFetching && !!identity && !!playlistName,
+  });
+}
+
+// Official Playlists
+export function useGetOfficialPlaylists() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<PlaylistView[]>({
+    queryKey: ['playlists', 'official'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listOfficialPlaylists();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useCreateOfficialPlaylist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+
+  return useMutation({
+    mutationFn: async (name: string) => {
+      if (!actor) throw new Error('Actor not initialized');
+      
+      if (!isAdminModeEnabled) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
+      
+      return actor.createOfficialPlaylist(name, passcode);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
+    },
+    onError: (error: any) => {
+      throw error;
+    },
+  });
+}
+
+export function useGetOfficialPlaylistDetails(playlistName: string | null) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<SongView[]>({
+    queryKey: ['playlists', 'official', playlistName, 'details'],
+    queryFn: async () => {
+      if (!actor || !playlistName) return [];
+      return actor.getOfficialPlaylistDetails(playlistName);
+    },
+    enabled: !!actor && !isFetching && !!playlistName,
   });
 }

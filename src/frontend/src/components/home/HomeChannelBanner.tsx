@@ -15,7 +15,7 @@ export function HomeChannelBanner() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAdmin) {
-      toast.error('Admin access required');
+      toast.error('You do not have permission to perform this action.');
       return;
     }
 
@@ -33,7 +33,7 @@ export function HomeChannelBanner() {
 
   const handleUrlSubmit = () => {
     if (!isAdmin) {
-      toast.error('Admin access required');
+      toast.error('You do not have permission to perform this action.');
       return;
     }
 
@@ -48,7 +48,7 @@ export function HomeChannelBanner() {
 
   const handleClear = () => {
     if (!isAdmin) {
-      toast.error('Admin access required');
+      toast.error('You do not have permission to perform this action.');
       return;
     }
 

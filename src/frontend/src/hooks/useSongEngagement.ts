@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { useToggleLikeSong, usePlaySong } from './useQueries';
+import { isSignInRequiredError } from '../utils/authorizationErrors';
 
 export function useSongEngagement() {
   const { isAuthenticated, requireAuth } = useAuth();
@@ -19,12 +20,8 @@ export function useSongEngagement() {
     try {
       await toggleLikeMutation.mutateAsync(songId);
     } catch (error: any) {
-      // Check for authorization errors
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can')
-      ) {
-        // Trigger auth flow even if we thought we were authenticated
+      // Only trigger auth flow for sign-in-required errors, not admin-only errors
+      if (isSignInRequiredError(error)) {
         requireAuth({
           type: 'like',
           songId,

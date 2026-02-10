@@ -2,12 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-frontend-role-detection-and-caching-so-the-react-app-can-determine-whether-the-currently-signed-in-identity-is-an-admin-artist-without-breaking-guest-mode",
-      "featureTitle": "Add frontend role detection and caching so the React app can determine whether the currently signed-in identity is an Admin/Artist, without breaking guest mode.",
+      "featureId": "feature-make-each-playlist-card-in-library-playlists-fully-clickable-so-clicking-tapping-the-card-opens-a-dedicated-playlist-detail-view-that-shows-the-songs-inside-that-playlist",
+      "featureTitle": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/context/AdminContext.tsx",
-        "frontend/src/hooks/useIsAdmin.ts"
+        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+        "frontend/src/components/library/PlaylistDetailView.tsx",
+        "frontend/src/pages/LibraryScreen.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -19,20 +19,17 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-103"
+        "REQ-130"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-gate-all-admin-only-ui-entry-points-so-admin-artist-only-features-are-hidden-or-blocked-for-normal-users-song-upload-add-song-delete-and-home-banner-editing-controls",
-      "featureTitle": "Gate all admin-only UI entry points so Admin/Artist-only features are hidden or blocked for normal users: song upload/add, song delete, and Home banner editing controls.",
+      "featureId": "feature-implement-the-playlist-detail-view-to-render-all-songs-in-the-playlist-using-existing-song-row-components-and-existing-playback-behavior-so-that-selecting-a-song-from-the-playlist-starts-playback-in-the-existing-musicplayer-within-the-playlist-context",
+      "featureTitle": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
       "files": [
-        "frontend/src/components/auth/AdminOnly.tsx",
-        "frontend/src/components/home/HomeChannelBanner.tsx",
-        "frontend/src/components/songs/SongCard.tsx",
-        "frontend/src/components/songs/SongEditor.tsx",
-        "frontend/src/pages/HomeScreen.tsx",
-        "frontend/src/pages/SongsScreen.tsx"
+        "frontend/src/components/library/PlaylistDetailView.tsx",
+        "frontend/src/pages/LibraryScreen.tsx",
+        "frontend/src/utils/playlistPlayback.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -44,20 +41,61 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-104"
+        "REQ-131"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-frontend-error-handling-for-admin-only-operations-properly-interprets-backend-authorization-failures-and-shows-a-clear-english-message-for-non-admin-signed-in-users-while-preserving-the-existing-soft-sign-in-modal-flow-for-guest-only-restrictions",
-      "featureTitle": "Ensure frontend error handling for admin-only operations properly interprets backend authorization failures and shows a clear English message for non-admin signed-in users, while preserving the existing soft sign-in modal flow for guest-only restrictions.",
+      "featureId": "feature-on-the-playlist-detail-view-add-a-playlist-level-play-button-and-spotify-like-controls-for-shuffle-repeat-and-play-mode-these-controls-must-affect-the-playlist-s-playback-order-when-using-next-previous-and-when-starting-playback-from-the-playlist-level-play-button",
+      "featureTitle": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
       "files": [
-        "frontend/src/components/songs/SongEditor.tsx",
-        "frontend/src/hooks/usePendingAction.ts",
+        "frontend/src/components/library/PlaylistDetailView.tsx",
+        "frontend/src/pages/LibraryScreen.tsx",
+        "frontend/src/utils/playlistPlayback.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-132"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-an-admin-mode-only-create-official-playlist-button-in-library-playlists-positioned-beside-the-official-playlists-section-header-it-must-only-appear-when-hidden-admin-mode-is-enabled-and-must-not-be-visible-to-normal-users-or-guests",
+      "featureTitle": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
+      "files": [
+        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-133"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-support-listing-and-opening-official-playlists-show-a-real-list-of-official-playlists-in-the-official-playlists-section-allow-clicking-an-official-playlist-card-to-open-the-same-playlist-detail-view-and-load-its-songs-using-backend-apis-intended-for-official-playlists",
+      "featureTitle": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
+      "files": [
+        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+        "frontend/src/components/library/PlaylistDetailView.tsx",
         "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/HomeScreen.tsx",
-        "frontend/src/pages/SongsScreen.tsx",
-        "frontend/src/utils/authorizationErrors.ts"
+        "frontend/src/pages/LibraryScreen.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -69,7 +107,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-105"
+        "REQ-134"
       ],
       "confidence": "high"
     }

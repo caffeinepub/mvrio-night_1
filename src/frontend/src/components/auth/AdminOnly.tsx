@@ -1,6 +1,5 @@
 import { type ReactNode } from 'react';
 import { useAdminContext } from '../../context/AdminContext';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AdminOnlyProps {
@@ -21,14 +20,9 @@ export function AdminOnly({
   children,
   fallback = null,
   showDisabled = false,
-  disabledMessage = 'Admin access required',
+  disabledMessage = 'You do not have permission to perform this action.',
 }: AdminOnlyProps) {
-  const { isAdmin, isLoading } = useAdminContext();
-
-  // While loading, don't render anything to prevent flash
-  if (isLoading) {
-    return null;
-  }
+  const { isAdmin } = useAdminContext();
 
   // If user is admin, render children normally
   if (isAdmin) {
@@ -68,9 +62,9 @@ interface AdminGateProps {
  * Non-admin users see nothing.
  */
 export function AdminGate({ children }: AdminGateProps) {
-  const { isAdmin, isLoading } = useAdminContext();
+  const { isAdmin } = useAdminContext();
 
-  if (isLoading || !isAdmin) {
+  if (!isAdmin) {
     return null;
   }
 

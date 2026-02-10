@@ -1,14 +1,15 @@
 # Specification
 
 ## Summary
-**Goal:** Add an Admin/Artist allowlist with backend-enforced permissions and frontend role-based gating so only approved principals can manage songs, official playlists, and Home banner edits, while preserving guest read-only mode.
+**Goal:** Add a dedicated playlist detail screen with Spotify-like playlist controls, and enable admin-only creation plus real listing/opening of Official Playlists.
 
 **Planned changes:**
-- Add a hard-coded Admin/Artist Principal ID allowlist in the Motoko canister and a query method to check whether the caller is admin.
-- Enforce admin-only authorization in the backend for song management operations (add/upload and delete), returning/raising authorization failures for non-admin signed-in users while keeping guest read-only flows working.
-- Enforce admin-only authorization in the backend for official playlist write operations (create/add/remove) while keeping official playlist reads accessible to everyone and leaving user-owned playlist permissions unchanged.
-- Add frontend role detection (querying the backend and caching per session) to derive an `isAdmin` state that updates on sign-in/sign-out and remains `false` in guest mode.
-- Gate admin-only UI entry points (song add/upload, song delete, Home banner editing controls) so they are hidden or disabled for non-admin users, with clear English feedback.
-- Update frontend error handling so backend authorization failures for admin-only actions show an English “admin access required” style message (without triggering the guest soft sign-in modal), and prevent retry loops for these actions.
+- Make Library → Playlists cards fully clickable to open a playlist detail view (without triggering unintended playback), with a Back control that returns to the prior Library → Playlists state.
+- Implement a playlist detail view that shows playlist name and renders the playlist’s songs using existing song row components and existing playback behavior.
+- Ensure playback from the playlist detail view uses playlist context for Next/Previous navigation within the playlist’s song list.
+- Add playlist-level controls on the playlist detail view: a prominent Play button plus Shuffle, Repeat (at least Off/Repeat All), and a Play Mode control that visibly changes state and affects playlist playback ordering/behavior.
+- Add an Admin-Mode-only “Create Official Playlist” button beside the “Official Playlists” header in Library → Playlists; open a name-entry dialog and show English success/failure toasts.
+- Backend: expose APIs to list official playlists (names + songIds) and to load official playlist details for the playlist detail view (Motoko single-actor).
+- Frontend: render a real “Official Playlists” section (name + song count) from backend data; allow opening an official playlist in the same playlist detail view, with official playlist reads accessible to guests.
 
-**User-visible outcome:** Admin/Artist users (from the allowlist) can add/delete songs, manage official playlists, and edit the Home banner; all other users can still browse/search/play in guest/read-only mode, but cannot access or trigger admin-only features and will see clear English permission errors if they try.
+**User-visible outcome:** Users can open any playlist to view its songs and play within that playlist using playlist-level Shuffle/Repeat/Play Mode controls; admins (Hidden Admin Mode) can create official playlists, and everyone (including guests) can browse and open official playlists and see their contents.

@@ -39,15 +39,15 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addSong(title: string, artist: string, albumArt: ExternalBlob, titleImage: ExternalBlob, audioFile: ExternalBlob, lyrics: string): Promise<bigint>;
-    addToOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
+    addSong(title: string, artist: string, albumArt: ExternalBlob, titleImage: ExternalBlob, audioFile: ExternalBlob, lyrics: string, passcode: string): Promise<bigint>;
+    addToOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     addToPlaylist(playlistName: string, songId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkAuthorization(): Promise<boolean>;
     clearFavorites(): Promise<void>;
-    createOfficialPlaylist(name: string): Promise<void>;
+    createOfficialPlaylist(name: string, passcode: string): Promise<void>;
     createPlaylist(name: string): Promise<void>;
-    deleteSong(id: bigint): Promise<void>;
+    deleteSong(id: bigint, passcode: string): Promise<void>;
     getAllSongs(): Promise<Array<SongView>>;
     getAllSongsByTitle(): Promise<Array<SongView>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -60,10 +60,10 @@ export interface backendInterface {
     getSong(id: bigint): Promise<SongView>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    isAdminArtist(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    listOfficialPlaylists(): Promise<Array<PlaylistView>>;
     playSong(id: bigint): Promise<void>;
-    removeFromOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
+    removeFromOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     removeFromPlaylist(playlistName: string, songId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchSongs(keyword: string): Promise<Array<SongView>>;

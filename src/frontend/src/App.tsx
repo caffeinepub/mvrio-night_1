@@ -13,7 +13,9 @@ import { ContactScreen } from './pages/ContactScreen';
 import { ThemeProvider } from './hooks/useTheme';
 import { SettingsProvider } from './hooks/useSettings';
 import { AuthProvider } from './context/AuthContext';
+import { HiddenAdminModeProvider } from './context/HiddenAdminModeContext';
 import { AdminProvider } from './context/AdminContext';
+import { AdminPasscodeModal } from './components/admin/AdminPasscodeModal';
 import { Toaster } from '@/components/ui/sonner';
 import { parseSongIdFromUrl, clearSongParamFromUrl } from './utils/deepLinks';
 import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
@@ -86,6 +88,7 @@ function AppContent() {
         {renderScreen()}
       </AppShell>
       <SignInModal />
+      <AdminPasscodeModal />
       <Toaster />
     </>
   );
@@ -98,9 +101,11 @@ function App() {
     <ThemeProvider>
       <SettingsProvider>
         <AuthProvider currentScreen={currentScreen} onNavigate={setCurrentScreen}>
-          <AdminProvider>
-            <AppContent />
-          </AdminProvider>
+          <HiddenAdminModeProvider>
+            <AdminProvider>
+              <AppContent />
+            </AdminProvider>
+          </HiddenAdminModeProvider>
         </AuthProvider>
       </SettingsProvider>
     </ThemeProvider>

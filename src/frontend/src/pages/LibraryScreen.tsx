@@ -3,6 +3,7 @@ import { useGetAllSongs, useGetFavorites } from '../hooks/useQueries';
 import { MusicPlayer } from '../components/player/MusicPlayer';
 import { LibraryTopTabs, type LibraryTab } from '../components/library/LibraryTopTabs';
 import { LibraryPlaylistsPanel } from '../components/library/LibraryPlaylistsPanel';
+import { PlaylistDetailView } from '../components/library/PlaylistDetailView';
 import { SongListRow } from '../components/songs/SongListRow';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useAuth } from '../context/AuthContext';
@@ -10,9 +11,19 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Heart } from 'lucide-react';
 import type { SongView } from '../backend';
 
+type PlaylistContext = {
+  type: 'user' | 'official';
+  name: string;
+  songs: SongView[];
+};
+
 export function LibraryScreen() {
   const [activeTab, setActiveTab] = useState<LibraryTab>('songs');
   const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistContext | null>(null);
+  const [playlistQueue, setPlaylistQueue] = useState<SongView[]>([]);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all'>('off');
   
   const { data: songs, isLoading: songsLoading } = useGetAllSongs();
   const { data: favorites, isLoading: favoritesLoading } = useGetFavorites();
@@ -23,6 +34,26 @@ export function LibraryScreen() {
   const currentSong = songs?.find(s => s.id === currentSongId) || null;
 
   const handleNext = () => {
+    // If we're in a playlist context, use playlist queue
+    if (playlistQueue.length > 0) {
+      const currentIndex = playlistQueue.findIndex(s => s.id === currentSongId);
+      if (currentIndex === -1) {
+        // Start from beginning
+        setCurrentSongId(playlistQueue[0].id);
+        return;
+      }
+      
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < playlistQueue.length) {
+        setCurrentSongId(playlistQueue[nextIndex].id);
+      } else if (repeatMode === 'all') {
+        // Loop back to start
+        setCurrentSongId(playlistQueue[0].id);
+      }
+      return;
+    }
+    
+    // Default behavior: use all songs
     if (!songs || songs.length === 0) return;
     const currentIndex = songs.findIndex(s => s.id === currentSongId);
     const nextIndex = (currentIndex + 1) % songs.length;
@@ -30,10 +61,67 @@ export function LibraryScreen() {
   };
 
   const handlePrevious = () => {
+    // If we're in a playlist context, use playlist queue
+    if (playlistQueue.length > 0) {
+      const currentIndex = playlistQueue.findIndex(s => s.id === currentSongId);
+      if (currentIndex === -1) {
+        // Start from end
+        setCurrentSongId(playlistQueue[playlistQueue.length - 1].id);
+        return;
+      }
+      
+      const prevIndex = currentIndex - 1;
+      if (prevIndex >= 0) {
+        setCurrentSongId(playlistQueue[prevIndex].id);
+      } else if (repeatMode === 'all') {
+        // Loop to end
+        setCurrentSongId(playlistQueue[playlistQueue.length - 1].id);
+      }
+      return;
+    }
+    
+    // Default behavior: use all songs
     if (!songs || songs.length === 0) return;
     const currentIndex = songs.findIndex(s => s.id === currentSongId);
     const prevIndex = currentIndex <= 0 ? songs.length - 1 : currentIndex - 1;
     setCurrentSongId(songs[prevIndex].id);
+  };
+
+  const handleOpenPlaylist = (playlist: PlaylistContext) => {
+    setSelectedPlaylist(playlist);
+    setPlaylistQueue(playlist.songs);
+    setIsShuffled(false);
+    setRepeatMode('off');
+  };
+
+  const handleBackToPlaylists = () => {
+    setSelectedPlaylist(null);
+    setPlaylistQueue([]);
+    setIsShuffled(false);
+    setRepeatMode('off');
+  };
+
+  const handlePlaylistPlay = (songs: SongView[]) => {
+    if (songs.length === 0) return;
+    setCurrentSongId(songs[0].id);
+  };
+
+  const handleShuffleToggle = (songs: SongView[]) => {
+    const newShuffled = !isShuffled;
+    setIsShuffled(newShuffled);
+    
+    if (newShuffled) {
+      // Shuffle the queue
+      const shuffled = [...songs].sort(() => Math.random() - 0.5);
+      setPlaylistQueue(shuffled);
+    } else {
+      // Restore original order
+      setPlaylistQueue(songs);
+    }
+  };
+
+  const handleRepeatToggle = () => {
+    setRepeatMode(prev => prev === 'off' ? 'all' : 'off');
   };
 
   if (songsLoading) {
@@ -128,7 +216,24 @@ export function LibraryScreen() {
         </div>
       )}
 
-      {activeTab === 'playlists' && <LibraryPlaylistsPanel />}
+      {activeTab === 'playlists' && (
+        selectedPlaylist ? (
+          <PlaylistDetailView
+            playlist={selectedPlaylist}
+            onBack={handleBackToPlaylists}
+            onPlay={handlePlaylistPlay}
+            onSongSelect={setCurrentSongId}
+            currentSongId={currentSongId}
+            isShuffled={isShuffled}
+            onShuffleToggle={handleShuffleToggle}
+            repeatMode={repeatMode}
+            onRepeatToggle={handleRepeatToggle}
+            playlistQueue={playlistQueue}
+          />
+        ) : (
+          <LibraryPlaylistsPanel onOpenPlaylist={handleOpenPlaylist} />
+        )
+      )}
 
       <MusicPlayer
         song={currentSong}
