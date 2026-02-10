@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --radius: 0.625rem;
+        
+        /* Day mode (light) */
+        --background: 0.98 0.01 140;
+        --foreground: 0.15 0.02 260;
+        --card: 1 0 0;
+        --card-foreground: 0.15 0.02 260;
+        --popover: 1 0 0;
+        --popover-foreground: 0.15 0.02 260;
+        --primary: 0.65 0.15 145;
+        --primary-foreground: 0.05 0.05 260;
+        --secondary: 0.95 0.01 140;
+        --secondary-foreground: 0.15 0.02 260;
+        --muted: 0.95 0.01 140;
+        --muted-foreground: 0.50 0.02 260;
+        --accent: 0.65 0.15 145;
+        --accent-foreground: 0.05 0.05 260;
+        --destructive: 0.577 0.245 27.325;
+        --destructive-foreground: 0.985 0 0;
+        --border: 0.90 0.01 260;
+        --input: 0.90 0.01 260;
+        --ring: 0.65 0.15 145;
+        --neon: 0.75 0.20 145;
+        --card-shadow: 0.20 0.02 260;
+        
+        --chart-1: 0.646 0.222 41.116;
+        --chart-2: 0.6 0.118 184.704;
+        --chart-3: 0.398 0.07 227.392;
+        --chart-4: 0.828 0.189 84.429;
+        --chart-5: 0.769 0.188 70.08;
+        
+        --sidebar: 0.98 0.01 140;
+        --sidebar-foreground: 0.15 0.02 260;
+        --sidebar-primary: 0.65 0.15 145;
+        --sidebar-primary-foreground: 0.05 0.05 260;
+        --sidebar-accent: 0.95 0.01 140;
+        --sidebar-accent-foreground: 0.15 0.02 260;
+        --sidebar-border: 0.90 0.01 260;
+        --sidebar-ring: 0.65 0.15 145;
+    }
+
+    .dark {
+        /* Night mode (default) - night sky gradient colors */
+        --background: 0.05 0.05 260;
+        --foreground: 0.95 0.01 260;
+        --card: 0.10 0.03 260;
+        --card-foreground: 0.95 0.01 260;
+        --popover: 0.12 0.03 260;
+        --popover-foreground: 0.95 0.01 260;
+        --primary: 0.75 0.20 145;
+        --primary-foreground: 0.05 0.05 260;
+        --secondary: 0.15 0.03 260;
+        --secondary-foreground: 0.95 0.01 260;
+        --muted: 0.15 0.03 260;
+        --muted-foreground: 0.60 0.01 260;
+        --accent: 0.75 0.20 145;
+        --accent-foreground: 0.05 0.05 260;
+        --destructive: 0.60 0.20 27;
+        --destructive-foreground: 0.95 0.01 260;
+        --border: 0.20 0.03 260;
+        --input: 0.20 0.03 260;
+        --ring: 0.75 0.20 145;
+        --neon: 0.75 0.20 145;
+        --card-shadow: 0.08 0.02 260;
+        
+        --chart-1: 0.488 0.243 264.376;
+        --chart-2: 0.696 0.17 162.48;
+        --chart-3: 0.769 0.188 70.08;
+        --chart-4: 0.627 0.265 303.9;
+        --chart-5: 0.645 0.246 16.439;
+        
+        --sidebar: 0.08 0.03 260;
+        --sidebar-foreground: 0.95 0.01 260;
+        --sidebar-primary: 0.75 0.20 145;
+        --sidebar-primary-foreground: 0.05 0.05 260;
+        --sidebar-accent: 0.15 0.03 260;
+        --sidebar-accent-foreground: 0.95 0.01 260;
+        --sidebar-border: 0.20 0.03 260;
+        --sidebar-ring: 0.75 0.20 145;
+    }
+
+    * {
+        @apply border-border;
+    }
+    
+    body {
+        @apply bg-background text-foreground;
+    }
+    
+    body.reduce-animations * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    /* Night mode input text color fix - force white text for all form controls */
+    .dark input,
+    .dark textarea,
+    .dark select {
+        color: #FFFFFF !important;
+    }
+
+    .dark input::placeholder,
+    .dark textarea::placeholder {
+        color: #FFFFFF !important;
+        opacity: 0.5;
+    }
+
+    /* Ensure autofill text is also white in night mode */
+    .dark input:-webkit-autofill,
+    .dark input:-webkit-autofill:hover,
+    .dark input:-webkit-autofill:focus,
+    .dark textarea:-webkit-autofill,
+    .dark textarea:-webkit-autofill:hover,
+    .dark textarea:-webkit-autofill:focus,
+    .dark select:-webkit-autofill,
+    .dark select:-webkit-autofill:hover,
+    .dark select:-webkit-autofill:focus {
+        -webkit-text-fill-color: #FFFFFF !important;
+        -webkit-box-shadow: 0 0 0px 1000px oklch(var(--input)) inset !important;
+        box-shadow: 0 0 0px 1000px oklch(var(--input)) inset !important;
+    }
+
+    /* BottomTabBar Night mode inactive icon fix - force pure white */
+    .dark .bottom-tab-bar button[data-active="false"] svg {
+        color: #FFFFFF !important;
+        stroke: #FFFFFF !important;
+    }
+}
+
+@layer utilities {
+    .neon-glow {
+        color: oklch(var(--neon));
+        text-shadow: 0 0 10px oklch(var(--neon) / 0.5);
+    }
+    
+    .neon-border {
+        border-color: oklch(var(--neon));
+        box-shadow: 0 0 10px oklch(var(--neon) / 0.3);
+    }
+    
+    .card-shadow-custom {
+        box-shadow: 0 4px 12px oklch(var(--card-shadow) / 0.4);
+    }
+
+    /* Neon contrast fix: primary/neon backgrounds get black text */
+    .bg-primary,
+    .bg-primary\/90,
+    .bg-primary\/80,
+    [class*="bg-primary"] {
+        color: oklch(var(--primary-foreground)) !important;
+    }
+
+    .bg-primary *,
+    .bg-primary\/90 *,
+    .bg-primary\/80 *,
+    [class*="bg-primary"] * {
+        color: oklch(var(--primary-foreground));
+    }
+
+    /* Banner gradient with stars */
+    .banner-gradient-stars {
+        background: linear-gradient(135deg, #111122 0%, #000000 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .banner-gradient-stars::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: 
+            radial-gradient(1px 1px at 20% 30%, white, transparent),
+            radial-gradient(1px 1px at 60% 70%, white, transparent),
+            radial-gradient(1px 1px at 50% 50%, white, transparent),
+            radial-gradient(1px 1px at 80% 10%, white, transparent),
+            radial-gradient(1px 1px at 90% 60%, white, transparent),
+            radial-gradient(1px 1px at 33% 80%, white, transparent),
+            radial-gradient(1px 1px at 15% 90%, white, transparent);
+        background-size: 200% 200%;
+        background-position: 0% 0%;
+        opacity: 0.4;
+        animation: twinkle-stars 8s ease-in-out infinite;
+    }
+
+    @keyframes twinkle-stars {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 0.6; }
+    }
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+.star {
+    animation: twinkle var(--twinkle-duration, 3s) ease-in-out infinite;
+    animation-delay: var(--twinkle-delay, 0s);
+}
+
+.star.no-animation {
+    animation: none;
+    opacity: 0.5;
+}

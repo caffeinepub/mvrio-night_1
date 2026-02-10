@@ -1,0 +1,73 @@
+{
+  "kind": "build_request",
+  "title": "Fix Like button toggle and set uploaded image as the Home banner (no crop/no stretch)",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-81",
+      "text": "Fix the Like button so it works and behaves as a true toggle: tap once to like, tap again to unlike, updating the song’s likeCount in the UI accordingly and staying in sync with the backend.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4",
+          "msg-5"
+        ],
+        "quotes": [
+          "like button isn't working when clikc on the like button , The Like button should be a toggle — tap once to like, tap again to unlike.",
+          "build it now , and add this image in the place of the banner image"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Clicking/tapping the heart Like button calls the existing backend toggleLikeSong(songId) mutation successfully (no parameter-shape mismatch).",
+        "A second click/tap on the same Like button unlikes the song (backend toggles back) and the displayed likeCount updates accordingly after mutation settle/refetch.",
+        "The Like interaction does not trigger song playback or other parent click handlers.",
+        "If the user is not authenticated, the app shows the existing login-required messaging behavior and does not optimistically flip the Like state."
+      ]
+    },
+    {
+      "id": "REQ-82",
+      "text": "Replace the Home channel banner image with the user-uploaded image “Aesthetic Moments from My Week (1).jpeg” and display it exactly as-is: do not crop and do not stretch (preserve the full image within the banner area).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "add this image in the place of the banner image , do not crop the image or strech the image add this as how it's"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Home banner renders the uploaded image by default (without requiring the user to paste a URL or re-upload).",
+        "The banner image is rendered with preserved aspect ratio and without cropping (e.g., no object-cover behavior); no dimension causes visible stretching.",
+        "The banner container/background styling still fits the existing MVRIO Night layout and does not overlap the A2HS banner, header, or content.",
+        "The banner image is served as a static frontend asset (not stored in or fetched from the backend)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit any files under frontend/src/components/ui (shadcn) or any other immutable paths listed in SYSTEM_CONTEXT.",
+    "Keep the existing Home header/A2HS banner placement; only change the Home channel banner image behavior.",
+    "Do not introduce heavy visual effects or performance-heavy image processing."
+  ],
+  "nonGoals": [
+    "Do not change the backend Motoko like/play logic or schema for this request.",
+    "Do not redesign the Home page layout beyond what is necessary to display the banner image without cropping/stretching.",
+    "Do not add new playlist/favorites/menu features beyond the scope of fixing Like and setting the banner image."
+  ],
+  "imageRequirements": {
+    "required": [
+      "Studio-room photo with a seated person in front of a desk setup (home-banner-aesthetic-moments.dim_463x453.jpeg)"
+    ],
+    "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
+  }
+}

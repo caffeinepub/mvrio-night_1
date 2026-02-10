@@ -1,0 +1,875 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 33,
+  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
+  "architectural_notes": [
+    "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
+    "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
+    "A2HS banner behavior: Close hides for current session only; banner reappears on next visit/session.",
+    "Night mode bottom tab styling override: inactive tab icons/text = #FFFFFF; active tab bg = #1ED760 with text/icons #000000; smooth transitions; Day mode unchanged.",
+    "Night mode input fields must render typed/input text as #FFFFFF (Day mode remains black).",
+    "Night mode sidebar interactive items: active (neon background) => black text/icons; inactive/dark => white text/icons; apply consistently across all sidebar items.",
+    "Song model/UI: add a separate per-song Title Image (file upload or URL) in addition to existing Cover Image; show Title Image on song card alongside cover image and in player.",
+    "Bottom navigation/tab bar color rules update (apply to BOTH mobile + desktop): Night mode inactive icon/label = #FFFFFF; active tab bg = #1ED760 with icon/label #000000. Day mode inactive icon/label = #000000; active tab bg = #1ED760 with icon/label #000000. Colors only; keep existing icon assets/sizes; smooth transitions; no other layout/behavior changes.",
+    "Bottom navigation color rules: override existing rules to match spec (Night: inactive icon/label #FFFFFF; active tab bg #1ED760 with icon/label #000000; Day mode unchanged). Only color changes—no layout/spacing/animation changes.",
+    "Desktop: BottomTabBar should render and be always visible (same as mobile; layout/spacing unchanged, only scaled for desktop)."
+  ],
+  "known_issues": [
+    "Build/update attempt failed with “The AI couldn't implement your request. Please simplify or rephrase your prompt.” (prompt complexity may be triggering tooling limits).",
+    "BottomTabBar inactive tab ICONS are not turning pure white (#FFFFFF) in Night mode (labels are correct); issue occurs on both mobile and desktop.",
+    "Build failed due to internal complexity/tooling limits when attempting to implement advanced song interactions + playlist system + favorites + deep links + download/share + official playlists in one pass; may require splitting into smaller builds.",
+    "Deployment step failed with generic “Deployment error” after code generation; likely due to deploy-service hiccup or platform/internal deployment limits rather than app logic.",
+    "Like button is not working; it must toggle like/unlike on repeated taps."
+  ],
+  "isFixRequest": true,
+  "imageRequirements": "## Required Images\n- Studio-room photo with a seated person in front of a desk setup (home-banner-aesthetic-moments.dim_463x453.jpeg)",
+  "existing_features": [
+    {
+      "id": "feature-implement-the-mvrio-night-visual-system-exactly-as-specified-default-night-mode-with-a-dark-night-sky-gradient-background-0b0c1a-to-000000-hundreds-of-tiny-star-dots-scattered-across-the-background-a-lightweight-twinkle-animation-stars-brighten-randomly-over-time-and-neon-green-highlights-1ed760-for-buttons-progress-bars-and-active-elements-effects-must-be-subtle-and-deployment-safe-no-heavy-particle-systems",
+      "title": "Implement the MVRIO Night visual system exactly as specified: default Night mode with a dark night-sky gradient background (#0B0C1A to #000000), hundreds of tiny star dots scattered across the background, a lightweight twinkle animation (stars brighten randomly over time), and neon green highlights (#1ED760) for buttons, progress bars, and active elements. Effects must be subtle and deployment-safe (no heavy particle systems).",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-day-night-theme-toggle-that-changes-the-app-to-day-mode-light-background-soft-muted-green-accents-while-keeping-the-same-layout-and-navigation-ensure-theme-choice-persists-across-reloads",
+      "title": "Add a Day/Night theme toggle that changes the app to Day mode (light background, soft muted green accents) while keeping the same layout and navigation. Ensure theme choice persists across reloads.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-sidebar-drawer-navigation-matching-the-specified-menu-items-home-about-the-artist-bio-social-links-themes-day-night-toggle-settings-audio-quality-reduce-animations-star-effects-toggle-notifications-app-version-support-buy-me-a-coffee-link-custom-song-requests-contact-email-link-and-an-add-to-home-screen-entry",
+      "title": "Create a sidebar/drawer navigation matching the specified menu items: Home; About the Artist (bio + social links); Themes (Day/Night toggle); Settings (audio quality, reduce animations, star effects toggle, notifications, app version); Support (Buy Me a Coffee link); Custom Song Requests; Contact (Email link); and an Add to Home Screen entry.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-music-player-and-song-management-features-allow-manual-entry-and-display-of-songs-via-urls-with-per-track-title-artist-album-art-and-manually-entered-lyrics-render-songs-as-rounded-cards-with-subtle-shadows-111122-provide-player-controls-play-pause-skip-next-previous-seek-bar-with-minute-progress-indicator-and-smooth-responsive-animations-for-interactions-progress-active-ui-must-use-neon-green-1ed760",
+      "title": "Implement the Music Player and Song Management features: allow manual entry and display of songs via URLs, with per-track title, artist, album art, and manually entered lyrics. Render songs as rounded cards with subtle shadows (#111122). Provide player controls: Play/Pause, Skip (next/previous), seek bar with minute/progress indicator, and smooth responsive animations for interactions; progress/active UI must use neon green (#1ED760).",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-custom-song-requests-screen-section-with-the-exact-welcome-message-text-and-a-premium-simple-layout-under-the-message-include-two-items-links-support-buy-me-a-coffee-and-contact-via-email",
+      "title": "Implement the Custom Song Requests screen/section with the exact welcome message text and a premium, simple layout. Under the message, include two items/links: “☕ Support / Buy Me a Coffee” and “📧 Contact via Email”.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-restrict-social-links-throughout-the-app-to-only-youtube-instagram-and-buy-me-a-coffee-remove-omit-github-and-x-twitter-anywhere-in-the-ui",
+      "title": "Restrict social links throughout the app to only: YouTube, Instagram, and Buy Me a Coffee. Remove/omit GitHub and X (Twitter) anywhere in the UI.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-always-visible-on-visit-top-add-to-home-screen-a2hs-banner-with-the-exact-message-text-add-mvrio-night-to-your-home-screen-one-tap-for-full-offline-experience-and-two-buttons-add-and-close-the-banner-must-show-on-every-visit-not-once-only-clicking-add-triggers-the-browser-install-prompt-when-available",
+      "title": "Add an always-visible-on-visit top Add-to-Home-Screen (A2HS) banner with the exact message text: “🌌 Add MVRIO Night to your Home Screen — One tap for full offline experience” and two buttons: “🟢 Add” and “❌ Close”. The banner must show on every visit (not once-only). Clicking Add triggers the browser install prompt when available.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-the-app-pwa-ready-configure-manifest-app-name-mvrio-night-short-name-mvrio-installability-and-offline-ready-behavior-appropriate-for-a-music-pwa-at-minimum-app-shell-caching-and-offline-access-to-previously-loaded-ui",
+      "title": "Make the app PWA-ready: configure manifest, app name “MVRIO Night” (short name “MVRIO”), installability, and offline-ready behavior appropriate for a music PWA (at minimum: app shell caching and offline access to previously loaded UI).",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-use-the-uploaded-logo-file-ario-1-jpg-for-the-app-header-branding-and-splash-launch-visuals-where-applicable-in-the-pwa-e-g-app-icon-splash-presentation-within-the-web-constraints",
+      "title": "Use the uploaded logo file “ARIO (1).jpg” for the app header branding and splash/launch visuals where applicable in the PWA (e.g., app icon/splash presentation within the web constraints).",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-settings-screen-with-controls-for-audio-quality-reduce-animations-star-effects-toggle-notifications-and-display-of-app-version-these-settings-must-affect-the-ui-behavior-e-g-reduce-animations-disables-most-transitions-star-effects-toggle-disables-the-starfield-twinkle-audio-quality-changes-which-url-stream-selection-is-used-when-provided-notifications-toggle-only-controls-in-app-setting-state-unless-a-supported-web-notification-implementation-is-included-persist-settings-across-reloads",
+      "title": "Implement the Settings screen with controls for: audio quality, reduce animations, star effects toggle, notifications, and display of app version. These settings must affect the UI/behavior (e.g., reduce animations disables most transitions; star effects toggle disables the starfield/twinkle; audio quality changes which URL/stream selection is used when provided; notifications toggle only controls in-app setting state unless a supported web notification implementation is included). Persist settings across reloads.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-spotify-style-bottom-tab-bar-that-is-always-visible-on-mobile-and-provides-navigation-tabs-for-home-songs-library-and-search-the-active-tab-must-use-a-neon-green-background-1ed760-with-black-text-icons-000000-inactive-tab-text-icons-must-be-neon-green-1ed760-on-a-dark-background-tab-switching-must-be-smooth-and-responsive",
+      "title": "Implement a Spotify-style bottom tab bar that is always visible on mobile and provides navigation tabs for: Home, Songs, Library, and Search. The active tab must use a neon green background (#1ED760) with black text/icons (#000000). Inactive tab text/icons must be neon green (#1ED760) on a dark background. Tab switching must be smooth and responsive.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-app-s-screen-routing-state-so-that-the-new-bottom-tabs-map-to-distinct-screens-sections-home-songs-library-and-search-while-keeping-the-existing-sidebar-drawer-navigation-functional-for-the-existing-pages-about-the-artist-themes-settings-support-custom-song-requests-contact-and-for-the-add-to-home-screen-action",
+      "title": "Update the app’s screen routing/state so that the new bottom tabs map to distinct screens/sections: Home, Songs, Library, and Search, while keeping the existing sidebar/drawer navigation functional for the existing pages (About the Artist, Themes, Settings, Support, Custom Song Requests, Contact) and for the Add-to-Home-Screen action.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-extend-song-creation-editing-ui-to-support-multiple-upload-options-per-track-1-audio-file-upload-or-audio-url-2-cover-image-file-upload-or-cover-image-url-and-3-lyrics-as-a-manual-text-field-when-a-file-is-uploaded-convert-it-to-a-url-format-usable-by-the-player-and-album-art-display-deployment-safe-with-clear-validation-and-size-limits-to-avoid-exceeding-canister-message-constraints",
+      "title": "Extend song creation/editing UI to support multiple upload options per track: (1) audio file upload OR audio URL, (2) cover image file upload OR cover image URL, and (3) lyrics as a manual text field. When a file is uploaded, convert it to a URL format usable by the player and album art display (deployment-safe), with clear validation and size limits to avoid exceeding canister/message constraints.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-consistent-neon-contrast-rule-across-the-ui-whenever-a-button-surface-uses-neon-green-1ed760-as-its-background-or-the-theme-primary-background-its-text-and-icons-must-automatically-be-black-000000-inactive-dark-buttons-must-use-white-text-for-readability-implement-this-without-editing-immutable-shadcn-ui-source-files-compose-via-classnames-and-or-global-utility-classes",
+      "title": "Apply a consistent neon contrast rule across the UI: whenever a button/surface uses neon green (#1ED760) as its background (or the theme primary background), its text and icons must automatically be black (#000000). Inactive/dark buttons must use white text for readability. Implement this without editing immutable shadcn UI source files (compose via classNames and/or global utility classes).",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-add-to-home-screen-banner-styling-to-exactly-match-full-width-top-banner-left-to-right-edge-semi-transparent-dark-gradient-background-111122-000000-with-subtle-stars-keep-the-exact-banner-message-text-and-ensure-close-hides-the-banner-for-the-current-session-only-banner-must-reappear-on-a-new-visit-session",
+      "title": "Update the Add-to-Home-Screen banner styling to exactly match: full-width top banner (left-to-right edge), semi-transparent dark gradient background (#111122 → #000000) with subtle stars. Keep the exact banner message text and ensure Close hides the banner for the current session only (banner must reappear on a new visit/session).",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-requested-tab-bar-aware-layout-so-the-overall-interface-remains-clean-and-spotify-like-smooth-transitions-responsive-spacing-and-no-visual-collisions-between-sidebar-desktop-header-a2hs-banner-main-content-music-player-components-and-the-new-bottom-tab-bar",
+      "title": "Implement the requested tab-bar-aware layout so the overall interface remains clean and “Spotify-like”: smooth transitions, responsive spacing, and no visual collisions between sidebar (desktop), header, A2HS banner, main content, music player components, and the new bottom tab bar.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-mobile-bottomtabbar-night-mode-styling-so-that-in-night-mode-only-inactive-tab-icons-text-are-white-ffffff-active-tab-background-is-neon-green-1ed760-active-tab-icons-text-are-black-000000-and-tab-switching-keeps-smooth-transitions-day-mode-must-remain-unchanged",
+      "title": "Update the mobile BottomTabBar night-mode styling so that in Night mode only: inactive tab icons/text are white (#FFFFFF), active tab background is neon green (#1ED760), active tab icons/text are black (#000000), and tab switching keeps smooth transitions. Day mode must remain unchanged.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-all-interactive-sidebar-navigation-items-night-mode-styling-so-that-in-night-mode-only-the-active-item-uses-a-neon-green-1ed760-background-with-black-000000-text-icons-and-all-inactive-items-use-white-ffffff-text-icons-on-their-dark-background-apply-consistently-across-all-sidebar-items-including-the-add-to-home-screen-action-day-mode-must-remain-unchanged",
+      "title": "Update all interactive sidebar navigation items night-mode styling so that in Night mode only: the active item uses a neon green (#1ED760) background with black (#000000) text/icons, and all inactive items use white (#FFFFFF) text/icons on their dark background; apply consistently across all sidebar items including the Add to Home Screen action. Day mode must remain unchanged.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-new-dedicated-per-song-title-image-field-separate-from-the-existing-cover-album-art-field-end-to-end-persist-it-in-the-motoko-song-type-accept-it-in-song-creation-return-it-in-queries-and-include-it-in-the-generated-frontend-song-type-actor-bindings-so-the-app-can-store-and-read-both-albumarturl-and-titleimageurl-for-each-song",
+      "title": "Add a new dedicated per-song “title image” field (separate from the existing cover/album art field) end-to-end: persist it in the Motoko Song type, accept it in song creation, return it in queries, and include it in the generated frontend Song type/actor bindings so the app can store and read both albumArtUrl and titleImageUrl for each song.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-songeditor-add-song-ui-to-include-a-new-title-image-input-in-addition-to-the-existing-album-art-input-with-both-url-and-file-upload-options-file-converted-to-a-player-usable-url-format-consistent-with-the-current-implementation-keep-existing-validation-size-limits-deployment-safe-and-do-not-remove-current-fields",
+      "title": "Update the SongEditor (add-song UI) to include a new “Title Image” input in addition to the existing “Album Art” input, with both URL and file upload options (file converted to a player-usable URL format consistent with the current implementation). Keep existing validation/size limits deployment-safe and do not remove current fields.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-display-the-new-title-image-on-each-song-card-along-with-the-existing-cover-image-album-art-and-use-the-title-image-in-the-player-ui-as-well-if-a-title-image-is-missing-fall-back-gracefully-do-not-break-layout",
+      "title": "Display the new title image on each song card along with the existing cover image (album art), and use the title image in the player UI as well. If a title image is missing, fall back gracefully (do not break layout).",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-all-input-typing-text-renders-white-ffffff-in-night-mode-across-the-app-search-input-text-inputs-textareas-etc-while-day-mode-remains-unchanged-implement-this-without-editing-immutable-shadcn-ui-component-source-files-compose-via-classnames-and-or-global-css-utilities",
+      "title": "Ensure all input/typing text renders white (#FFFFFF) in Night mode across the app (search input, text inputs, textareas, etc.), while Day mode remains unchanged. Implement this without editing immutable shadcn UI component source files (compose via classNames and/or global CSS utilities).",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-mobile-bottomtabbar-night-mode-colors-exactly-match-inactive-tab-icon-label-text-is-white-ffffff-and-active-tab-uses-neon-green-background-1ed760-with-icon-label-text-black-000000-keep-the-same-layout-spacing-animations-and-do-not-change-day-mode-styling",
+      "title": "Ensure the mobile BottomTabBar night-mode colors exactly match: inactive tab icon + label text is white (#FFFFFF), and active tab uses neon green background (#1ED760) with icon + label text black (#000000). Keep the same layout/spacing/animations and do not change Day mode styling.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-all-sidebar-navigation-buttons-in-night-mode-exactly-match-active-item-uses-neon-green-background-1ed760-with-black-000000-text-icons-inactive-items-use-white-ffffff-text-icons-apply-this-consistently-to-all-sidebar-interactive-items-including-the-add-to-home-screen-action-keep-day-mode-unchanged",
+      "title": "Ensure all Sidebar navigation buttons in Night mode exactly match: active item uses neon green background (#1ED760) with black (#000000) text/icons; inactive items use white (#FFFFFF) text/icons. Apply this consistently to all sidebar interactive items, including the “Add to Home Screen” action. Keep Day mode unchanged.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-night-mode-typing-input-text-so-that-user-entered-text-in-all-form-controls-renders-white-ffffff-across-the-app-including-search-add-song-form-and-any-other-text-inputs-textareas-keep-day-mode-unchanged-and-do-not-edit-immutable-shadcn-ui-source-files",
+      "title": "Fix Night mode typing/input text so that user-entered text in all form controls renders white (#FFFFFF) across the app (including search, add-song form, and any other text inputs/textareas). Keep Day mode unchanged and do not edit immutable shadcn UI source files.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-bottomtabbar-bottom-navigation-color-rules-so-they-match-the-user-s-specification-in-both-themes-1-night-mode-inactive-tab-icon-label-color-is-white-ffffff-active-tab-background-is-neon-green-1ed760-with-active-tab-icon-label-color-black-000000-2-day-mode-inactive-tab-icon-label-color-is-black-000000-active-tab-background-is-neon-green-1ed760-with-active-tab-icon-label-color-black-000000-keep-existing-icon-assets-sizes-spacing-layout-and-tab-switching-behavior-animations-unchanged-only-update-colors",
+      "title": "Update the BottomTabBar (bottom navigation) color rules so they match the user’s specification in both themes: (1) Night mode: inactive tab icon+label color is white (#FFFFFF); active tab background is neon green (#1ED760) with active tab icon+label color black (#000000). (2) Day mode: inactive tab icon+label color is black (#000000); active tab background is neon green (#1ED760) with active tab icon+label color black (#000000). Keep existing icon assets, sizes, spacing, layout, and tab switching behavior/animations unchanged; only update colors.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-the-updated-bottom-navigation-color-rules-to-both-mobile-and-desktop-views-if-the-bottom-navigation-is-currently-mobile-only-extend-the-existing-bottom-navigation-to-also-render-on-desktop-without-introducing-visual-collisions-with-existing-desktop-layout-elements-e-g-footer-content-spacing-keep-all-other-features-layouts-and-functionality-unchanged",
+      "title": "Apply the updated bottom-navigation color rules to both mobile and desktop views. If the bottom navigation is currently mobile-only, extend the existing bottom navigation to also render on desktop without introducing visual collisions with existing desktop layout elements (e.g., footer/content spacing). Keep all other features, layouts, and functionality unchanged.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-override-the-existing-bottomtabbar-color-rules-on-mobile-so-that-in-night-mode-inactive-tab-icon-label-text-is-white-ffffff-active-tab-background-is-neon-green-1ed760-and-active-tab-icon-label-text-is-black-000000-ensure-all-icons-text-are-fully-visible-readable-preserve-smooth-tab-transitions-and-do-not-change-day-mode-styling-or-any-non-color-ui-behavior",
+      "title": "Override the existing BottomTabBar color rules on mobile so that in Night Mode: inactive tab icon + label text is white (#FFFFFF), active tab background is neon green (#1ED760), and active tab icon + label text is black (#000000). Ensure all icons/text are fully visible/readable, preserve smooth tab transitions, and do not change Day Mode styling or any non-color UI behavior.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-include-the-desktop-night-mode-bottom-bar-color-update-in-the-codebase-but-keep-it-inactive-until-explicit-user-approval-is-provided-i-e-do-not-apply-any-desktop-bottomtabbar-rendering-styling-changes-by-default",
+      "title": "Include the desktop Night Mode bottom-bar color update in the codebase but keep it inactive until explicit user approval is provided (i.e., do not apply any desktop BottomTabBar rendering/styling changes by default).",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-bottomtabbar-circled-bottom-navigation-area-in-the-provided-screenshot-so-that-in-night-mode-only-all-inactive-tab-icons-and-labels-render-in-pure-white-ffffff-while-the-active-tab-remains-neon-green-1ed760-with-black-000000-icon-label-text-keep-day-mode-styling-unchanged",
+      "title": "Update the BottomTabBar (circled bottom navigation area in the provided screenshot) so that in Night Mode only, all inactive tab icons and labels render in pure white (#FFFFFF), while the active tab remains neon green (#1ED760) with black (#000000) icon/label text. Keep Day Mode styling unchanged.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-enable-the-bottomtabbar-to-render-on-desktop-large-breakpoints-so-it-is-always-visible-exactly-like-on-mobile-keeping-the-same-layout-spacing-animations-and-simply-scaling-appropriately-for-desktop",
+      "title": "Enable the BottomTabBar to render on desktop (large breakpoints) so it is always visible exactly like on mobile, keeping the same layout/spacing/animations and simply scaling appropriately for desktop.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-adjust-the-desktop-layout-spacing-so-enabling-the-bottomtabbar-on-desktop-does-not-overlap-or-collide-with-main-content-and-any-desktop-only-elements-e-g-footer-ensure-the-main-scroll-area-has-sufficient-bottom-padding-when-the-bottomtabbar-is-visible-on-desktop",
+      "title": "Adjust the desktop layout spacing so enabling the BottomTabBar on desktop does not overlap or collide with main content and any desktop-only elements (e.g., footer). Ensure the main scroll area has sufficient bottom padding when the BottomTabBar is visible on desktop.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-bottomtabbar-home-songs-library-search-icon-color-rules-so-the-icons-always-match-the-tab-label-text-colors-per-state-in-night-mode-inactive-tab-icons-must-render-pure-white-ffffff-and-active-tab-icons-must-render-pure-black-000000-on-the-neon-green-1ed760-active-background-day-mode-must-remain-exactly-unchanged",
+      "title": "Update the BottomTabBar (Home/Songs/Library/Search) icon color rules so the icons always match the tab label text colors per state: in Night Mode, inactive tab icons must render pure white (#FFFFFF) and active tab icons must render pure black (#000000) on the neon green (#1ED760) active background; Day Mode must remain exactly unchanged.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-bottomtabbar-so-that-in-night-mode-dark-theme-the-inactive-tab-icons-render-in-pure-white-ffffff-on-both-mobile-and-desktop-the-tab-labels-are-already-correct-only-the-icon-color-must-be-corrected-keep-day-mode-styling-unchanged",
+      "title": "Fix the BottomTabBar so that in Night mode (dark theme) the **inactive tab icons** render in pure white (#FFFFFF) on both mobile and desktop. The tab labels are already correct; only the icon color must be corrected. Keep Day mode styling unchanged.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-bottomtabbar-active-state-icon-styling-remains-correct-in-both-themes-the-active-tab-keeps-the-neon-green-background-1ed760-and-the-active-icon-remains-pure-black-000000",
+      "title": "Ensure the BottomTabBar active-state icon styling remains correct: in both themes, the **active tab** keeps the neon green background (#1ED760) and the active icon remains pure black (#000000).",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-home-screen-layout-to-add-a-large-full-width-channel-style-banner-placed-below-the-existing-a2hs-banner-and-below-the-header-logo-do-not-replace-or-modify-the-header-the-banner-must-support-setting-the-image-via-either-an-uploaded-image-file-or-an-image-url",
+      "title": "Update the Home screen layout to add a large, full-width channel-style banner placed below the existing A2HS banner and below the header/logo (do not replace or modify the header). The banner must support setting the image via either an uploaded image file or an image URL.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-home-screen-add-a-new-songs-section-below-the-banner-that-displays-songs-as-responsive-horizontal-cards-in-a-horizontally-scrollable-row-fewer-cards-on-mobile-and-more-on-desktop-each-card-must-show-the-song-title-image-titleimage-and-song-title",
+      "title": "On the Home screen, add a “New Songs” section below the banner that displays songs as responsive horizontal cards in a horizontally scrollable row: fewer cards on mobile and more on desktop. Each card must show the song title image (titleImage) and song title.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-home-screen-add-a-top-songs-section-below-new-songs-that-uses-the-same-responsive-horizontal-card-row-pattern-title-image-title",
+      "title": "On the Home screen, add a “Top Songs” section below “New Songs” that uses the same responsive horizontal card row pattern (title image + title).",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-songs-screen-ui-to-add-a-top-label-filter-indicator-on-the-top-left-and-a-sort-dropdown-on-the-top-right-with-options-latest-most-liked-most-heard-the-rest-of-the-songs-screen-styling-must-follow-the-existing-mvrio-night-visual-style-and-spacing",
+      "title": "Update the Songs screen UI to add a “Top” label/filter indicator on the top-left and a sort dropdown on the top-right with options: “Latest”, “Most Liked”, “Most Heard”. The rest of the Songs screen styling must follow the existing MVRIO Night visual style and spacing.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-songs-screen-content-list-so-each-song-row-card-displays-title-image-song-name-and-a-play-control-while-keeping-existing-playback-behavior-intact",
+      "title": "Update the Songs screen content list so each song row/card displays: title image, song name, and a play control, while keeping existing playback behavior intact.",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-library-screen-to-include-two-top-tabs-displayed-side-by-side-songs-and-playlists-switching-tabs-must-update-the-displayed-content-accordingly-while-preserving-existing-mvrio-night-styling-and-spacing",
+      "title": "Update the Library screen to include two top tabs displayed side-by-side: “Songs” and “Playlists”. Switching tabs must update the displayed content accordingly while preserving existing MVRIO Night styling and spacing.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-song-data-flow-react-query-hooks-actor-bindings-usage-to-support-fetching-playcount-likecount-for-songs-toggling-like-and-incrementing-play-count-with-optimistic-ui-updates-for-likes-and-query-invalidation-refetch-to-keep-state-in-sync",
+      "title": "Update the frontend song data flow (React Query hooks + actor bindings usage) to support: fetching playCount/likeCount for songs, toggling like, and incrementing play count, with optimistic UI updates for likes and query invalidation/refetch to keep state in sync.",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-show-like-count-and-play-count-with-icons-everywhere-songs-are-visible-on-home-screen-song-cards-including-horizontal-cards-in-new-songs-and-top-songs-and-the-main-grid-cards-on-the-songs-screen-list-rows-and-in-the-player-view",
+      "title": "Show like count and play count with icons everywhere songs are visible: on Home screen song cards (including horizontal cards in “New Songs” and “Top Songs” and the main grid cards), on the Songs screen list rows, and in the player view.",
+      "reqIds": [
+        "REQ-46"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-like-button-heart-icon-everywhere-songs-are-visible-home-song-cards-rows-songs-list-and-player-that-toggles-per-user-like-unlike-and-updates-likecount-accordingly",
+      "title": "Add a Like button (heart icon) everywhere songs are visible (Home song cards/rows, Songs list, and player) that toggles per-user like/unlike and updates likeCount accordingly.",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-increment-play-count-automatically-when-a-song-is-played-from-the-ui-and-ensure-the-updated-playcount-is-reflected-across-home-songs-and-the-player",
+      "title": "Increment play count automatically when a song is played from the UI, and ensure the updated playCount is reflected across Home, Songs, and the player.",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-each-song-item-fully-clickable-song-cards-song-list-rows-and-library-songs-view-so-tapping-clicking-anywhere-on-the-item-starts-playback-open-the-song-in-the-existing-player-behavior-without-removing-the-existing-play-button",
+      "title": "Make each song item fully clickable (song cards, song list rows, and library songs view) so tapping/clicking anywhere on the item starts playback/open the song in the existing player behavior, without removing the existing play button.",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-three-dot-overflow-menu-button-on-the-right-side-of-every-song-item-in-all-relevant-ui-variants-song-cards-song-list-rows-and-library-songs-list-tapping-the-menu-button-must-not-trigger-playback",
+      "title": "Add a three-dot (⋮) overflow menu button on the right side of every song item in all relevant UI variants (song cards, song list rows, and library songs list). Tapping the menu button must not trigger playback.",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-the-menu-is-opened-show-a-bottom-sheet-mobile-or-a-popover-menu-desktop-with-the-following-actions-using-english-labels-exactly-add-to-playlist-create-new-playlist-add-to-favorites-download-share-and-optionally-view-song-details-hide-or-disable-download-when-the-song-does-not-have-a-usable-audio-url",
+      "title": "When the ⋮ menu is opened, show a bottom sheet (mobile) or a popover/menu (desktop) with the following actions, using English labels exactly: “Add to Playlist”, “Create New Playlist”, “Add to Favorites”, “Download”, “Share”, and optionally “View Song Details”. Hide or disable “Download” when the song does not have a usable audio URL.",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-download-from-the-menu-as-a-direct-browser-download-of-the-song-s-audio-file-url-with-no-backend-file-storage-the-downloaded-filename-should-be-a-reasonable-slug-based-on-the-song-title-when-possible",
+      "title": "Implement “Download” from the ⋮ menu as a direct browser download of the song’s audio file URL, with no backend file storage. The downloaded filename should be a reasonable slug based on the song title when possible.",
+      "reqIds": [
+        "REQ-52",
+        "REQ-66"
+      ],
+      "version": 2
+    },
+    {
+      "id": "feature-implement-share-from-the-menu-using-the-web-share-api-when-available-otherwise-fall-back-to-copying-the-deep-link-to-clipboard-and-showing-a-success-toast-the-shared-copied-url-must-deep-link-into-the-app-and-open-the-specific-song-in-the-player-view",
+      "title": "Implement “Share” from the ⋮ menu using the Web Share API when available, otherwise fall back to copying the deep link to clipboard and showing a success toast. The shared/copied URL must deep-link into the app and open the specific song in the player view.",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-deep-link-handling-when-the-app-loads-and-a-song-deep-link-parameter-is-present-in-the-url-query-string-or-hash-query-the-app-must-automatically-navigate-to-the-appropriate-screen-and-open-play-that-song-in-the-existing-player-then-preserve-normal-navigation-behavior",
+      "title": "Add deep-link handling: when the app loads and a song deep-link parameter is present in the URL (query string or hash query), the app must automatically navigate to the appropriate screen and open/play that song in the existing player, then preserve normal navigation behavior.",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-the-menu-add-to-favorites-action-to-the-backend-favorites-system-and-reflect-favorite-state-in-the-ui-at-minimum-show-a-toast-confirming-add-remove-optionally-show-a-checked-state-in-the-menu",
+      "title": "Wire the ⋮ menu “Add to Favorites” action to the backend favorites system, and reflect favorite state in the UI (at minimum: show a toast confirming add/remove; optionally show a checked state in the menu).",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-library-playlists-tab-ui-to-show-two-clearly-separated-sections-official-playlists-and-your-playlists-render-playlists-returned-from-the-backend-and-allow-creating-a-new-user-playlist-with-a-custom-name",
+      "title": "Update Library → Playlists tab UI to show two clearly separated sections: “Official Playlists” and “Your Playlists”. Render playlists returned from the backend, and allow creating a new user playlist with a custom name.",
+      "reqIds": [
+        "REQ-59"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-add-to-playlist-and-create-new-playlist-flows-from-the-song-menu-add-to-playlist-should-let-the-user-choose-an-existing-playlist-and-add-remove-the-song-create-new-playlist-should-prompt-for-a-name-and-then-add-the-current-song-to-the-newly-created-playlist",
+      "title": "Implement “Add to Playlist” and “Create New Playlist” flows from the song ⋮ menu: “Add to Playlist” should let the user choose an existing playlist and add/remove the song; “Create New Playlist” should prompt for a name and then add the current song to the newly created playlist.",
+      "reqIds": [
+        "REQ-60"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-simple-view-song-details-option-optional-in-the-menu-that-opens-a-lightweight-dialog-sheet-showing-at-least-title-artist-and-the-song-s-engagement-counts-likes-and-plays-it-must-not-change-existing-layouts-or-colors-beyond-what-is-necessary-for-the-dialog-sheet",
+      "title": "Add a simple “View Song Details” option (optional) in the ⋮ menu that opens a lightweight dialog/sheet showing at least: title, artist, and the song’s engagement counts (likes and plays). It must not change existing layouts or colors beyond what is necessary for the dialog/sheet.",
+      "reqIds": [
+        "REQ-61"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-three-dot-overflow-menu-button-on-the-right-side-of-every-song-item-in-all-relevant-ui-variants-song-cards-song-list-rows-and-the-library-songs-list-tapping-clicking-the-menu-button-must-not-trigger-playback",
+      "title": "Add a three-dot (⋮) overflow menu button on the right side of every song item in all relevant UI variants (song cards, song list rows, and the Library songs list). Tapping/clicking the menu button must not trigger playback.",
+      "reqIds": [
+        "REQ-63"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-the-menu-is-opened-show-a-bottom-sheet-on-mobile-and-a-popover-menu-on-desktop-with-the-following-actions-using-english-labels-exactly-add-to-playlist-create-new-playlist-add-to-favorites-download-share-and-optionally-view-song-details-hide-or-disable-download-when-the-song-does-not-have-a-usable-audio-url",
+      "title": "When the ⋮ menu is opened, show a bottom sheet on mobile and a popover/menu on desktop with the following actions using English labels exactly: “Add to Playlist”, “Create New Playlist”, “Add to Favorites”, “Download”, “Share”, and optionally “View Song Details”. Hide or disable “Download” when the song does not have a usable audio URL.",
+      "reqIds": [
+        "REQ-64"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-each-song-item-fully-clickable-so-tapping-clicking-anywhere-on-the-item-starts-playback-opens-the-song-in-the-existing-player-behavior-without-removing-the-existing-play-button-ensure-the-menu-button-and-any-other-secondary-actions-do-not-trigger-playback",
+      "title": "Make each song item fully clickable so tapping/clicking anywhere on the item starts playback/opens the song in the existing player behavior, without removing the existing play button. Ensure the ⋮ menu button and any other secondary actions do not trigger playback.",
+      "reqIds": [
+        "REQ-65"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-share-from-the-menu-using-the-web-share-api-when-available-otherwise-fall-back-to-copying-the-deep-link-to-clipboard-and-showing-a-success-toast-the-shared-copied-url-must-deep-link-into-the-app-and-open-the-specific-song-in-the-player-view-2",
+      "title": "Implement “Share” from the ⋮ menu using the Web Share API when available; otherwise fall back to copying the deep link to clipboard and showing a success toast. The shared/copied URL must deep-link into the app and open the specific song in the player view.",
+      "reqIds": [
+        "REQ-67"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-deep-link-handling-when-the-app-loads-and-a-song-deep-link-parameter-is-present-in-the-url-query-string-or-hash-query-the-app-must-automatically-navigate-to-the-appropriate-screen-if-needed-and-open-play-that-song-in-the-existing-player-then-preserve-normal-navigation-behavior",
+      "title": "Add deep-link handling: when the app loads and a song deep-link parameter is present in the URL (query string or hash query), the app must automatically navigate to the appropriate screen (if needed) and open/play that song in the existing player, then preserve normal navigation behavior.",
+      "reqIds": [
+        "REQ-68"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-the-menu-add-to-favorites-action-to-the-backend-favorites-system-and-reflect-favorite-state-in-the-ui-at-minimum-show-a-toast-confirming-add-remove-optionally-show-a-checked-selected-state-in-the-menu",
+      "title": "Wire the ⋮ menu “Add to Favorites” action to the backend favorites system and reflect favorite state in the UI (at minimum: show a toast confirming add/remove; optionally show a checked/selected state in the menu).",
+      "reqIds": [
+        "REQ-70"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-library-playlists-tab-ui-to-show-two-clearly-separated-sections-official-playlists-and-your-playlists-render-playlists-returned-from-the-backend-and-allow-creating-a-new-user-playlist-with-a-custom-name-2",
+      "title": "Update Library → Playlists tab UI to show two clearly separated sections: “Official Playlists” and “Your Playlists”. Render playlists returned from the backend and allow creating a new user playlist with a custom name.",
+      "reqIds": [
+        "REQ-73"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-add-to-playlist-and-create-new-playlist-flows-from-the-song-menu-add-to-playlist-lets-the-user-choose-an-existing-playlist-and-add-remove-the-song-create-new-playlist-prompts-for-a-name-and-then-adds-the-current-song-to-the-newly-created-playlist",
+      "title": "Implement “Add to Playlist” and “Create New Playlist” flows from the song ⋮ menu: “Add to Playlist” lets the user choose an existing playlist and add/remove the song; “Create New Playlist” prompts for a name and then adds the current song to the newly created playlist.",
+      "reqIds": [
+        "REQ-74"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-song-overflow-menu-download-action-so-that-clicking-it-opens-a-two-option-chooser-that-asks-whether-the-user-wants-to-1-keep-the-song-s-uploaded-audio-file-available-offline-inside-the-app-pwa-cache-or-2-download-the-audio-file-to-device-storage-via-normal-browser-download",
+      "title": "Update the song overflow menu “Download” action so that clicking it opens a two-option chooser that asks whether the user wants to (1) keep the song’s uploaded audio file available offline inside the app (PWA cache) or (2) download the audio file to device storage via normal browser download.",
+      "reqIds": [
+        "REQ-76"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-both-download-related-actions-use-only-the-song-s-uploaded-audio-file-the-same-source-used-for-playback-via-song-audiofile-getdirecturl-and-never-switch-to-any-other-external-audio-url-when-performing-offline-caching-or-device-download",
+      "title": "Ensure both download-related actions use only the song’s uploaded audio file (the same source used for playback via song.audioFile.getDirectURL()) and never switch to any other external audio URL when performing offline caching or device download.",
+      "reqIds": [
+        "REQ-77"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-keep-available-offline-in-the-app-option-by-explicitly-caching-the-song-s-uploaded-audio-url-in-the-pwa-cache-storage-so-it-can-be-played-while-offline-without-automatically-caching-all-audio-files",
+      "title": "Implement the “Keep available offline in the app” option by explicitly caching the song’s uploaded audio URL in the PWA Cache Storage so it can be played while offline, without automatically caching all audio files.",
+      "reqIds": [
+        "REQ-78"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-service-worker-fetch-behavior-so-that-cached-audio-files-can-be-served-while-offline-for-urls-that-were-explicitly-saved-for-offline-use-while-maintaining-the-existing-app-shell-caching-behavior",
+      "title": "Update the service worker fetch behavior so that cached audio files can be served while offline for URLs that were explicitly saved for offline use, while maintaining the existing app-shell caching behavior.",
+      "reqIds": [
+        "REQ-79"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-require-authentication-internet-identity-for-download-related-actions-if-the-user-is-not-signed-in-prompt-an-instant-sign-in-popup-and-only-proceed-with-the-selected-action-after-successful-sign-in",
+      "title": "Require authentication (Internet Identity) for download-related actions: if the user is not signed in, prompt an instant sign-in popup and only proceed with the selected action after successful sign-in.",
+      "reqIds": [
+        "REQ-80"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-like-button-so-it-works-and-behaves-as-a-true-toggle-tap-once-to-like-tap-again-to-unlike-updating-the-song-s-likecount-in-the-ui-accordingly-and-staying-in-sync-with-the-backend",
+      "title": "Fix the Like button so it works and behaves as a true toggle: tap once to like, tap again to unlike, updating the song’s likeCount in the UI accordingly and staying in sync with the backend.",
+      "reqIds": [
+        "REQ-81"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-home-channel-banner-image-with-the-user-uploaded-image-aesthetic-moments-from-my-week-1-jpeg-and-display-it-exactly-as-is-do-not-crop-and-do-not-stretch-preserve-the-full-image-within-the-banner-area",
+      "title": "Replace the Home channel banner image with the user-uploaded image “Aesthetic Moments from My Week (1).jpeg” and display it exactly as-is: do not crop and do not stretch (preserve the full image within the banner area).",
+      "reqIds": [
+        "REQ-82"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Implement MVRIO Night premium UI theme: night-sky gradient background with hundreds of stars + lightweight twinkle animation and neon green (#1ED760) highlights; day mode alternative",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Music player + song management: manual song URLs, per-track title/artist/album art/lyrics, song cards, playback controls (play/pause/skip/seek) with smooth responsive animations",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Sidebar/drawer navigation with items: Home, About the Artist (bio + social links), Themes toggle, Settings, Support (Buy Me a Coffee), Custom Song Requests, Contact (email), plus Add to Home Screen entry",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Custom Song Requests / Contact section content + layout including welcome message, Buy Me a Coffee link, and email contact link",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "PWA Add-to-Home-Screen: top banner shown on every visit with Add/Close actions; Add triggers browser install prompt; include offline-ready PWA setup",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Social/links configuration: include only YouTube, Instagram, and Buy Me a Coffee; remove GitHub and X (Twitter)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Branding assets: use uploaded logo “ARIO (1).jpg” for splash and header; app name ‘MVRIO Night’",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Settings screen: audio quality, reduce animations, star effects toggle, notifications, app version",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Responsive design: mobile + desktop optimized; lightweight performance-safe effects and smooth animations",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add Spotify-style bottom navigation/tab bar with tabs Home / Songs / Library / Search, neon active styling, smooth transitions, responsive layout",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Neon contrast rule: when a button/surface background is neon green (#1ED760), automatically set text/icon color to black (#000000); otherwise use white on dark surfaces for readability",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Custom song upload support: allow audio file upload and cover image upload as alternatives to URLs (plus manual lyrics field)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Essential Night-mode readability fixes: bottom tab inactive icons/text white (#FFF) in Night mode (Day unchanged); sidebar interactive items use active neon bg->black text and inactive->white text in Night mode; all input/typing text white (#FFF) in Night mode",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Song upload improvement: add separate dedicated per-song “title image” field (in addition to existing cover image) supporting file upload or URL; display title image on song cards alongside cover image and in player",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Update bottom navigation/tab bar colors for both Day and Night modes across mobile + desktop: Night inactive white (#FFF), active neon bg (#1ED760) with black text/icons; Day inactive black (#000), active neon bg (#1ED760) with black text/icons; keep icons/sizes and all other UI unchanged",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Staged bottom navigation Night Mode rollout: implement mobile Night Mode color override now; include desktop Night Mode bottom bar colors but keep them inactive until user approves mobile result; no layout/spacing/animation changes",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Activate BottomTabBar on desktop (always visible like mobile, same layout/spacing scaled for desktop) and ensure icon colors match bottom bar text color rules (Night: inactive white, active neon bg with black; Day unchanged)",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Update BottomTabBar icon coloring so icon colors always match the tab label text colors per state in Night mode: inactive icons must be pure white (#FFFFFF) and active icons must be pure black (#000000) on the neon green (#1ED760) active background. Do not change icon shapes/assets.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Home screen: add large full-width channel-style banner (supports image upload or image URL) placed below A2HS banner and below header/logo, without modifying existing header structure",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Home screen: add responsive horizontal card rows for ‘New Songs’ and ‘Top Songs’ showing song title image + song title (fewer cards on mobile, more on desktop) using existing card style",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Songs section UI: add ‘Top’ label/filter on top-left and a sort dropdown on top-right (Latest, Most Liked, Most Heard); keep existing visual style/spacing; show songs with title image, name, and play control",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Library section UI: add top tabs ‘Songs’ and ‘Playlists’ side-by-side; switching tabs updates content; keep existing MVRIO Night visual style/spacing",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Add persistent likes + play counts for songs (backend-stored): show like/play counts with icons everywhere songs are visible (Home cards/rows, Songs list, player). Plays auto-increment when a song is played; Likes are per-user toggle (like increments, unlike decrements) with instant UI updates and backend sync.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Extend the backend song data model to persist play counts and like state, supporting a per-user like toggle and a global play counter per song.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Add backend canister methods to (a) toggle like for the caller for a given song and (b) increment play count for a given song, and ensure song list/get/search queries return the up-to-date likeCount and playCount fields for each song.",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Advanced song interactions: make each song item fully clickable to open/play; add a three-dot (⋮) menu on every song item (cards/lists/library) that opens a bottom sheet/popup with actions (Add to Playlist, Create New Playlist, Add to Favorites, Download if available, Share, optional View Details)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-28",
+      "summary": "Playlist system (backend-persisted): users can create named playlists, add/remove songs; show user playlists under Library → Playlists tab; artist/admin can create official playlists visible to all users",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Library → Playlists UI: display official playlists in a separate “Official Playlists” section, clearly separated from user-created playlists",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-30",
+      "summary": "Favorites + persistence: allow users to favorite songs; store favorites in backend and persist across sessions; integrate with song item ⋮ menu",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-31",
+      "summary": "Download behavior: implement “Download” as direct browser download of the song’s audio file URL (no separate backend storage for downloadable files)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-32",
+      "summary": "Share + deep links: implement Share via system share sheet / copy link, where shared links deep-link into the app directly to the specific song’s player view",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-39",
+      "summary": "Implement backend-persisted Favorites: allow a signed-in user to favorite/unfavorite a song and retrieve their favorites across sessions. Favorites must be stored per user (caller Principal) in the Motoko canister.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-41",
+      "summary": "Implement backend playlist system: allow signed-in users to create playlists with custom names, add/remove songs in their playlists, list their playlists, and fetch playlist contents. Data must persist in the Motoko canister across sessions.",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-42",
+      "summary": "Implement official playlists in the backend that can be created/managed only by the artist/admin and are readable by all users. Official playlists must be separate from user playlists in the data model and APIs.",
+      "reqIds": [
+        "REQ-58"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-46",
+      "summary": "Add required backend state migration support (conditional) so that upgrading an existing canister preserves existing songs and initializes new favorites/playlist state without data loss.",
+      "reqIds": [
+        "REQ-62"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-53",
+      "summary": "Implement a backend-persisted Favorites system: allow a signed-in user to favorite/unfavorite a song, store favorites per user (caller Principal) in the Motoko canister, and retrieve a user’s favorites across sessions.",
+      "reqIds": [
+        "REQ-69"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-55",
+      "summary": "Implement a backend-persisted playlist system: allow signed-in users to create playlists with custom names, add/remove songs in their playlists, list their playlists, and fetch playlist contents. Data must persist in the Motoko canister across sessions.",
+      "reqIds": [
+        "REQ-71"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-56",
+      "summary": "Implement official playlists in the backend that can be created/managed only by the artist/admin and are readable by all users. Official playlists must be separate from user playlists in the data model and APIs.",
+      "reqIds": [
+        "REQ-72"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-59",
+      "summary": "Add required backend state migration support (conditional) so that upgrading an existing canister preserves existing songs and initializes new favorites/playlist state without data loss.",
+      "reqIds": [
+        "REQ-75"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-60",
+      "summary": "Update song Download flow: clicking Download prompts user to either (a) keep the song’s uploaded audio file available offline inside the PWA (cached for offline playback) or (b) download the audio file to device storage via normal browser download; when caching offline, use the uploaded audio file as the source",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-61",
+      "summary": "Require authentication for downloading: only signed-in users can download audio to device storage; if not signed in, show an instant pop-up sign-in prompt and proceed after successful sign-in",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-62",
+      "summary": "Fix Like button so it works and toggles correctly (tap once to like, tap again to unlike), updating UI and likeCount accordingly",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-63",
+      "summary": "Set the provided image as the Home channel-style banner image and ensure it displays exactly as-is (no cropping and no stretching)",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "MVRIO Night",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

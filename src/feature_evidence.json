@@ -1,0 +1,48 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-fix-the-like-button-so-it-works-and-behaves-as-a-true-toggle-tap-once-to-like-tap-again-to-unlike-updating-the-song-s-likecount-in-the-ui-accordingly-and-staying-in-sync-with-the-backend",
+      "featureTitle": "Fix the Like button so it works and behaves as a true toggle: tap once to like, tap again to unlike, updating the song’s likeCount in the UI accordingly and staying in sync with the backend.",
+      "files": [
+        "frontend/src/components/songs/SongEngagementBar.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/hooks/useSongEngagement.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-81"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-replace-the-home-channel-banner-image-with-the-user-uploaded-image-aesthetic-moments-from-my-week-1-jpeg-and-display-it-exactly-as-is-do-not-crop-and-do-not-stretch-preserve-the-full-image-within-the-banner-area",
+      "featureTitle": "Replace the Home channel banner image with the user-uploaded image “Aesthetic Moments from My Week (1).jpeg” and display it exactly as-is: do not crop and do not stretch (preserve the full image within the banner area).",
+      "files": [
+        "frontend/src/components/home/HomeChannelBanner.tsx",
+        "frontend/src/hooks/useHomeBanner.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-82"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

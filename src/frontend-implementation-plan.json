@@ -1,0 +1,61 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix Like toggle behavior and set Home banner to provided image without crop/stretch",
+  "requirements": [
+    {
+      "id": "REQ-81",
+      "summary": "Make the heart Like button a true toggle that calls the backend correctly, updates likeCount in UI after mutation settles, prevents parent click/playback, and respects unauthenticated behavior.",
+      "acceptanceCriteria": [
+        "Clicking/tapping the heart Like button calls the existing backend toggleLikeSong(songId) mutation successfully (no parameter-shape mismatch).",
+        "A second click/tap on the same Like button unlikes the song (backend toggles back) and the displayed likeCount updates accordingly after mutation settle/refetch.",
+        "The Like interaction does not trigger song playback or other parent click handlers.",
+        "If the user is not authenticated, the app shows the existing login-required messaging behavior and does not optimistically flip the Like state."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Fix the toggle-like mutation to call the backend with the correct parameter shape (bigint songId only), remove incorrect optimistic +1 behavior, and update the React Query cache with the returned new likesCount (then invalidate/refetch songs to stay in sync)."
+        },
+        {
+          "path": "frontend/src/hooks/useSongEngagement.ts",
+          "operation": "modify",
+          "description": "Update like handling to call the corrected toggle-like mutation with only songId, preserve existing login-required messaging when unauthenticated, and only update any local 'liked' UI state after a successful mutation (no unauth optimistic flip)."
+        },
+        {
+          "path": "frontend/src/components/songs/SongEngagementBar.tsx",
+          "operation": "modify",
+          "description": "Replace per-render local isLiked state with engagement state sourced from the hook (or derived local store) so the heart acts as a toggle across re-renders; ensure the Like button fully stops propagation (and optionally pointer/mousedown) so it never triggers parent onClick/playback; keep likesCount displayed from song.likesCount updated via query refresh."
+        }
+      ]
+    },
+    {
+      "id": "REQ-82",
+      "summary": "Replace the Home channel banner with the provided uploaded image, served as a static asset and rendered with preserved aspect ratio (no crop/no stretch) while keeping existing header/A2HS placement.",
+      "acceptanceCriteria": [
+        "The Home banner renders the uploaded image by default (without requiring the user to paste a URL or re-upload).",
+        "The banner image is rendered with preserved aspect ratio and without cropping (e.g., no object-cover behavior); no dimension causes visible stretching.",
+        "The banner container/background styling still fits the existing MVRIO Night layout and does not overlap the A2HS banner, header, or content.",
+        "The banner image is served as a static frontend asset (not stored in or fetched from the backend)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg",
+          "operation": "create",
+          "description": "Add the generated static banner image asset (Studio-room photo with a seated person in front of a desk setup) at the exact path required so the Home banner can render it by default."
+        },
+        {
+          "path": "frontend/src/hooks/useHomeBanner.ts",
+          "operation": "modify",
+          "description": "Set the default banner to the static asset frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg when no user-selected banner is stored; keep persistence behavior for user overrides without involving backend storage."
+        },
+        {
+          "path": "frontend/src/components/home/HomeChannelBanner.tsx",
+          "operation": "modify",
+          "description": "Render the default banner image using non-cropping, non-stretching styling (e.g., object-contain and centered with a suitable background), while keeping the existing Home placement/spacing and avoiding overlap with A2HS banner/header; do not introduce performance-heavy image processing."
+        }
+      ]
+    }
+  ]
+}
