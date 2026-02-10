@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 37,
+  "projectStateVersion": 39,
   "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system: guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. Support Google OAuth and passwordless Email Magic Link (Magic.link SDK loginWithMagicLink using import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY). After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
@@ -655,6 +655,22 @@
         "REQ-91"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-home-channel-banner-component-so-the-banner-area-is-larger-both-wider-and-taller-while-keeping-the-banner-image-fully-visible-at-all-times-no-stretching-and-no-cropping",
+      "title": "Update the Home channel banner component so the banner area is larger (both wider and taller) while keeping the banner image fully visible at all times (no stretching and no cropping).",
+      "reqIds": [
+        "REQ-92"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-overlay-the-artist-name-text-the-mvrio-on-top-of-the-home-channel-banner-inside-the-right-side-region-the-green-outlined-area-in-the-uploaded-screenshots-styled-using-the-app-s-neon-green-theme-color-1ed760",
+      "title": "Overlay the artist name text “THE MVRIO” on top of the Home channel banner inside the right-side region (the green-outlined area in the uploaded screenshots), styled using the app’s neon green theme color (#1ED760).",
+      "reqIds": [
+        "REQ-93"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -947,6 +963,12 @@
     {
       "id": "AR-65",
       "summary": "Implement full authentication system: Guest read-only access; restricted actions (Like/Create Playlist/Add to Playlist/Download) trigger soft sign-in modal; support Google OAuth + Email Magic Link (Magic.link loginWithMagicLink); global AuthContext state (userAuthState/pendingAction/loginReturnPath); post-login return to exact screen+scroll with automatic pending-action retry; keep existing UI and behaviors unchanged",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-66",
+      "summary": "Home channel banner update: enlarge banner image area (wider + taller) while keeping the original image fully visible (no stretching, no cropping) and overlay artist name “THE MVRIO” in neon green inside the right-side (green-outlined) area on top of the banner",
       "reqIds": [],
       "status": "pending"
     }

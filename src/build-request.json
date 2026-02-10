@@ -1,154 +1,59 @@
 {
   "kind": "build_request",
-  "title": "Add global AuthContext with soft sign-in modal and pending-action retry (guest vs signed-in)",
+  "title": "Enlarge Home banner area and overlay artist name “THE MVRIO” in neon green",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-86",
-      "text": "Create a new global authentication context at `frontend/src/context/AuthContext.tsx` that models the app’s approved auth behavior using the existing Internet Identity identity as the source of truth for signed-in state: expose `userAuthState` (`\"guest\" | \"signedIn\"`), `pendingAction`, and `loginReturnPath` (screen/params + scroll position), plus helper methods to (a) open/close the soft sign-in modal, (b) record a pending restricted action without navigating away, and (c) complete sign-in and then restore the prior screen + scroll position and automatically retry any pending action.",
+      "id": "REQ-92",
+      "text": "Update the Home channel banner component so the banner area is larger (both wider and taller) while keeping the banner image fully visible at all times (no stretching and no cropping).",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Implement the following:\n\nMagic Link login (passwordless email login).\n\nGoogle OAuth login.\n\nGuest mode (read-only access: stream, view lyrics, browse).\n\nSoft sign-in modal that opens when a guest taps a restricted action (Like, Create Playlist, Add to Playlist, Download).\n\nPending-action retry: after login, the previously blocked action is automatically executed.\n\nGlobal auth context (AuthContext) with state: userAuthState (guest | signedIn), pendingAction, and loginReturnPath.\n\nAfter login (Magic Link or Google), return exactly to the previous screen + scroll position."
+          "1, both - don't strach or crop the image keep the original image  and make it larger in wide and tall"
         ]
       },
       "acceptanceCriteria": [
-        "`frontend/src/context/AuthContext.tsx` exists and exports an `AuthProvider` and a `useAuth()` hook (or equivalent) that can be consumed by any component.",
-        "`userAuthState` is derived from the current authenticated identity (signed in when the identity is present and non-anonymous; otherwise guest).",
-        "Calling the context method used by restricted features stores a `pendingAction` object describing the requested action and captures a `loginReturnPath` including current screen and `scrollY`, without changing the current screen.",
-        "After sign-in completes successfully, the app restores the captured screen (if applicable) and scroll position and then retries the recorded `pendingAction` exactly once, then clears it.",
-        "If sign-in fails or is cancelled, the user remains on the current screen and `pendingAction` is preserved or cleared in a predictable way (documented in code comments)."
+        "Home screen channel banner renders with a noticeably larger visual area than before on both mobile and desktop (increase height and maintain full-width layout).",
+        "The banner image is never cropped and never stretched: it must remain fully visible within the banner area (e.g., object-contain behavior preserved).",
+        "No layout collisions are introduced with the A2HS banner, header, or the content below the banner (content remains readable and spaced correctly)."
       ]
     },
     {
-      "id": "REQ-87",
-      "text": "Add a soft sign-in modal component at `frontend/src/components/SignInModal.tsx` that matches the approved UX constraints: it must open on top of the current screen (no navigation), show a clear sign-in prompt, and provide exactly the two primary actions for authentication and a cancel action. The modal must integrate with the new AuthContext so that restricted actions can trigger it, and it must support showing a “check your email” / “sign-in in progress” / “link expired or failed” message state when using the email flow.",
+      "id": "REQ-93",
+      "text": "Overlay the artist name text “THE MVRIO” on top of the Home channel banner inside the right-side region (the green-outlined area in the uploaded screenshots), styled using the app’s neon green theme color (#1ED760).",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Soft sign-in modal that opens when a guest taps a restricted action (Like, Create Playlist, Add to Playlist, Download).",
-          "Soft modal does not navigate away from the current screen.",
-          "Display appropriate messages for Magic Link (Check your email, expired link, etc.)."
+          "2. in the green outline are",
+          "3.neon green theme"
         ]
       },
       "acceptanceCriteria": [
-        "`frontend/src/components/SignInModal.tsx` exists and can be rendered globally (once) while being controlled by AuthContext state.",
-        "The modal blocks interaction with underlying UI until dismissed, but does not change the current screen or reset existing UI state.",
-        "The modal exposes buttons labeled in English and wired into AuthContext sign-in actions, plus a Cancel button that closes the modal and keeps the user in place.",
-        "The modal supports a dedicated status view/state for email sign-in (e.g., “Check your email for a secure sign-in link.”) and for common failure modes (expired/invalid link, network error)."
-      ]
-    },
-    {
-      "id": "REQ-88",
-      "text": "Add a pending-action helper hook at `frontend/src/hooks/usePendingAction.ts` that standardizes how restricted UI elements register actions for retry and how the retry is executed after authentication. The hook must support the app’s restricted actions set: Like/Unlike, Create Playlist, Add to Playlist, Download (offline cache and device download).",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Generate full drop-in React + TypeScript + Tailwind code for:\n\nsrc/hooks/usePendingAction.ts\n\nPending-action retry: after login, the previously blocked action is automatically executed."
-        ]
-      },
-      "acceptanceCriteria": [
-        "`frontend/src/hooks/usePendingAction.ts` exists and provides typed helpers to set/clear/execute a `pendingAction` compatible with the AuthContext.",
-        "Pending actions include enough payload to retry (e.g., songId, playlistName/playlistId where relevant, and which download option was selected).",
-        "Retry execution uses the same existing mutation/utilities currently used by the UI so behavior remains unchanged aside from the authentication gating.",
-        "Retry runs at most once per successful sign-in and does not re-open the sign-in modal."
-      ]
-    },
-    {
-      "id": "REQ-89",
-      "text": "Integrate AuthContext + SignInModal into the existing app shell without editing immutable files: wrap the existing app tree in `frontend/src/App.tsx` (or another non-immutable file) with the new `AuthProvider`, and render the `SignInModal` at a global level so any screen/component can trigger it. Preserve the existing first-launch-only welcome popup behavior and copy, and do not change existing navigation, BottomTabBar, Sidebar, A2HS banner, or theming behavior.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "First-launch welcome popup: still appears only once for new users.",
-          "All existing app UI and behavior (MVRIO Night theme, bottom bar, song upload, playlists, lyrics, day/night mode, etc.) remain unchanged."
-        ]
-      },
-      "acceptanceCriteria": [
-        "The first-launch welcome popup (`frontend/src/components/onboarding/FirstLaunchWelcomePopup.tsx`) continues to show only once based on the existing `firstLaunchShown` localStorage flag and retains its current two-button behavior.",
-        "AuthProvider and SignInModal are integrated without modifying `frontend/src/main.tsx` (immutable) and without breaking existing providers (React Query + Internet Identity provider).",
-        "Existing screen routing and deep-link handling in `frontend/src/App.tsx` continues to work unchanged."
-      ]
-    },
-    {
-      "id": "REQ-90",
-      "text": "Update all restricted-action entry points to use the new AuthContext soft sign-in modal and pending-action retry flow rather than showing only toasts or ad-hoc login calls. At minimum, ensure the following areas are consistent: (1) Like actions (via `frontend/src/hooks/useSongEngagement.ts` and any Like buttons), (2) Playlist creation/add-to-playlist flows (e.g., `CreatePlaylistDialog`, `PlaylistChooserDialog`, `LibraryPlaylistsPanel`), and (3) Download chooser actions in `SongOverflowMenu`. Secondary controls (⋮ menu button, play buttons, etc.) must continue to stop propagation and must not unintentionally trigger playback.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Soft sign-in modal that opens when a guest taps a restricted action (Like, Create Playlist, Add to Playlist, Download).",
-          "Pending-action retry: after login, the previously blocked action is automatically executed.",
-          "Soft modal does not navigate away from the current screen."
-        ]
-      },
-      "acceptanceCriteria": [
-        "As a guest, attempting to like a song opens the soft sign-in modal (no navigation) and records a pending action; after successful sign-in, the like action is retried automatically and the UI updates accordingly.",
-        "As a guest, attempting to create a playlist or add to playlist opens the same soft sign-in modal, records the appropriate pending action, and automatically resumes the intended flow after sign-in.",
-        "As a guest, attempting either download option (offline cache or device download) opens the soft sign-in modal and, after sign-in, resumes and executes the selected download option automatically.",
-        "Existing behavior for authenticated users remains unchanged aside from going through the shared context logic (i.e., actions still work and use the same backend calls/utilities)."
-      ]
-    },
-    {
-      "id": "REQ-91",
-      "text": "Keep backend permission checks unchanged and ensure frontend error handling continues to respect them: backend methods already trap on unauthorized access for user-only operations (like/playlist/favorites). The frontend must treat authorization failures as a sign-in requirement and route the user into the soft sign-in flow (without breaking guest read-only actions like browsing, searching, streaming URLs, and play-count incrementing).",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Backend checks:\n\nAnonymous users: only allow read-only actions (getSongs, getLyrics, streaming URLs).\n\nSigned-in users: allow likeSong, unlikeSong, createPlaylist, addToPlaylist, download.",
-          "Backend permission checks remain unchanged."
-        ]
-      },
-      "acceptanceCriteria": [
-        "No changes are required to existing backend access-control logic in `backend/main.mo` for this build.",
-        "Guest users can continue to browse songs, play songs, and view lyrics without being blocked by auth UI.",
-        "If a restricted backend call fails due to authorization (e.g., traps with an Unauthorized message), the frontend triggers the soft sign-in modal and preserves/resumes the user’s pending action after sign-in.",
-        "No existing non-auth functionality (theme, navigation, star effects, PWA behavior, player) regresses."
+        "The text “THE MVRIO” is visible on top of the banner image, positioned on the right side within the banner area (right-side box placement).",
+        "The text color uses neon green (#1ED760) and remains readable on both themes/backgrounds.",
+        "The overlay does not block or overlap the existing banner edit controls (upload/link/clear); controls remain clickable and visually accessible.",
+        "The overlay is responsive: it stays within the banner area across common mobile and desktop widths without overflowing or being cut off."
       ]
     }
   ],
   "constraints": [
-    "Do not edit immutable frontend paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and anything under `frontend/src/components/ui`.",
-    "Backend must remain a single Motoko actor with all logic in `backend/main.mo`; only add `backend/migration.mo` if a state upgrade is required (this auth work should not require migration).",
-    "All user-facing text must be in English.",
-    "Preserve existing first-launch-only welcome popup behavior and the `firstLaunchShown` localStorage flag logic.",
-    "Preserve existing MVRIO Night theme, layout, and navigation behavior; no redesigns beyond adding the soft sign-in modal and wiring auth gating consistently."
+    "Frontend immutable paths must not be modified: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Keep the existing Home header (AppHeader) unchanged; only adjust the Home banner component/layout as needed.",
+    "Do not introduce image cropping or stretching under any responsive breakpoint."
   ],
   "nonGoals": [
-    "Implementing third-party authentication providers (Magic.link SDK or Google OAuth) that produce an Internet Computer Principal equivalent to Internet Identity (this requires an IC-native delegation/identity integration not present in the current codebase).",
-    "Changing backend authorization rules or adding new backend auth APIs beyond current permission checks.",
-    "Adding new screens or changing the BottomTabBar/Sidebar structure.",
-    "Implementing email delivery infrastructure for magic links (handled by external provider; not part of the IC canister)."
+    "Do not change the banner image selection/storage behavior (upload/URL/localStorage) beyond what is required for sizing and overlay text.",
+    "Do not change global theming rules, BottomTabBar behavior, sidebar behavior, or the A2HS banner behavior.",
+    "Do not add new backend APIs or modify Motoko state for this change."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

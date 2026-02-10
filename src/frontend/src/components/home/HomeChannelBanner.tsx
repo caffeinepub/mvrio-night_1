@@ -45,15 +45,33 @@ export function HomeChannelBanner() {
 
   return (
     <div className="w-full mb-8">
-      <div className="relative w-full bg-card/30 rounded-lg overflow-hidden" style={{ aspectRatio: '6/1' }}>
+      <div className="relative w-full bg-card/30 rounded-lg overflow-hidden min-h-[280px] md:min-h-[360px]">
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-background/80 to-card/50">
           <img
             src={displayImage}
             alt="Channel Banner"
-            className="max-w-full max-h-full object-contain"
+            className="w-full h-full object-contain"
           />
         </div>
-        <div className="absolute top-2 right-2 flex gap-2">
+        
+        {/* Artist Name Overlay */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-end pr-4 md:pr-8">
+          <div className="text-right max-w-[200px] md:max-w-[300px]">
+            <h2 
+              className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight"
+              style={{ 
+                color: '#1ED760',
+                textShadow: '0 0 20px rgba(30, 215, 96, 0.5), 0 0 40px rgba(30, 215, 96, 0.3)',
+                WebkitTextStroke: '1px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              THE MVRIO
+            </h2>
+          </div>
+        </div>
+
+        {/* Controls - raised z-index to stay above overlay */}
+        <div className="absolute top-2 right-2 flex gap-2 z-10 pointer-events-auto">
           {hasCustomBanner && (
             <Button
               size="icon"

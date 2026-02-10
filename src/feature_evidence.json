@@ -2,11 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-create-a-new-global-authentication-context-at-frontend-src-context-authcontext-tsx-that-models-the-app-s-approved-auth-behavior-using-the-existing-internet-identity-identity-as-the-source-of-truth-for-signed-in-state-expose-userauthstate-guest-signedin-pendingaction-and-loginreturnpath-screen-params-scroll-position-plus-helper-methods-to-a-open-close-the-soft-sign-in-modal-b-record-a-pending-restricted-action-without-navigating-away-and-c-complete-sign-in-and-then-restore-the-prior-screen-scroll-position-and-automatically-retry-any-pending-action",
-      "featureTitle": "Create a new global authentication context at `frontend/src/context/AuthContext.tsx` that models the app’s approved auth behavior using the existing Internet Identity identity as the source of truth for signed-in state: expose `userAuthState` (`\"guest\" | \"signedIn\"`), `pendingAction`, and `loginReturnPath` (screen/params + scroll position), plus helper methods to (a) open/close the soft sign-in modal, (b) record a pending restricted action without navigating away, and (c) complete sign-in and then restore the prior screen + scroll position and automatically retry any pending action.",
+      "featureId": "feature-update-the-home-channel-banner-component-so-the-banner-area-is-larger-both-wider-and-taller-while-keeping-the-banner-image-fully-visible-at-all-times-no-stretching-and-no-cropping",
+      "featureTitle": "Update the Home channel banner component so the banner area is larger (both wider and taller) while keeping the banner image fully visible at all times (no stretching and no cropping).",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/context/AuthContext.tsx"
+        "frontend/src/components/home/HomeChannelBanner.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -18,16 +17,15 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-86"
+        "REQ-92"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-a-soft-sign-in-modal-component-at-frontend-src-components-signinmodal-tsx-that-matches-the-approved-ux-constraints-it-must-open-on-top-of-the-current-screen-no-navigation-show-a-clear-sign-in-prompt-and-provide-exactly-the-two-primary-actions-for-authentication-and-a-cancel-action-the-modal-must-integrate-with-the-new-authcontext-so-that-restricted-actions-can-trigger-it-and-it-must-support-showing-a-check-your-email-sign-in-in-progress-link-expired-or-failed-message-state-when-using-the-email-flow",
-      "featureTitle": "Add a soft sign-in modal component at `frontend/src/components/SignInModal.tsx` that matches the approved UX constraints: it must open on top of the current screen (no navigation), show a clear sign-in prompt, and provide exactly the two primary actions for authentication and a cancel action. The modal must integrate with the new AuthContext so that restricted actions can trigger it, and it must support showing a “check your email” / “sign-in in progress” / “link expired or failed” message state when using the email flow.",
+      "featureId": "feature-overlay-the-artist-name-text-the-mvrio-on-top-of-the-home-channel-banner-inside-the-right-side-region-the-green-outlined-area-in-the-uploaded-screenshots-styled-using-the-app-s-neon-green-theme-color-1ed760",
+      "featureTitle": "Overlay the artist name text “THE MVRIO” on top of the Home channel banner inside the right-side region (the green-outlined area in the uploaded screenshots), styled using the app’s neon green theme color (#1ED760).",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/SignInModal.tsx"
+        "frontend/src/components/home/HomeChannelBanner.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -39,95 +37,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-87"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-a-pending-action-helper-hook-at-frontend-src-hooks-usependingaction-ts-that-standardizes-how-restricted-ui-elements-register-actions-for-retry-and-how-the-retry-is-executed-after-authentication-the-hook-must-support-the-app-s-restricted-actions-set-like-unlike-create-playlist-add-to-playlist-download-offline-cache-and-device-download",
-      "featureTitle": "Add a pending-action helper hook at `frontend/src/hooks/usePendingAction.ts` that standardizes how restricted UI elements register actions for retry and how the retry is executed after authentication. The hook must support the app’s restricted actions set: Like/Unlike, Create Playlist, Add to Playlist, Download (offline cache and device download).",
-      "files": [
-        "frontend/src/context/AuthContext.tsx",
-        "frontend/src/hooks/usePendingAction.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-88"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-integrate-authcontext-signinmodal-into-the-existing-app-shell-without-editing-immutable-files-wrap-the-existing-app-tree-in-frontend-src-app-tsx-or-another-non-immutable-file-with-the-new-authprovider-and-render-the-signinmodal-at-a-global-level-so-any-screen-component-can-trigger-it-preserve-the-existing-first-launch-only-welcome-popup-behavior-and-copy-and-do-not-change-existing-navigation-bottomtabbar-sidebar-a2hs-banner-or-theming-behavior",
-      "featureTitle": "Integrate AuthContext + SignInModal into the existing app shell without editing immutable files: wrap the existing app tree in `frontend/src/App.tsx` (or another non-immutable file) with the new `AuthProvider`, and render the `SignInModal` at a global level so any screen/component can trigger it. Preserve the existing first-launch-only welcome popup behavior and copy, and do not change existing navigation, BottomTabBar, Sidebar, A2HS banner, or theming behavior.",
-      "files": [
-        "frontend/src/App.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-89"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-all-restricted-action-entry-points-to-use-the-new-authcontext-soft-sign-in-modal-and-pending-action-retry-flow-rather-than-showing-only-toasts-or-ad-hoc-login-calls-at-minimum-ensure-the-following-areas-are-consistent-1-like-actions-via-frontend-src-hooks-usesongengagement-ts-and-any-like-buttons-2-playlist-creation-add-to-playlist-flows-e-g-createplaylistdialog-playlistchooserdialog-libraryplaylistspanel-and-3-download-chooser-actions-in-songoverflowmenu-secondary-controls-menu-button-play-buttons-etc-must-continue-to-stop-propagation-and-must-not-unintentionally-trigger-playback",
-      "featureTitle": "Update all restricted-action entry points to use the new AuthContext soft sign-in modal and pending-action retry flow rather than showing only toasts or ad-hoc login calls. At minimum, ensure the following areas are consistent: (1) Like actions (via `frontend/src/hooks/useSongEngagement.ts` and any Like buttons), (2) Playlist creation/add-to-playlist flows (e.g., `CreatePlaylistDialog`, `PlaylistChooserDialog`, `LibraryPlaylistsPanel`), and (3) Download chooser actions in `SongOverflowMenu`. Secondary controls (⋮ menu button, play buttons, etc.) must continue to stop propagation and must not unintentionally trigger playback.",
-      "files": [
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-        "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-        "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-        "frontend/src/components/songs/SongOverflowMenu.tsx",
-        "frontend/src/hooks/useSongEngagement.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-90"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-keep-backend-permission-checks-unchanged-and-ensure-frontend-error-handling-continues-to-respect-them-backend-methods-already-trap-on-unauthorized-access-for-user-only-operations-like-playlist-favorites-the-frontend-must-treat-authorization-failures-as-a-sign-in-requirement-and-route-the-user-into-the-soft-sign-in-flow-without-breaking-guest-read-only-actions-like-browsing-searching-streaming-urls-and-play-count-incrementing",
-      "featureTitle": "Keep backend permission checks unchanged and ensure frontend error handling continues to respect them: backend methods already trap on unauthorized access for user-only operations (like/playlist/favorites). The frontend must treat authorization failures as a sign-in requirement and route the user into the soft sign-in flow (without breaking guest read-only actions like browsing, searching, streaming URLs, and play-count incrementing).",
-      "files": [
-        "frontend/src/components/songs/SongOverflowMenu.tsx",
-        "frontend/src/context/AuthContext.tsx",
-        "frontend/src/hooks/usePendingAction.ts",
-        "frontend/src/hooks/useSongEngagement.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-91"
+        "REQ-93"
       ],
       "confidence": "high"
     }
