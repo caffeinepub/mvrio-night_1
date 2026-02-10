@@ -1,26 +1,90 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T15:35:13.767Z",
+  "generatedAt": "2026-02-10T16:19:36.589Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 1,
-    "implemented": 1,
+    "total": 5,
+    "implemented": 5,
     "items": [
       {
-        "id": "REQ-191",
-        "summary": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
+        "id": "REQ-199",
+        "summary": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useLongPress.ts",
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useLongPress.ts",
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx"
+        ]
+      },
+      {
+        "id": "REQ-200",
+        "summary": "Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from the actual Internet Identity state (`useInternetIdentity().identity`) rather than being hard-coded false, and ensure the AuthContext stays in sync when identity changes (login/logout).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/context/AuthContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/context/AuthContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-201",
+        "summary": "Fix the soft sign-in modal \"Sign In with Internet Identity\" button so it reliably triggers the Internet Identity login flow and does not appear “stuck” (no-op) when tapped/clicked. Ensure the modal closes automatically when authentication succeeds and does not immediately re-open for the same action once signed in.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useInternetIdentity.ts",
+          "frontend/src/components/SignInModal.tsx",
+          "frontend/src/context/AuthContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/SignInModal.tsx",
+          "frontend/src/context/AuthContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-202",
+        "summary": "Ensure pending restricted actions complete correctly after successful authentication: when a restricted action triggers `requireAuth(...)`, after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
+        ]
+      },
+      {
+        "id": "REQ-203",
+        "summary": "Standardize restricted-action routing to `requireAuth(...)` only when the user is truly unauthenticated (anonymous) or when the backend returns a sign-in-required error; do not route signed-in users into the soft sign-in flow for non-auth issues. Keep user-facing text in English.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+          "frontend/src/hooks/useSongEngagement.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+          "frontend/src/components/songs/SongOverflowMenu.tsx"
         ]
       }
     ]
@@ -30,8 +94,13 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/home/HomeChannelBanner.tsx",
-    "frontend/src/hooks/useLongPress.ts",
+    "frontend/src/components/SignInModal.tsx",
+    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+    "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+    "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+    "frontend/src/components/songs/SongOverflowMenu.tsx",
+    "frontend/src/context/AuthContext.tsx",
+    "frontend/src/hooks/usePendingAction.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

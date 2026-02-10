@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Paperclip, X, Image as ImageIcon, Music as MusicIcon, FileText } from 'lucide-react';
-import { toast } from 'sonner';
+import { Paperclip, X, FileText, Music as MusicIcon, Image as ImageIcon } from 'lucide-react';
 import { validateAttachment } from '../../utils/messagingAttachments';
+import { toast } from 'sonner';
 
 interface AttachmentPickerProps {
   onAttachmentsChange: (attachments: {
@@ -10,61 +10,67 @@ interface AttachmentPickerProps {
     imageAttachment?: File;
     pdfAttachment?: File;
   }) => void;
-  currentAttachments: {
-    audioAttachment?: File;
-    imageAttachment?: File;
-    pdfAttachment?: File;
-  };
+  disabled?: boolean;
 }
 
-export function AttachmentPicker({ onAttachmentsChange, currentAttachments }: AttachmentPickerProps) {
-  const [showPicker, setShowPicker] = useState(false);
+export function AttachmentPicker({ onAttachmentsChange, disabled }: AttachmentPickerProps) {
+  const [audioAttachment, setAudioAttachment] = useState<File | undefined>();
+  const [imageAttachment, setImageAttachment] = useState<File | undefined>();
+  const [pdfAttachment, setPdfAttachment] = useState<File | undefined>();
 
-  const handleFileSelect = async (type: 'image' | 'audio' | 'pdf') => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    
-    switch (type) {
-      case 'image':
-        input.accept = 'image/*';
-        break;
-      case 'audio':
-        input.accept = 'audio/mpeg';
-        break;
-      case 'pdf':
-        input.accept = 'application/pdf';
-        break;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Determine file type
+    let fileType: 'image' | 'audio' | 'pdf';
+    if (file.type.startsWith('image/')) {
+      fileType = 'image';
+    } else if (file.type.startsWith('audio/')) {
+      fileType = 'audio';
+    } else if (file.type === 'application/pdf') {
+      fileType = 'pdf';
+    } else {
+      toast.error('Unsupported file type. Please select an image, MP3, or PDF file.');
+      e.target.value = '';
+      return;
     }
 
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    const validation = validateAttachment(file, fileType);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Invalid file');
+      e.target.value = '';
+      return;
+    }
 
-      const validation = validateAttachment(file, type);
-      if (!validation.valid) {
-        toast.error(validation.error);
-        return;
-      }
+    if (fileType === 'image') {
+      setImageAttachment(file);
+      onAttachmentsChange({ audioAttachment, imageAttachment: file, pdfAttachment });
+    } else if (fileType === 'audio') {
+      setAudioAttachment(file);
+      onAttachmentsChange({ audioAttachment: file, imageAttachment, pdfAttachment });
+    } else if (fileType === 'pdf') {
+      setPdfAttachment(file);
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: file });
+    }
 
-      const key = type === 'image' ? 'imageAttachment' : type === 'audio' ? 'audioAttachment' : 'pdfAttachment';
-      onAttachmentsChange({
-        ...currentAttachments,
-        [key]: file,
-      });
-      setShowPicker(false);
-    };
-
-    input.click();
+    e.target.value = '';
   };
 
-  const handleRemoveAttachment = (type: 'image' | 'audio' | 'pdf') => {
-    const key = type === 'image' ? 'imageAttachment' : type === 'audio' ? 'audioAttachment' : 'pdfAttachment';
-    const newAttachments = { ...currentAttachments };
-    delete newAttachments[key];
-    onAttachmentsChange(newAttachments);
+  const handleRemove = (type: 'audio' | 'image' | 'pdf') => {
+    if (type === 'audio') {
+      setAudioAttachment(undefined);
+      onAttachmentsChange({ audioAttachment: undefined, imageAttachment, pdfAttachment });
+    } else if (type === 'image') {
+      setImageAttachment(undefined);
+      onAttachmentsChange({ audioAttachment, imageAttachment: undefined, pdfAttachment });
+    } else if (type === 'pdf') {
+      setPdfAttachment(undefined);
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: undefined });
+    }
   };
 
-  const hasAttachments = !!(currentAttachments.imageAttachment || currentAttachments.audioAttachment || currentAttachments.pdfAttachment);
+  const hasAttachments = !!(audioAttachment || imageAttachment || pdfAttachment);
 
   return (
     <div className="space-y-2">
@@ -73,87 +79,67 @@ export function AttachmentPicker({ onAttachmentsChange, currentAttachments }: At
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setShowPicker(!showPicker)}
+          disabled={disabled}
+          onClick={() => document.getElementById('attachment-input')?.click()}
         >
           <Paperclip className="w-4 h-4 mr-2" />
           Attach File
         </Button>
+        <input
+          id="attachment-input"
+          type="file"
+          accept="image/*,audio/mpeg,application/pdf"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={disabled}
+        />
       </div>
 
-      {showPicker && (
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleFileSelect('image')}
-          >
-            <ImageIcon className="w-4 h-4 mr-2" />
-            Image
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleFileSelect('audio')}
-          >
-            <MusicIcon className="w-4 h-4 mr-2" />
-            MP3
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleFileSelect('pdf')}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            PDF
-          </Button>
-        </div>
-      )}
-
       {hasAttachments && (
-        <div className="space-y-1">
-          {currentAttachments.imageAttachment && (
-            <div className="flex items-center gap-2 text-sm">
-              <ImageIcon className="w-4 h-4" />
-              <span className="flex-1 truncate">{currentAttachments.imageAttachment.name}</span>
+        <div className="space-y-2">
+          {imageAttachment && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm flex-1 truncate">{imageAttachment.name}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => handleRemoveAttachment('image')}
+                onClick={() => handleRemove('image')}
+                disabled={disabled}
               >
                 <X className="w-3 h-3" />
               </Button>
             </div>
           )}
-          {currentAttachments.audioAttachment && (
-            <div className="flex items-center gap-2 text-sm">
-              <MusicIcon className="w-4 h-4" />
-              <span className="flex-1 truncate">{currentAttachments.audioAttachment.name}</span>
+          {audioAttachment && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+              <MusicIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm flex-1 truncate">{audioAttachment.name}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => handleRemoveAttachment('audio')}
+                onClick={() => handleRemove('audio')}
+                disabled={disabled}
               >
                 <X className="w-3 h-3" />
               </Button>
             </div>
           )}
-          {currentAttachments.pdfAttachment && (
-            <div className="flex items-center gap-2 text-sm">
-              <FileText className="w-4 h-4" />
-              <span className="flex-1 truncate">{currentAttachments.pdfAttachment.name}</span>
+          {pdfAttachment && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm flex-1 truncate">{pdfAttachment.name}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => handleRemoveAttachment('pdf')}
+                onClick={() => handleRemove('pdf')}
+                disabled={disabled}
               >
                 <X className="w-3 h-3" />
               </Button>

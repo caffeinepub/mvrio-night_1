@@ -1,45 +1,106 @@
 {
   "kind": "build_request",
-  "title": "Add 5-second long-press Home banner trigger for Hidden Admin Mode passcode modal",
-  "priority": "normal",
+  "title": "Fix sign-in state mismatch causing soft sign-in modal loop for restricted actions",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-191",
-      "text": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
+      "id": "REQ-199",
+      "text": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-5",
-          "msg-7"
+          "msg-user-1"
         ],
         "quotes": [
-          "to activate admin mode in mobile a altanative , admin has to click on the banner image and hold for 5 sec then the password bar appears so , admin can input the password and turn on admin mode",
-          "1. no it's an additional way , and keep the cntl + shift + u shortcut . 2. can work in both but it's important in mobile . 3. yeah , same password",
-          "build it now"
+          "for every restricted action (like Add to Favorites, Create Playlist, Like)",
+          "always keep reappearing like we haven'r signed in",
+          "it's showing user have logged in but still this sign in use fetures are asking to sign in"
         ]
       },
       "acceptanceCriteria": [
-        "On mobile, pressing and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
-        "On desktop, clicking and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
-        "Releasing early, moving pointer/finger off the banner, or canceling the gesture prevents the modal from opening.",
-        "The existing Ctrl+Shift+U shortcut continues to open the same Admin passcode modal exactly as before.",
-        "The passcode flow remains unchanged: the modal still accepts the same passcode and enables/disables Admin Mode using the existing Hidden Admin Mode logic.",
-        "No new admin-only UI controls become visible unless Admin Mode is enabled; the long-press only opens the passcode modal."
+        "After signing in with Internet Identity (sidebar shows Logout), clicking Like, Add to Favorites, Create Playlist, or Add to Playlist does NOT open the soft sign-in modal and proceeds with the action.",
+        "If the user is not signed in, restricted actions open the soft sign-in modal as before.",
+        "The fix works on both mobile and desktop."
+      ]
+    },
+    {
+      "id": "REQ-200",
+      "text": "Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from the actual Internet Identity state (`useInternetIdentity().identity`) rather than being hard-coded false, and ensure the AuthContext stays in sync when identity changes (login/logout).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-1"
+        ],
+        "quotes": [
+          "it's showing user have logged in but still this sign in use fetures are asking to sign in"
+        ]
+      },
+      "acceptanceCriteria": [
+        "`useAuth().isAuthenticated` becomes `true` when `useInternetIdentity().identity` is present, and becomes `false` after logout.",
+        "Restricted-action guards using `useAuth().isAuthenticated` stop incorrectly treating signed-in users as guests."
+      ]
+    },
+    {
+      "id": "REQ-201",
+      "text": "Fix the soft sign-in modal \"Sign In with Internet Identity\" button so it reliably triggers the Internet Identity login flow and does not appear “stuck” (no-op) when tapped/clicked. Ensure the modal closes automatically when authentication succeeds and does not immediately re-open for the same action once signed in.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-1"
+        ],
+        "quotes": [
+          "it's doing nothing and stucked",
+          "see the image"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When the soft sign-in modal is open and the user clicks “Sign In with Internet Identity”, the Internet Identity login flow is initiated (popup/new window as appropriate).",
+        "On successful Internet Identity login, the soft sign-in modal closes automatically without requiring user interaction.",
+        "After a successful login from the soft sign-in modal, re-trying the same restricted action does not prompt sign-in again."
+      ]
+    },
+    {
+      "id": "REQ-202",
+      "text": "Ensure pending restricted actions complete correctly after successful authentication: when a restricted action triggers `requireAuth(...)`, after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-1"
+        ],
+        "quotes": [
+          "always keep reappearing like we haven'r signed in"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Triggering Like/Add to Favorites/Create Playlist/Add to Playlist while signed out opens the modal; after signing in, the original action is executed once and pending state is cleared.",
+        "After the pending action runs, subsequent restricted actions do not reopen the modal (unless the user logs out or the identity is missing).",
+        "No infinite loop: the modal does not repeatedly reopen due to stale pendingAction or stale isAuthenticated state."
+      ]
+    },
+    {
+      "id": "REQ-203",
+      "text": "Standardize restricted-action routing to `requireAuth(...)` only when the user is truly unauthenticated (anonymous) or when the backend returns a sign-in-required error; do not route signed-in users into the soft sign-in flow for non-auth issues. Keep user-facing text in English.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-1"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When a signed-in user hits a non-auth error (e.g., network/other failure), the UI shows an appropriate error toast and does not open the sign-in modal.",
+        "When the backend indicates a sign-in-required condition, the soft sign-in modal opens as before."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any frontend files under the immutable paths listed in SYSTEM_CONTEXT (compose and integrate via non-immutable components/hooks only).",
+    "Do not modify any files under the immutable frontend paths listed in SYSTEM_CONTEXT.",
     "Keep all user-facing text in English.",
-    "Do not change the existing Ctrl+Shift+U Hidden Admin Mode activation flow; add long-press as an additional trigger only.",
-    "Do not change the admin passcode value or modal copy/labels beyond what is necessary to wire in the new trigger."
+    "Do not change backend authorization rules or Motoko canister behavior as part of this fix unless it is strictly required to resolve the sign-in state mismatch (frontend should be fixed first)."
   ],
   "nonGoals": [
-    "Replacing the Ctrl+Shift+U shortcut with long-press.",
-    "Changing the passcode or introducing a new admin credential scheme.",
-    "Adding new admin UI features beyond opening the existing passcode modal from a long-press gesture.",
-    "Backend changes or state migrations for this request."
+    "Do not redesign the SignInModal UI beyond what is necessary to make the button functional and the modal close/retry behavior correct.",
+    "Do not add new authentication providers; Internet Identity remains the only auth mechanism.",
+    "Do not change admin Hidden Admin Mode behavior or passcode flows as part of this issue."
   ],
   "imageRequirements": {
     "required": [],
@@ -50,7 +111,9 @@
     "goalsToRemove": [],
     "preferencesToAdd": [],
     "preferencesToRemove": [],
-    "miscToAdd": [],
+    "miscToAdd": [
+      "User reports: restricted actions always prompt soft sign-in modal even after Internet Identity login; Sign In button in modal appears to do nothing; occurs on both mobile and desktop. Screenshot provided: Screenshot 2026-02-10 213855.png."
+    ],
     "miscToRemove": [],
     "fieldsToSet": {},
     "fieldsToDelete": []

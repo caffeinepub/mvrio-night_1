@@ -61,7 +61,7 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
     if (!isAuthenticated) {
       setOpen(false);
       requireAuth({
-        type: 'like',
+        type: 'favorites',
         songId: song.id,
       });
       return;
@@ -80,7 +80,7 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
       if (isSignInRequiredError(error)) {
         setOpen(false);
         requireAuth({
-          type: 'like',
+          type: 'favorites',
           songId: song.id,
         });
       } else {

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { useHiddenAdminMode } from '../context/HiddenAdminModeContext';
-import type { MessagesView, Message, ContactInfo } from '../backend';
+import type { MessagesView, Message, ContactInfo, UserProfileRecord } from '../backend';
 import { Principal } from '@icp-sdk/core/principal';
 import { toast } from 'sonner';
 import { getAuthErrorMessage, isSignInRequiredError } from '../utils/authorizationErrors';
@@ -65,6 +65,7 @@ export function useSendMessageWithAttachments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Message sent successfully');
     },
     onError: (error: any) => {
@@ -86,6 +87,7 @@ export function useDeleteMessage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Message deleted');
     },
     onError: (error: any) => {
@@ -107,6 +109,7 @@ export function useMarkMessagesAsSeen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
     },
     onError: (error: any) => {
       console.error('Mark as seen error:', error);
@@ -114,21 +117,59 @@ export function useMarkMessagesAsSeen() {
   });
 }
 
+// Admin unread count query
+export function useGetAdminUnreadCount() {
+  const { actor, isFetching } = useActor();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+
+  return useQuery<number>({
+    queryKey: ['unreadCount', 'admin'],
+    queryFn: async () => {
+      if (!actor) return 0;
+      const passcode = getPasscode();
+      if (!passcode) return 0;
+      
+      try {
+        const conversations = await actor.getAllConversations(passcode);
+        let unreadCount = 0;
+        
+        // Check each conversation for unread user messages
+        for (const userPrincipal of conversations) {
+          const messagesView = await actor.getAllMessages(userPrincipal, passcode);
+          if (messagesView && messagesView.messages) {
+            const hasUnreadUserMessages = messagesView.messages.some(
+              msg => !msg.isAdmin && !msg.recipientSeen
+            );
+            if (hasUnreadUserMessages) {
+              unreadCount++;
+            }
+          }
+        }
+        
+        return unreadCount;
+      } catch (error) {
+        console.error('Error fetching admin unread count:', error);
+        return 0;
+      }
+    },
+    enabled: !!actor && !isFetching && isAdminModeEnabled && !!getPasscode(),
+    refetchInterval: 10000, // Refetch every 10 seconds when admin mode is active
+  });
+}
+
 // Compute unread state for user inbox icon
 export function useHasUnreadMessages() {
   const { isAdminModeEnabled } = useHiddenAdminMode();
   const userMessagesQuery = useGetMessages();
-  const adminConversationsQuery = useGetAllConversations();
+  const adminUnreadCountQuery = useGetAdminUnreadCount();
   const { identity } = useInternetIdentity();
 
   if (isAdminModeEnabled) {
-    // Admin mode: check if any conversation has unread user messages
-    // For simplicity, we'll show unread if there are any conversations
-    // A more sophisticated approach would query each conversation
-    const hasConversations = (adminConversationsQuery.data?.length || 0) > 0;
+    // Admin mode: check if there are any conversations with unread user messages
+    const unreadCount = adminUnreadCountQuery.data || 0;
     return {
-      hasUnread: hasConversations,
-      isLoading: adminConversationsQuery.isLoading,
+      hasUnread: unreadCount > 0,
+      isLoading: adminUnreadCountQuery.isLoading,
     };
   } else {
     // User mode: check for unread admin messages
@@ -172,6 +213,26 @@ export function useGetConversation(user: Principal | null) {
       return actor.getAllMessages(user, passcode);
     },
     enabled: !!actor && !isFetching && isAdminModeEnabled && !!user && !!getPasscode(),
+  });
+}
+
+// Fetch user profile for a given principal
+export function useGetUserProfile(user: Principal | null) {
+  const { actor, isFetching } = useActor();
+  const { isAdminModeEnabled } = useHiddenAdminMode();
+
+  return useQuery<UserProfileRecord | null>({
+    queryKey: ['userProfile', user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return null;
+      try {
+        return await actor.getUserProfile(user);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+    },
+    enabled: !!actor && !isFetching && isAdminModeEnabled && !!user,
   });
 }
 
@@ -222,6 +283,7 @@ export function useReplyWithAttachments() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
       queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Reply sent');
     },
     onError: (error: any) => {
@@ -246,6 +308,7 @@ export function useDeleteUserMessage() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Message deleted');
     },
     onError: (error: any) => {
@@ -271,6 +334,7 @@ export function useMarkAdminMessagesAsSeen() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
       queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
     },
     onError: (error: any) => {
       console.error('Mark as seen error:', error);
@@ -292,6 +356,7 @@ export function useDeleteConversation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Conversation deleted');
     },
     onError: (error: any) => {

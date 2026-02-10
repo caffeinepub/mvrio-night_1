@@ -13,9 +13,16 @@ interface MessageThreadProps {
   contactInfo?: ContactInfo | null;
   onDeleteMessage?: (messageId: bigint) => void;
   isAdminView?: boolean;
+  userDisplayName?: string;
 }
 
-export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminView = false }: MessageThreadProps) {
+export function MessageThread({ 
+  messages, 
+  contactInfo, 
+  onDeleteMessage, 
+  isAdminView = false,
+  userDisplayName 
+}: MessageThreadProps) {
   const { isAdminModeEnabled } = useHiddenAdminMode();
   const { identity } = useInternetIdentity();
 
@@ -31,6 +38,25 @@ export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminV
     }
     // User can only delete their own messages (non-admin messages)
     return !message.isAdmin;
+  };
+
+  const getSenderLabel = (message: Message): string => {
+    if (message.isAdmin) {
+      return 'MARIO';
+    }
+    
+    // Use message sender field if available (should contain username)
+    if (message.sender && message.sender !== 'user' && message.sender !== 'admin') {
+      return message.sender;
+    }
+    
+    // Use provided userDisplayName
+    if (userDisplayName) {
+      return userDisplayName;
+    }
+    
+    // Fallback
+    return 'User';
   };
 
   const renderAttachment = (message: Message): ReactNode => {
@@ -96,6 +122,18 @@ export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminV
     return attachments.length > 0 ? <>{attachments}</> : null;
   };
 
+  // Determine if we should show "Seen" indicator
+  const shouldShowSeen = (message: Message): boolean => {
+    // Only show "Seen" on outgoing messages that have been seen by recipient
+    if (isAdminView) {
+      // In admin view, show "Seen" on MARIO's messages (outgoing from admin perspective)
+      return message.isAdmin && message.recipientSeen;
+    } else {
+      // In user view, show "Seen" on user's messages (outgoing from user perspective)
+      return !message.isAdmin && message.recipientSeen;
+    }
+  };
+
   if (messages.length === 0) {
     return (
       <Card>
@@ -114,6 +152,8 @@ export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminV
             {messages.map((message: Message) => {
               const isFromMario = message.isAdmin;
               const showDelete = canDeleteMessage(message);
+              const senderLabel = getSenderLabel(message);
+              const showSeen = shouldShowSeen(message);
 
               return (
                 <div
@@ -124,7 +164,9 @@ export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminV
                     <MarioAvatar size="sm" />
                   ) : (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-xs font-semibold">U</span>
+                      <span className="text-xs font-semibold">
+                        {senderLabel.charAt(0).toUpperCase()}
+                      </span>
                     </div>
                   )}
                   
@@ -135,12 +177,12 @@ export function MessageThread({ messages, contactInfo, onDeleteMessage, isAdminV
                         : 'bg-muted'
                     }`}>
                       <p className="text-xs font-semibold mb-1">
-                        {isFromMario ? 'MARIO' : 'You'}
+                        {senderLabel}
                       </p>
                       <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       {renderAttachment(message)}
                       
-                      {message.recipientSeen && (
+                      {showSeen && (
                         <p className="text-xs opacity-70 mt-1">Seen</p>
                       )}
                       

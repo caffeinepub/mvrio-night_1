@@ -21,22 +21,34 @@ import { useIsMobile } from '../hooks/useMediaQuery';
 export function SignInModal() {
   const isMobile = useIsMobile();
   const { isSignInModalOpen, closeSignInModal, clearPendingAction } = useAuth();
-  const { login, isLoggingIn } = useInternetIdentity();
+  const { login, isLoggingIn, clear, identity } = useInternetIdentity();
 
   const handleSignIn = async () => {
     try {
-      await login();
-      // Modal will auto-close on successful login via AuthContext effect
+      // If already authenticated with stale state, clear and retry
+      if (identity && !identity.getPrincipal().isAnonymous()) {
+        await clear();
+        setTimeout(() => {
+          login();
+        }, 300);
+      } else {
+        login();
+      }
     } catch (error: any) {
       console.error('Sign-in error:', error);
-      // Keep modal open so user can try again
+      // If "already authenticated" error, clear and retry
+      if (error.message?.includes('already authenticated')) {
+        await clear();
+        setTimeout(() => {
+          login();
+        }, 300);
+      }
     }
   };
 
   const handleCancel = () => {
     closeSignInModal();
-    // Optionally clear pending action on cancel
-    // For now, we preserve it in case user wants to try again
+    clearPendingAction();
   };
 
   const content = (

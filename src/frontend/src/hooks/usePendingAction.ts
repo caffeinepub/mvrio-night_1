@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useInternetIdentity } from './useInternetIdentity';
 import {
   useToggleLikeSong,
+  useToggleFavorite,
   useCreatePlaylist,
   useAddToPlaylist,
 } from './useQueries';
@@ -17,6 +18,7 @@ export function usePendingAction() {
   const hasExecuted = useRef(false);
 
   const toggleLikeMutation = useToggleLikeSong();
+  const toggleFavoriteMutation = useToggleFavorite();
   const createPlaylistMutation = useCreatePlaylist();
   const addToPlaylistMutation = useAddToPlaylist();
 
@@ -39,7 +41,30 @@ export function usePendingAction() {
               }
               break;
 
+            case 'favorites':
+              if (pendingAction.songId) {
+                const wasRemoved = await toggleFavoriteMutation.mutateAsync(pendingAction.songId);
+                if (wasRemoved) {
+                  toast.success('Removed from favorites');
+                } else {
+                  toast.success('Added to favorites');
+                }
+              }
+              break;
+
             case 'create-playlist':
+              if (pendingAction.playlistName) {
+                await createPlaylistMutation.mutateAsync(pendingAction.playlistName);
+                toast.success(`Created "${pendingAction.playlistName}"`);
+                // If songId is present, add the song to the newly created playlist
+                if (pendingAction.songId) {
+                  await addToPlaylistMutation.mutateAsync({
+                    playlistName: pendingAction.playlistName,
+                    songId: pendingAction.songId,
+                  });
+                  toast.success('Song added to playlist');
+                }
+              }
               break;
 
             case 'add-to-playlist':
@@ -95,6 +120,7 @@ export function usePendingAction() {
     pendingAction,
     loginStatus,
     toggleLikeMutation,
+    toggleFavoriteMutation,
     createPlaylistMutation,
     addToPlaylistMutation,
     clearPendingAction,

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -13,15 +16,12 @@ import {
   DrawerTitle,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useAuth } from '@/context/AuthContext';
 import { useCreatePlaylist, useAddToPlaylist } from '@/hooks/useQueries';
+import { isSignInRequiredError } from '@/utils/authorizationErrors';
 import { toast } from 'sonner';
-import type { SongView } from '../../backend';
+import type { SongView } from '@/backend';
 
 interface CreatePlaylistDialogProps {
   song: SongView;
@@ -31,8 +31,8 @@ interface CreatePlaylistDialogProps {
 
 export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylistDialogProps) {
   const isMobile = useIsMobile();
-  const [playlistName, setPlaylistName] = useState('');
   const { isAuthenticated, requireAuth } = useAuth();
+  const [playlistName, setPlaylistName] = useState('');
   
   const createPlaylistMutation = useCreatePlaylist();
   const addToPlaylistMutation = useAddToPlaylist();
@@ -66,10 +66,7 @@ export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylis
       setPlaylistName('');
       onOpenChange(false);
     } catch (error: any) {
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can')
-      ) {
+      if (isSignInRequiredError(error)) {
         onOpenChange(false);
         requireAuth({
           type: 'create-playlist',
@@ -80,30 +77,26 @@ export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylis
         toast.error('A playlist with this name already exists');
       } else {
         toast.error('Failed to create playlist');
+        console.error(error);
       }
-      console.error(error);
     }
   };
 
-  const isLoading = createPlaylistMutation.isPending || addToPlaylistMutation.isPending;
-
   const content = (
     <>
-      <div className="space-y-4">
+      <div className="space-y-4 py-4">
         <div className="space-y-2">
           <Label htmlFor="playlist-name">Playlist Name</Label>
           <Input
             id="playlist-name"
-            placeholder="My Awesome Playlist"
+            placeholder="My Playlist"
             value={playlistName}
             onChange={(e) => setPlaylistName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isLoading) {
+              if (e.key === 'Enter' && playlistName.trim()) {
                 handleCreate();
               }
             }}
-            disabled={isLoading}
-            autoFocus
           />
         </div>
         <p className="text-sm text-muted-foreground">
@@ -113,23 +106,24 @@ export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylis
     </>
   );
 
-  const actions = (
-    <>
+  const footer = (
+    <div className="flex gap-2 w-full">
       <Button
         variant="outline"
         onClick={() => onOpenChange(false)}
-        disabled={isLoading}
+        disabled={createPlaylistMutation.isPending}
+        className="flex-1"
       >
         Cancel
       </Button>
       <Button
         onClick={handleCreate}
-        disabled={isLoading || !playlistName.trim()}
+        disabled={!playlistName.trim() || createPlaylistMutation.isPending}
+        className="flex-1"
       >
-        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-        Create & Add
+        {createPlaylistMutation.isPending ? 'Creating...' : 'Create'}
       </Button>
-    </>
+    </div>
   );
 
   if (isMobile) {
@@ -139,11 +133,11 @@ export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylis
           <DrawerHeader>
             <DrawerTitle>Create New Playlist</DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 pb-4">
+          <div className="px-4">
             {content}
           </div>
-          <DrawerFooter className="flex-row gap-2">
-            {actions}
+          <DrawerFooter>
+            {footer}
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -152,13 +146,13 @@ export function CreatePlaylistDialog({ song, open, onOpenChange }: CreatePlaylis
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Playlist</DialogTitle>
         </DialogHeader>
         {content}
         <DialogFooter>
-          {actions}
+          {footer}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,8 +4,8 @@ export function MarioStatusPill() {
   const { isAdminModeEnabled } = useHiddenAdminMode();
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span 
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div 
         className={`w-2 h-2 rounded-full ${
           isAdminModeEnabled ? 'bg-green-500' : 'bg-gray-400'
         }`}

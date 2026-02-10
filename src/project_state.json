@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 79,
-  "summary": "Project scope update: enhance the “Send a Message” in-app messaging so users message the admin identity “MARIO” (replies display MARIO as sender, and MARIO’s avatar uses the current Home channel banner image). Admin online status is displayed Instagram-style (green dot + “online” when Hidden Admin Mode is ON; gray dot + “offline” when Hidden Admin Mode is OFF). Implement message seen/read receipts for both sides and ensure unread notification dots clear after messages are seen. Maintain a single per-user conversation thread (Normal Message + Custom Song Request via a fillable form + optional free-text) and remove any separate admin inbox UI view while still allowing the admin (when Hidden Admin Mode is ON) to see the list of all user conversations and reply within the same thread. Add file attachments to messages (images, MP3s, PDFs). Keep user hard-deletion of their own messages; allow MARIO (Hidden Admin Mode) to delete any messages (user or admin) and delete entire conversations via a delete icon on each user conversation card. Additionally, update auth/account so first launch requires Internet Identity login + required profile completion (full name, username, date of birth) and show this under a new “Account” sidebar area along with total listening time aggregated across songs played. Hidden Admin Mode activation must support BOTH Ctrl+Shift+U and a 5-second long-press on the Home banner image (especially for mobile), using the same passcode + backend verification flow.",
+  "projectStateVersion": 83,
+  "summary": "Project scope update: enhance the “Send a Message” in-app messaging so users message the admin identity “MARIO” (replies display MARIO as sender, and MARIO’s avatar uses the current Home channel banner image). Admin online status is displayed Instagram-style (green dot + “online” when Hidden Admin Mode is ON; gray dot + “offline” when Hidden Admin Mode is OFF). Implement message seen/read receipts for both sides and ensure unread notification dots clear after messages are seen. Maintain a single per-user conversation thread (Normal Message + Custom Song Request via a fillable form + optional free-text) and remove any separate admin inbox UI view while still allowing the admin (when Hidden Admin Mode is ON) to see the list of all user conversations and reply within the same thread. Add file attachments to messages (images, MP3s, PDFs). Keep user hard-deletion of their own messages; allow MARIO (Hidden Admin Mode) to delete any messages (user or admin) and delete entire conversations via a delete icon on each user conversation card. Additionally, update auth/account so first launch requires Internet Identity login + required profile completion (full name, username, date of birth) and show this under a new “Account” sidebar area along with total listening time aggregated across songs played. Hidden Admin Mode activation must support BOTH Ctrl+Shift+U and a 5-second long-press on the Home banner image (especially for mobile), using the same passcode + backend verification flow. In conversation threads, display the user’s chosen username as the user identity label.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
     "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
@@ -26,7 +26,7 @@
     "Admin inbox in Hidden Admin Mode is not receiving/displaying user messages (admin conversation thread appears blank/empty even though user can see their own sent messages).",
     "Admin reply/send message from the admin path fails with a permission error (\"You don't have the permission to send messages\")."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "feature-implement-the-mvrio-night-visual-system-exactly-as-specified-default-night-mode-with-a-dark-night-sky-gradient-background-0b0c1a-to-000000-hundreds-of-tiny-star-dots-scattered-across-the-background-a-lightweight-twinkle-animation-stars-brighten-randomly-over-time-and-neon-green-highlights-1ed760-for-buttons-progress-bars-and-active-elements-effects-must-be-subtle-and-deployment-safe-no-heavy-particle-systems",
@@ -1292,6 +1292,94 @@
         "REQ-191"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-and-complete-frontend-seen-read-receipt-behavior-so-the-unread-notification-dot-and-the-per-message-seen-indicator-behave-like-instagram-for-both-user-and-admin-contexts",
+      "title": "Fix and complete frontend “seen” (read receipt) behavior so the unread notification dot and the per-message “Seen” indicator behave like Instagram for both user and admin contexts.",
+      "reqIds": [
+        "REQ-193"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-conversation-thread-ui-so-that-the-user-s-identity-label-in-messages-uses-the-user-s-chosen-username-from-the-required-user-profile-instead-of-generic-labels-and-ensure-the-admin-view-also-displays-the-same-username-when-viewing-a-user-conversation",
+      "title": "Update the conversation thread UI so that the user’s identity label in messages uses the user’s chosen username (from the required user profile) instead of generic labels, and ensure the admin view also displays the same username when viewing a user conversation.",
+      "reqIds": [
+        "REQ-194"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-mario-s-online-offline-status-indicator-renders-exactly-as-specified-and-updates-immediately-when-hidden-admin-mode-state-changes-without-requiring-navigation-or-reload",
+      "title": "Ensure MARIO’s online/offline status indicator renders exactly as specified and updates immediately when Hidden Admin Mode state changes, without requiring navigation or reload.",
+      "reqIds": [
+        "REQ-195"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-complete-message-deletion-ux-and-authorization-handling-users-can-hard-delete-their-own-sent-messages-when-hidden-admin-mode-is-on-mario-can-hard-delete-any-message-user-or-mario-and-delete-entire-conversations-error-handling-must-show-clear-english-messages-and-must-not-incorrectly-route-into-the-soft-sign-in-flow-for-admin-passcode-failures",
+      "title": "Complete message deletion UX and authorization handling: users can hard-delete their own sent messages; when Hidden Admin Mode is ON, MARIO can hard-delete any message (user or MARIO) and delete entire conversations; error handling must show clear English messages and must not incorrectly route into the soft sign-in flow for admin-passcode failures.",
+      "reqIds": [
+        "REQ-196"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-file-attachments-images-mp3-pdfs-work-end-to-end-in-messaging-pick-validate-send-store-and-render-attachments-correctly-for-both-user-messages-and-mario-replies",
+      "title": "Ensure file attachments (images, MP3, PDFs) work end-to-end in messaging: pick/validate, send, store, and render attachments correctly for both user messages and MARIO replies.",
+      "reqIds": [
+        "REQ-197"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-admin-unread-detection-logic-so-the-header-unread-indicator-reflects-actual-unread-user-messages-not-merely-has-any-conversations-and-ensure-unread-state-clears-immediately-after-messages-are-marked-as-seen",
+      "title": "Fix admin unread detection logic so the header unread indicator reflects actual unread user messages (not merely “has any conversations”), and ensure unread state clears immediately after messages are marked as seen.",
+      "reqIds": [
+        "REQ-198"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-global-auth-state-so-the-app-correctly-treats-an-internet-identity-signed-in-user-as-authenticated-for-all-restricted-actions-like-add-to-favorites-create-playlist-add-to-playlist-offline-cache-device-download-messaging-preventing-the-soft-sign-in-modal-from-appearing-when-the-sidebar-already-shows-the-user-is-logged-in",
+      "title": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
+      "reqIds": [
+        "REQ-199"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-src-context-authcontext-tsx-so-isauthenticated-is-derived-from-the-actual-internet-identity-state-useinternetidentity-identity-rather-than-being-hard-coded-false-and-ensure-the-authcontext-stays-in-sync-when-identity-changes-login-logout",
+      "title": "Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from the actual Internet Identity state (`useInternetIdentity().identity`) rather than being hard-coded false, and ensure the AuthContext stays in sync when identity changes (login/logout).",
+      "reqIds": [
+        "REQ-200"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-soft-sign-in-modal-sign-in-with-internet-identity-button-so-it-reliably-triggers-the-internet-identity-login-flow-and-does-not-appear-stuck-no-op-when-tapped-clicked-ensure-the-modal-closes-automatically-when-authentication-succeeds-and-does-not-immediately-re-open-for-the-same-action-once-signed-in",
+      "title": "Fix the soft sign-in modal \"Sign In with Internet Identity\" button so it reliably triggers the Internet Identity login flow and does not appear “stuck” (no-op) when tapped/clicked. Ensure the modal closes automatically when authentication succeeds and does not immediately re-open for the same action once signed in.",
+      "reqIds": [
+        "REQ-201"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-pending-restricted-actions-complete-correctly-after-successful-authentication-when-a-restricted-action-triggers-requireauth-after-sign-in-succeeds-the-app-retries-the-pending-action-once-and-then-clears-pending-state-so-the-modal-does-not-reappear-for-subsequent-actions",
+      "title": "Ensure pending restricted actions complete correctly after successful authentication: when a restricted action triggers `requireAuth(...)`, after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
+      "reqIds": [
+        "REQ-202"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-standardize-restricted-action-routing-to-requireauth-only-when-the-user-is-truly-unauthenticated-anonymous-or-when-the-backend-returns-a-sign-in-required-error-do-not-route-signed-in-users-into-the-soft-sign-in-flow-for-non-auth-issues-keep-user-facing-text-in-english",
+      "title": "Standardize restricted-action routing to `requireAuth(...)` only when the user is truly unauthenticated (anonymous) or when the backend returns a sign-in-required error; do not route signed-in users into the soft sign-in flow for non-auth issues. Keep user-facing text in English.",
+      "reqIds": [
+        "REQ-203"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -1904,6 +1992,20 @@
       "summary": "Add an additional Hidden Admin Mode activation method: long-press/press-and-hold on the Home banner image for 5 seconds to reveal the passcode input modal; keep the existing Ctrl+Shift+U shortcut; support both mobile and desktop (mobile is most important); use the same passcode (A1B2D3ABD) and backend verification flow.",
       "reqIds": [],
       "status": "in_progress"
+    },
+    {
+      "id": "AR-134",
+      "summary": "Messaging thread identity: display each user’s chosen username as their display name in the conversation thread (for both user and admin views).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-135",
+      "summary": "Update the backend messaging data model and APIs so that message sender identity, per-side seen/read state, deletions, and attachments are supported end-to-end for a single per-user conversation with the admin identity “MARIO”.",
+      "reqIds": [
+        "REQ-192"
+      ],
+      "status": "pending"
     }
   ],
   "gameProjectType": "none",

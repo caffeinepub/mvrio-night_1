@@ -156,8 +156,14 @@ actor {
     lyrics : Text,
     passcode : Text,
   ) : async Nat {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add songs");
     };
 
     let song : Song = {
@@ -179,6 +185,7 @@ actor {
   };
 
   public shared ({ caller }) func playSong(id : Nat) : async () {
+    // No authorization required - guests can play songs
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (?song) {
@@ -234,6 +241,7 @@ actor {
   };
 
   public query ({ caller }) func getSong(id : Nat) : async SongView {
+    // No authorization required - guests can view songs
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (?song) { toSongView(song) };
@@ -241,17 +249,26 @@ actor {
   };
 
   public query ({ caller }) func getAllSongs() : async [SongView] {
+    // No authorization required - guests can view songs
     songs.values().toArray().map(toSongView).sort();
   };
 
   public query ({ caller }) func getAllSongsByTitle() : async [SongView] {
+    // No authorization required - guests can view songs
     songs.values().toArray().map(toSongView).sort(SongView.compareByTitle);
   };
 
   public shared ({ caller }) func deleteSong(id : Nat, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete songs");
+    };
+
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (_song) {
@@ -261,6 +278,7 @@ actor {
   };
 
   public query ({ caller }) func searchSongs(keyword : Text) : async [SongView] {
+    // No authorization required - guests can search songs
     let filtered = songs.values().toArray().filter(
       func(song) {
         song.title.contains(#text keyword) or song.artist.contains(#text keyword);
@@ -456,8 +474,14 @@ actor {
 
   // Official playlists
   public shared ({ caller }) func createOfficialPlaylist(name : Text, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can create official playlists");
     };
 
     if (officialPlaylists.containsKey(name)) {
@@ -474,8 +498,14 @@ actor {
   };
 
   public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can modify official playlists");
     };
 
     if (not songs.containsKey(songId)) {
@@ -493,8 +523,14 @@ actor {
   };
 
   public shared ({ caller }) func removeFromOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can modify official playlists");
     };
 
     switch (officialPlaylists.get(playlistName)) {
@@ -513,6 +549,7 @@ actor {
   public shared ({ caller }) func deletePlaylist(playlistName : Text, passcode : ?Text) : async () {
     switch (passcode) {
       case (null) {
+        // User deleting their own playlist
         if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
           Runtime.trap("Unauthorized: Only users can delete their playlists");
         };
@@ -529,9 +566,17 @@ actor {
         };
       };
       case (?code) {
+        // Admin deleting official playlist
+        // Verify admin passcode first for clear error message
         if (not verifyAdminPasscode(code)) {
-          Runtime.trap("Unauthorized: Invalid admin passcode");
+          Runtime.trap("Invalid admin passcode");
         };
+
+        // Then verify admin role
+        if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+          Runtime.trap("Unauthorized: Only admins can delete official playlists");
+        };
+
         if (not officialPlaylists.containsKey(playlistName)) {
           Runtime.trap("Official playlist not found");
         };
@@ -541,10 +586,12 @@ actor {
   };
 
   public query ({ caller }) func getOfficialPlaylist(playlistName : Text) : async ?PlaylistView {
+    // No authorization required - guests can view official playlists
     officialPlaylists.get(playlistName).map(func(playlist) { toPlaylistView(playlistName, playlist) });
   };
 
   public query ({ caller }) func getOfficialPlaylistDetails(playlistName : Text) : async [SongView] {
+    // No authorization required - guests can view official playlists
     switch (officialPlaylists.get(playlistName)) {
       case (null) { [] };
       case (?playlist) {
@@ -563,6 +610,7 @@ actor {
   };
 
   public query ({ caller }) func listOfficialPlaylists() : async [PlaylistView] {
+    // No authorization required - guests can view official playlists
     officialPlaylists.toArray().map(
       func((name, playlist)) { toPlaylistView(name, playlist) }
     );
@@ -583,12 +631,13 @@ actor {
   };
 
   public query ({ caller }) func getArtistProfile() : async ArtistProfile {
+    // No authorization required - guests can view artist profile
     artistProfile;
   };
 
   public shared ({ caller }) func updateArtistProfile(profile : ArtistProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admin can update artist profile");
+      Runtime.trap("Unauthorized: Only admins can update artist profile");
     };
     artistProfile := profile;
   };
@@ -752,8 +801,14 @@ actor {
     content : Text,
     passcode : Text,
   ) : async Nat {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can reply to messages");
     };
 
     let message : Message = {
@@ -790,8 +845,14 @@ actor {
     pdfAttachment : ?Storage.ExternalBlob,
     passcode : Text,
   ) : async Nat {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can reply to messages");
     };
 
     let message : Message = {
@@ -836,9 +897,16 @@ actor {
   };
 
   public query ({ caller }) func getAllMessages(user : Principal, passcode : Text) : async ?MessagesView {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all messages");
+    };
+
     let messages = conversations.get(user);
 
     ?{
@@ -858,8 +926,11 @@ actor {
     switch (conversations.get(caller)) {
       case (null) { Runtime.trap("No conversation found") };
       case (?messages) {
+        var messageFound = false;
         let filteredMessages = messages.filter(func(msg : Message) : Bool {
           if (msg.id == messageId) {
+            messageFound := true;
+            // Users can only delete their own messages (not admin messages)
             if (msg.isAdmin) {
               Runtime.trap("Unauthorized: Cannot delete admin messages");
             };
@@ -869,7 +940,7 @@ actor {
           };
         });
 
-        if (filteredMessages.size() == messages.size()) {
+        if (not messageFound) {
           Runtime.trap("Message not found");
         };
 
@@ -879,10 +950,17 @@ actor {
   };
 
   public shared ({ caller }) func deleteUserMessage(user : Principal, messageId : Nat, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
 
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete user messages");
+    };
+
+    // Check Hidden Admin Mode is enabled
     if (not hiddenAdminModeEnabled) {
       Runtime.trap("Unauthorized: Hidden Admin Mode must be enabled to delete messages");
     };
@@ -962,8 +1040,14 @@ actor {
   };
 
   public shared ({ caller }) func markAllMessagesAsSeen(senderType : Text, user : Principal, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can mark all messages as seen");
     };
 
     if (not hiddenAdminModeEnabled) {
@@ -988,8 +1072,14 @@ actor {
   };
 
   public shared ({ caller }) func getUnreadMessagesCount(passcode : Text) : async Nat {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can get unread message count");
     };
 
     conversations.size();
@@ -999,36 +1089,64 @@ actor {
 
   public shared ({ caller }) func updateAdminInfo(contactInfo : ?ContactInfo) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admin can update contact info");
+      Runtime.trap("Unauthorized: Only admins can update contact info");
     };
     adminContactInfo := contactInfo;
   };
 
   public shared ({ caller }) func setHiddenAdminMode(enabled : Bool, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set Hidden Admin Mode");
+    };
+
     hiddenAdminModeEnabled := enabled;
   };
 
   public query ({ caller }) func getHiddenAdminModeStatus(passcode : Text) : async Bool {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can check Hidden Admin Mode status");
+    };
+
     hiddenAdminModeEnabled;
   };
 
   public query ({ caller }) func getAllConversations(passcode : Text) : async [Principal] {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all conversations");
+    };
+
     conversations.keys().toArray();
   };
 
   public query ({ caller }) func getAllConversationsByUserIdPasscode(passcode : Text) : async [Principal] {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
     };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all conversations");
+    };
+
     conversations.keys().toArray();
   };
 
@@ -1040,8 +1158,14 @@ actor {
   };
 
   public shared ({ caller }) func adminDeleteConversation(conversationType : ?Text, conversationId : Text, passcode : Text) : async () {
+    // Verify admin passcode first for clear error message
     if (not verifyAdminPasscode(passcode)) {
-      Runtime.trap("Unauthorized: Invalid admin passcode");
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    // Then verify admin role
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete conversations");
     };
 
     if (not hiddenAdminModeEnabled) {

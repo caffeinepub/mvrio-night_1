@@ -13,25 +13,26 @@ import { useDeleteConversation } from '../../hooks/useMessaging';
 interface DeleteConversationConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  conversationId: string;
-  onSuccess?: () => void;
+  conversationId: string | null;
 }
 
 export function DeleteConversationConfirmDialog({
   open,
   onOpenChange,
   conversationId,
-  onSuccess,
 }: DeleteConversationConfirmDialogProps) {
   const deleteConversationMutation = useDeleteConversation();
 
-  const handleConfirm = () => {
-    deleteConversationMutation.mutate(conversationId, {
-      onSuccess: () => {
-        onOpenChange(false);
-        onSuccess?.();
-      },
-    });
+  const handleConfirm = async () => {
+    if (!conversationId) return;
+    
+    try {
+      await deleteConversationMutation.mutateAsync(conversationId);
+      onOpenChange(false);
+    } catch (error) {
+      // Error is already handled by the mutation's onError
+      console.error('Delete conversation failed:', error);
+    }
   };
 
   return (
@@ -40,7 +41,7 @@ export function DeleteConversationConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this entire conversation? This action cannot be undone and will permanently remove all messages.
+            Are you sure you want to delete this entire conversation? This action cannot be undone and all messages will be permanently removed.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
