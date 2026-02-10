@@ -18,13 +18,18 @@ export function parseAuthorizationError(error: any): AuthorizationError {
   const errorMessage = error?.message || String(error);
   const lowerMessage = errorMessage.toLowerCase();
 
-  // Check for admin-required errors (including passcode-related)
+  // Check for admin passcode errors specifically
+  const isPasscodeError =
+    lowerMessage.includes('invalid admin passcode') ||
+    lowerMessage.includes('admin passcode not found') ||
+    lowerMessage.includes('admin passcode not available');
+
+  // Check for other admin-required errors
   const isAdminRequired =
-    lowerMessage.includes('unauthorized') ||
-    lowerMessage.includes('admin') ||
-    lowerMessage.includes('permission') ||
-    lowerMessage.includes('passcode') ||
-    lowerMessage.includes('invalid passcode');
+    isPasscodeError ||
+    lowerMessage.includes('only admin') ||
+    (lowerMessage.includes('unauthorized') && lowerMessage.includes('admin')) ||
+    (lowerMessage.includes('permission') && !lowerMessage.includes('only users'));
 
   // Check for sign-in-required errors (but not admin-only errors)
   const isSignInRequired =
@@ -49,9 +54,15 @@ export function parseAuthorizationError(error: any): AuthorizationError {
  */
 export function getAuthErrorMessage(error: any): string {
   const authError = parseAuthorizationError(error);
+  const lowerMessage = authError.message.toLowerCase();
+
+  // Specific message for passcode errors
+  if (lowerMessage.includes('passcode')) {
+    return 'Invalid or missing admin passcode. Please re-enable Admin Mode.';
+  }
 
   if (authError.isAdminRequired) {
-    return 'You do not have permission to perform this action.';
+    return 'You do not have admin permission to perform this action.';
   }
 
   if (authError.isSignInRequired) {

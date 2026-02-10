@@ -1,139 +1,29 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Playlist detail view with playback controls and admin-only official playlist creation",
+  "title": "Add 5-second long-press trigger on Home banner to open existing Admin passcode modal",
   "requirements": [
     {
-      "id": "REQ-130",
-      "summary": "Make playlist cards fully clickable to open a playlist detail view with a Back control that preserves the Library tab selection.",
+      "id": "REQ-191",
+      "summary": "Add a 5-second long-press gesture on the Home banner image area (touch + mouse/pointer) to open the existing Admin passcode modal without affecting the Ctrl+Shift+U shortcut or other Home interactions.",
       "acceptanceCriteria": [
-        "In Library → Playlists, clicking a playlist card opens a playlist detail view without triggering any unintended playback.",
-        "The playlist detail view shows the playlist name and a list of songs contained in that playlist.",
-        "A clear Back control returns the user to the Library → Playlists list with the prior tab selection preserved."
+        "On mobile, pressing and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
+        "On desktop, clicking and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
+        "Releasing early, moving pointer/finger off the banner, or canceling the gesture prevents the modal from opening.",
+        "The existing Ctrl+Shift+U shortcut continues to open the same Admin passcode modal exactly as before.",
+        "The passcode flow remains unchanged: the modal still accepts the same passcode and enables/disables Admin Mode using the existing Hidden Admin Mode logic.",
+        "No new admin-only UI controls become visible unless Admin Mode is enabled; the long-press only opens the passcode modal."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/LibraryScreen.tsx",
-          "operation": "modify",
-          "description": "Add Library-internal navigation state (Playlists list vs Playlist detail) so playlist cards open a detail view while keeping BottomTabBar/Sidebar behavior intact and preserving the active Library tab on Back."
-        },
-        {
-          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "operation": "modify",
-          "description": "Make each playlist card clickable (entire card surface) and call a passed-in handler to open the playlist detail view; ensure no playback is triggered on card click. Use existing shadcn-ui primitives already in the app (e.g., Button/Dialog where applicable). Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
+          "path": "frontend/src/hooks/useLongPress.ts",
           "operation": "create",
-          "description": "Create a PlaylistDetailView component that renders playlist title, a clear Back button, and a song list for the selected playlist. Use shadcn-ui Button (and other existing UI primitives as needed) to match current design. Verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-131",
-      "summary": "Render playlist songs using existing song row UI and wire selection into existing MusicPlayer behavior with playlist-context Next/Previous ordering.",
-      "acceptanceCriteria": [
-        "Playlist detail song list renders using the existing Song UI patterns (e.g., SongListRow) including title image/title and the existing per-song controls (play/⋮/like) where applicable.",
-        "Clicking a song row in the playlist detail view starts playback using the existing player behavior (no new audio implementation).",
-        "Next/Previous from the MusicPlayer navigates within the playlist’s song list while the playlist detail view is open."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
-          "operation": "modify",
-          "description": "Render songs with the existing SongListRow component and forward song selection to the parent so playback uses the existing MusicPlayer (no new audio implementation)."
+          "description": "Create a reusable React hook that detects a continuous long-press via Pointer Events (works for touch and mouse) with a configurable delay (5000ms), and exposes event handlers that properly cancel on pointerup, pointercancel, pointerleave, and significant movement so the action does not fire unless the press is uninterrupted for the full duration."
         },
         {
-          "path": "frontend/src/pages/LibraryScreen.tsx",
+          "path": "frontend/src/components/home/HomeChannelBanner.tsx",
           "operation": "modify",
-          "description": "Extend playback state to support a 'playlist context' queue while the playlist detail view is open so MusicPlayer Next/Previous advances within the selected playlist’s song list (falling back to the existing all-songs behavior outside playlist detail)."
-        },
-        {
-          "path": "frontend/src/utils/playlistPlayback.ts",
-          "operation": "create",
-          "description": "Add small pure helpers for playlist playback ordering (e.g., mapping songIds to SongView, computing next/previous indices safely) to keep LibraryScreen logic readable."
-        }
-      ]
-    },
-    {
-      "id": "REQ-132",
-      "summary": "Add playlist-level Play button and Spotify-like Shuffle/Repeat/Play Mode controls that affect playlist playback ordering and behavior.",
-      "acceptanceCriteria": [
-        "Playlist detail view includes a prominent Play button plus distinct controls labeled or iconified for Shuffle, Repeat, and Play Mode.",
-        "Toggling Shuffle changes the order used when starting playlist playback from the Play button and when navigating Next/Previous.",
-        "Repeat control supports at minimum Off and Repeat All for playlist playback behavior within the playlist detail view.",
-        "Play Mode control is present and changes playback behavior/state in a visible way (e.g., a dropdown or cycle button) without breaking existing player UI or other screens.",
-        "All user-facing labels for these controls are in English."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
-          "operation": "modify",
-          "description": "Add a prominent playlist-level Play button plus Shuffle/Repeat/Play Mode controls in English. Use shadcn-ui Button and (if needed) shadcn-ui DropdownMenu/Toggle-style patterns already present in the codebase for Spotify-like controls. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/LibraryScreen.tsx",
-          "operation": "modify",
-          "description": "Wire the playlist-level controls into the LibraryScreen playlist playback context: Shuffle must change queue order for Play and Next/Previous; Repeat must support Off and Repeat All; Play Mode must be visible and adjust behavior/state without impacting other screens."
-        },
-        {
-          "path": "frontend/src/utils/playlistPlayback.ts",
-          "operation": "modify",
-          "description": "Implement ordering helpers for shuffle and repeat behavior used by playlist-level Play and by Next/Previous navigation within the playlist context."
-        }
-      ]
-    },
-    {
-      "id": "REQ-133",
-      "summary": "Show an Admin-Mode-only Create Official Playlist button beside the Official Playlists header, opening a name dialog and toasting success/failure in English.",
-      "acceptanceCriteria": [
-        "When Hidden Admin Mode is disabled, the “Create Official Playlist” button is not rendered anywhere in the Library UI.",
-        "When Hidden Admin Mode is enabled, the “Create Official Playlist” button is rendered beside the “Official Playlists” header in Library → Playlists.",
-        "Normal users (not in Hidden Admin Mode) can still create their own playlists via the existing “Create Playlist” flow and cannot see the official playlist creation control.",
-        "Clicking “Create Official Playlist” opens a dialog to enter a playlist name and confirms creation with an English success toast; errors show an English failure toast."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "operation": "modify",
-          "description": "Render an Admin-Mode-only “Create Official Playlist” button beside the “Official Playlists” header using the existing AdminGate/AdminOnly pattern (Hidden Admin Mode). Use shadcn-ui Dialog, Input, Label, and Button for the name prompt, and show English success/failure toasts. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add a React Query mutation hook to create an official playlist that is gated by Hidden Admin Mode (passcode), and invalidates the official playlists list on success. Ensure error handling maps to English toast messages."
-        }
-      ]
-    },
-    {
-      "id": "REQ-134",
-      "summary": "List and open Official Playlists in Library → Playlists, allowing guests to browse official playlists and their songs read-only using official-playlist backend methods.",
-      "acceptanceCriteria": [
-        "Backend exposes a query method to list all official playlists (names + songIds) so the frontend can render the “Official Playlists” section without hardcoded placeholders.",
-        "Frontend renders official playlist cards with name + song count in the “Official Playlists” section.",
-        "Clicking an official playlist card opens the playlist detail view and displays the songs for that official playlist using the backend’s official-playlist details API.",
-        "Guests can view official playlists and their contents (read-only) without being forced into sign-in, while user playlists remain restricted to signed-in users per existing authorization behavior."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add React Query hooks for official playlists: list official playlists (guest-accessible) and fetch official playlist song details via the backend’s official-playlist read functions; keep user-playlist queries auth-restricted as they are today."
-        },
-        {
-          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "operation": "modify",
-          "description": "Replace the Official Playlists placeholder with a real list (name + song count) sourced from the official playlists query; allow guest rendering of the Official section while keeping the user playlists section gated behind sign-in. Use existing UI patterns (cards/grid) and shadcn-ui Button/Dialog where applicable. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/LibraryScreen.tsx",
-          "operation": "modify",
-          "description": "Support opening an official playlist card into the same playlist detail view and ensure the detail view selects the correct data source (official vs user) while preserving existing authorization behavior (no forced sign-in for official reads)."
-        },
-        {
-          "path": "frontend/src/components/library/PlaylistDetailView.tsx",
-          "operation": "modify",
-          "description": "Allow PlaylistDetailView to render either user-playlist songs or official-playlist songs based on the selected playlist type, without exposing any mutation controls for guests (read-only browsing for official playlists)."
+          "description": "Wrap the banner image area with long-press handlers (from useLongPress) and call useHiddenAdminMode().openModal() after an uninterrupted 5-second press; ensure the long-press is attached only to the banner image area (not the rest of the Home screen), cancels when the pointer/finger leaves the banner image area, and does not change existing admin controls visibility or the Ctrl+Shift+U activation behavior."
         }
       ]
     }

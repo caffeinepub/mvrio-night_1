@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { useHiddenAdminMode } from '../context/HiddenAdminModeContext';
-import type { SongView, PlaylistView } from '../backend';
+import type { SongView, PlaylistView, ArtistProfile } from '../backend';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 import { isDataUrl, dataUrlToBytes } from '../utils/dataUrl';
@@ -420,5 +420,112 @@ export function useGetOfficialPlaylistDetails(playlistName: string | null) {
       return actor.getOfficialPlaylistDetails(playlistName);
     },
     enabled: !!actor && !isFetching && !!playlistName,
+  });
+}
+
+// Delete User Playlist
+export function useDeleteUserPlaylist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (playlistName: string) => {
+      if (!actor) throw new Error('Actor not initialized');
+      return actor.deletePlaylist(playlistName, null);
+    },
+    onSuccess: (_, playlistName) => {
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'user', playlistName, 'details'] });
+      toast.success('Playlist deleted successfully');
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Delete user playlist error:', error);
+    },
+  });
+}
+
+// Delete Official Playlist
+export function useDeleteOfficialPlaylist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+
+  return useMutation({
+    mutationFn: async (playlistName: string) => {
+      if (!actor) throw new Error('Actor not initialized');
+      
+      if (!isAdminModeEnabled) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
+      
+      return actor.deletePlaylist(playlistName, passcode);
+    },
+    onSuccess: (_, playlistName) => {
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official', playlistName, 'details'] });
+      toast.success('Official playlist deleted successfully');
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Delete official playlist error:', error);
+    },
+  });
+}
+
+// Artist Profile
+export function useGetArtistProfile() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<ArtistProfile>({
+    queryKey: ['artistProfile'],
+    queryFn: async () => {
+      if (!actor) {
+        // Return default fallback if actor not ready
+        return {
+          bio: '',
+          youtube: '',
+          instagram: '',
+          buyMeACoffee: '',
+        };
+      }
+      return actor.getArtistProfile();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useUpdateArtistProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { getPasscode } = useHiddenAdminMode();
+
+  return useMutation({
+    mutationFn: async (profile: ArtistProfile) => {
+      if (!actor) throw new Error('Actor not initialized');
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
+
+      return actor.updateArtistProfile(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artistProfile'] });
+      toast.success('Artist profile updated successfully');
+    },
+    onError: (error: any) => {
+      // Do not trigger sign-in modal for admin-only errors
+      const message = getAuthErrorMessage(error);
+      throw new Error(message);
+    },
   });
 }

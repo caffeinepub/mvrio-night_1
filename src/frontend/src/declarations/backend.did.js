@@ -25,6 +25,29 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const ContactInfo = IDL.Record({
+  'instagram' : IDL.Text,
+  'name' : IDL.Text,
+  'email' : IDL.Text,
+  'youtube' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const Message = IDL.Record({
+  'id' : IDL.Nat,
+  'content' : IDL.Text,
+  'audioAttachment' : IDL.Opt(ExternalBlob),
+  'pdfAttachment' : IDL.Opt(ExternalBlob),
+  'isRead' : IDL.Bool,
+  'sender' : IDL.Text,
+  'imageAttachment' : IDL.Opt(ExternalBlob),
+  'timestamp' : IDL.Int,
+  'isAdmin' : IDL.Bool,
+  'recipientSeen' : IDL.Bool,
+});
+export const MessagesView = IDL.Record({
+  'contactInfo' : IDL.Opt(ContactInfo),
+  'messages' : IDL.Vec(Message),
+});
 export const SongView = IDL.Record({
   'id' : IDL.Nat,
   'albumArt' : ExternalBlob,
@@ -37,7 +60,18 @@ export const SongView = IDL.Record({
   'likesCount' : IDL.Nat,
   'titleImage' : ExternalBlob,
 });
-export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const ArtistProfile = IDL.Record({
+  'bio' : IDL.Text,
+  'instagram' : IDL.Text,
+  'buyMeACoffee' : IDL.Text,
+  'youtube' : IDL.Text,
+});
+export const UserProfileRecord = IDL.Record({
+  'totalListeningTime' : IDL.Nat,
+  'userName' : IDL.Text,
+  'dateOfBirth' : IDL.Text,
+  'fullName' : IDL.Text,
+});
 export const PlaylistView = IDL.Record({
   'name' : IDL.Text,
   'songIds' : IDL.Vec(IDL.Nat),
@@ -71,6 +105,7 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addListeningTime' : IDL.Func([IDL.Nat], [], []),
   'addSong' : IDL.Func(
       [
         IDL.Text,
@@ -86,17 +121,48 @@ export const idlService = IDL.Service({
     ),
   'addToOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
   'addToPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+  'adminDeleteConversation' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Text, IDL.Text],
+      [],
+      [],
+    ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'checkAuthorization' : IDL.Func([], [IDL.Bool], ['query']),
   'clearFavorites' : IDL.Func([], [], []),
+  'clearMessages' : IDL.Func([], [], []),
   'createOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'createPlaylist' : IDL.Func([IDL.Text], [], []),
+  'deleteMessage' : IDL.Func([IDL.Nat], [], []),
+  'deletePlaylist' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [], []),
   'deleteSong' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+  'deleteUserMessage' : IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [], []),
+  'getAllConversations' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(IDL.Principal)],
+      ['query'],
+    ),
+  'getAllConversationsByUserIdPasscode' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(IDL.Principal)],
+      ['query'],
+    ),
+  'getAllMessages' : IDL.Func(
+      [IDL.Principal, IDL.Text],
+      [IDL.Opt(MessagesView)],
+      ['query'],
+    ),
   'getAllSongs' : IDL.Func([], [IDL.Vec(SongView)], ['query']),
   'getAllSongsByTitle' : IDL.Func([], [IDL.Vec(SongView)], ['query']),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getArtistProfile' : IDL.Func([], [ArtistProfile], ['query']),
+  'getCallerUserProfile' : IDL.Func(
+      [],
+      [IDL.Opt(UserProfileRecord)],
+      ['query'],
+    ),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getFavorites' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
+  'getHiddenAdminModeStatus' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+  'getMessages' : IDL.Func([], [IDL.Opt(MessagesView)], ['query']),
   'getOfficialPlaylist' : IDL.Func(
       [IDL.Text],
       [IDL.Opt(PlaylistView)],
@@ -110,14 +176,23 @@ export const idlService = IDL.Service({
   'getPlaylist' : IDL.Func([IDL.Text], [PlaylistView], ['query']),
   'getPlaylistDetails' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
   'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
+  'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
+  'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
   'getUserPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfile)],
+      [IDL.Opt(UserProfileRecord)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listOfficialPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
+  'markAllMessagesAsSeen' : IDL.Func(
+      [IDL.Text, IDL.Principal, IDL.Text],
+      [],
+      [],
+    ),
+  'markLastMessageAsRead' : IDL.Func([], [], []),
+  'markMessagesAsSeen' : IDL.Func([IDL.Bool], [], []),
   'playSong' : IDL.Func([IDL.Nat], [], []),
   'removeFromOfficialPlaylist' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Text],
@@ -125,10 +200,42 @@ export const idlService = IDL.Service({
       [],
     ),
   'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'replyToMessage' : IDL.Func(
+      [IDL.Principal, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
+  'replyWithAttachments' : IDL.Func(
+      [
+        IDL.Principal,
+        IDL.Text,
+        IDL.Opt(ExternalBlob),
+        IDL.Opt(ExternalBlob),
+        IDL.Opt(ExternalBlob),
+        IDL.Text,
+      ],
+      [IDL.Nat],
+      [],
+    ),
+  'saveCallerUserProfile' : IDL.Func([UserProfileRecord], [], []),
   'searchSongs' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
+  'sendMessage' : IDL.Func([IDL.Text], [IDL.Nat], []),
+  'sendMessageWithAttachments' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Opt(ExternalBlob),
+        IDL.Opt(ExternalBlob),
+        IDL.Opt(ExternalBlob),
+      ],
+      [IDL.Nat],
+      [],
+    ),
+  'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
   'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
+  'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo)], [], []),
+  'updateArtistProfile' : IDL.Func([ArtistProfile], [], []),
+  'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
 });
 
 export const idlInitArgs = [];
@@ -151,6 +258,29 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const ContactInfo = IDL.Record({
+    'instagram' : IDL.Text,
+    'name' : IDL.Text,
+    'email' : IDL.Text,
+    'youtube' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const Message = IDL.Record({
+    'id' : IDL.Nat,
+    'content' : IDL.Text,
+    'audioAttachment' : IDL.Opt(ExternalBlob),
+    'pdfAttachment' : IDL.Opt(ExternalBlob),
+    'isRead' : IDL.Bool,
+    'sender' : IDL.Text,
+    'imageAttachment' : IDL.Opt(ExternalBlob),
+    'timestamp' : IDL.Int,
+    'isAdmin' : IDL.Bool,
+    'recipientSeen' : IDL.Bool,
+  });
+  const MessagesView = IDL.Record({
+    'contactInfo' : IDL.Opt(ContactInfo),
+    'messages' : IDL.Vec(Message),
+  });
   const SongView = IDL.Record({
     'id' : IDL.Nat,
     'albumArt' : ExternalBlob,
@@ -163,7 +293,18 @@ export const idlFactory = ({ IDL }) => {
     'likesCount' : IDL.Nat,
     'titleImage' : ExternalBlob,
   });
-  const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const ArtistProfile = IDL.Record({
+    'bio' : IDL.Text,
+    'instagram' : IDL.Text,
+    'buyMeACoffee' : IDL.Text,
+    'youtube' : IDL.Text,
+  });
+  const UserProfileRecord = IDL.Record({
+    'totalListeningTime' : IDL.Nat,
+    'userName' : IDL.Text,
+    'dateOfBirth' : IDL.Text,
+    'fullName' : IDL.Text,
+  });
   const PlaylistView = IDL.Record({
     'name' : IDL.Text,
     'songIds' : IDL.Vec(IDL.Nat),
@@ -197,6 +338,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addListeningTime' : IDL.Func([IDL.Nat], [], []),
     'addSong' : IDL.Func(
         [
           IDL.Text,
@@ -212,17 +354,48 @@ export const idlFactory = ({ IDL }) => {
       ),
     'addToOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
     'addToPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+    'adminDeleteConversation' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Text, IDL.Text],
+        [],
+        [],
+      ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'checkAuthorization' : IDL.Func([], [IDL.Bool], ['query']),
     'clearFavorites' : IDL.Func([], [], []),
+    'clearMessages' : IDL.Func([], [], []),
     'createOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'createPlaylist' : IDL.Func([IDL.Text], [], []),
+    'deleteMessage' : IDL.Func([IDL.Nat], [], []),
+    'deletePlaylist' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [], []),
     'deleteSong' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+    'deleteUserMessage' : IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [], []),
+    'getAllConversations' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(IDL.Principal)],
+        ['query'],
+      ),
+    'getAllConversationsByUserIdPasscode' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(IDL.Principal)],
+        ['query'],
+      ),
+    'getAllMessages' : IDL.Func(
+        [IDL.Principal, IDL.Text],
+        [IDL.Opt(MessagesView)],
+        ['query'],
+      ),
     'getAllSongs' : IDL.Func([], [IDL.Vec(SongView)], ['query']),
     'getAllSongsByTitle' : IDL.Func([], [IDL.Vec(SongView)], ['query']),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getArtistProfile' : IDL.Func([], [ArtistProfile], ['query']),
+    'getCallerUserProfile' : IDL.Func(
+        [],
+        [IDL.Opt(UserProfileRecord)],
+        ['query'],
+      ),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getFavorites' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
+    'getHiddenAdminModeStatus' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+    'getMessages' : IDL.Func([], [IDL.Opt(MessagesView)], ['query']),
     'getOfficialPlaylist' : IDL.Func(
         [IDL.Text],
         [IDL.Opt(PlaylistView)],
@@ -236,14 +409,23 @@ export const idlFactory = ({ IDL }) => {
     'getPlaylist' : IDL.Func([IDL.Text], [PlaylistView], ['query']),
     'getPlaylistDetails' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
     'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
+    'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
+    'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
     'getUserPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfile)],
+        [IDL.Opt(UserProfileRecord)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listOfficialPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
+    'markAllMessagesAsSeen' : IDL.Func(
+        [IDL.Text, IDL.Principal, IDL.Text],
+        [],
+        [],
+      ),
+    'markLastMessageAsRead' : IDL.Func([], [], []),
+    'markMessagesAsSeen' : IDL.Func([IDL.Bool], [], []),
     'playSong' : IDL.Func([IDL.Nat], [], []),
     'removeFromOfficialPlaylist' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Text],
@@ -251,10 +433,42 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'replyToMessage' : IDL.Func(
+        [IDL.Principal, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
+    'replyWithAttachments' : IDL.Func(
+        [
+          IDL.Principal,
+          IDL.Text,
+          IDL.Opt(ExternalBlob),
+          IDL.Opt(ExternalBlob),
+          IDL.Opt(ExternalBlob),
+          IDL.Text,
+        ],
+        [IDL.Nat],
+        [],
+      ),
+    'saveCallerUserProfile' : IDL.Func([UserProfileRecord], [], []),
     'searchSongs' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
+    'sendMessage' : IDL.Func([IDL.Text], [IDL.Nat], []),
+    'sendMessageWithAttachments' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Opt(ExternalBlob),
+          IDL.Opt(ExternalBlob),
+          IDL.Opt(ExternalBlob),
+        ],
+        [IDL.Nat],
+        [],
+      ),
+    'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
     'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
+    'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo)], [], []),
+    'updateArtistProfile' : IDL.Func([ArtistProfile], [], []),
+    'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
   });
 };
 

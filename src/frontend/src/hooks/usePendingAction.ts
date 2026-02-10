@@ -11,10 +11,6 @@ import { downloadSong } from '../utils/download';
 import { toast } from 'sonner';
 import { isAdminRequiredError } from '../utils/authorizationErrors';
 
-/**
- * Hook that monitors authentication state and automatically executes
- * pending actions once after successful sign-in.
- */
 export function usePendingAction() {
   const { isAuthenticated, pendingAction, clearPendingAction, closeSignInModal, returnPath } = useAuth();
   const { loginStatus } = useInternetIdentity();
@@ -25,7 +21,6 @@ export function usePendingAction() {
   const addToPlaylistMutation = useAddToPlaylist();
 
   useEffect(() => {
-    // Only execute once when user becomes authenticated and we have a pending action
     if (
       isAuthenticated &&
       pendingAction &&
@@ -45,7 +40,6 @@ export function usePendingAction() {
               break;
 
             case 'create-playlist':
-              // This will be handled by CreatePlaylistDialog after sign-in
               break;
 
             case 'add-to-playlist':
@@ -71,19 +65,19 @@ export function usePendingAction() {
                 toast.success('Download started');
               }
               break;
+
+            case 'messaging':
+              break;
           }
 
-          // Restore scroll position if available
           if (returnPath) {
             setTimeout(() => {
               window.scrollTo(0, returnPath.scrollY);
             }, 100);
           }
         } catch (error: any) {
-          // Check if this is an admin-required error
           if (isAdminRequiredError(error)) {
             toast.error('You do not have permission to perform this action.');
-            // Don't retry for admin-only errors
           } else {
             toast.error('Failed to complete action');
             console.error('Pending action error:', error);
@@ -108,7 +102,6 @@ export function usePendingAction() {
     returnPath,
   ]);
 
-  // Reset execution flag when pending action is cleared
   useEffect(() => {
     if (!pendingAction) {
       hasExecuted.current = false;

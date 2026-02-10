@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add to Home Screen - PWA Install Snippet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+
+    p {
+      color: #666;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    /* Install Banner */
+    #installBanner {
+      display: none;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    #installBanner.visible {
+      display: flex;
+    }
+
+    .banner-text {
+      flex: 1;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .banner-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #closeBtn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 10px 16px;
+    }
+
+    #closeBtn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+
+    .feature-list {
+      text-align: left;
+      margin: 30px 0;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .feature-list h3 {
+      color: #333;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+
+    .feature-list ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .feature-list li {
+      color: #666;
+      padding: 8px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .feature-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      #installBanner {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .banner-text {
+        text-align: center;
+      }
+
+      .banner-actions {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 PWA Install Demo</h1>
+    <p>This page demonstrates the standard beforeinstallprompt flow for Progressive Web Apps.</p>
+
+    <!-- Install Banner (hidden by default) -->
+    <div id="installBanner">
+      <div class="banner-text">
+        📱 Install this app on your device for a better experience!
+      </div>
+      <div class="banner-actions">
+        <button id="installBtn">Add to Home Screen</button>
+        <button id="closeBtn">✕</button>
+      </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="status" class="status"></div>
+
+    <div class="feature-list">
+      <h3>How it works:</h3>
+      <ul>
+        <li>Browser fires beforeinstallprompt event</li>
+        <li>Event is captured and stored</li>
+        <li>Banner appears only when install is supported</li>
+        <li>Clicking "Add to Home Screen" triggers prompt()</li>
+        <li>User choice (accepted/dismissed) is handled</li>
+        <li>Banner hides after install attempt</li>
+        <li>Works on mobile and desktop</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let deferredPrompt = null;
+    let isInstalled = false;
+
+    // DOM Elements
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const status = document.getElementById('status');
+
+    // Check if app is already installed
+    function checkIfInstalled() {
+      // Check for standalone mode (PWA installed)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSStandalone = window.navigator.standalone === true;
+      return isStandalone || isIOSStandalone;
+    }
+
+    // Show status message
+    function showStatus(message, type = 'info') {
+      status.textContent = message;
+      status.className = `status visible ${type}`;
+      setTimeout(() => {
+        status.classList.remove('visible');
+      }, 5000);
+    }
+
+    // Initialize
+    function init() {
+      isInstalled = checkIfInstalled();
+
+      if (isInstalled) {
+        showStatus('✓ App is already installed!', 'success');
+        return;
+      }
+
+      showStatus('Waiting for install prompt...', 'info');
+    }
+
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('beforeinstallprompt event fired');
+      
+      // Prevent the default mini-infobar
+      e.preventDefault();
+      
+      // Store the event for later use
+      deferredPrompt = e;
+      
+      // Show the install banner
+      installBanner.classList.add('visible');
+      
+      showStatus('Install prompt available! Click "Add to Home Screen" to install.', 'success');
+    });
+
+    // Handle install button click
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) {
+        showStatus('Install prompt not available', 'error');
+        return;
+      }
+
+      // Disable button during prompt
+      installBtn.disabled = true;
+      installBtn.textContent = 'Installing...';
+
+      try {
+        // Show the install prompt
+        await deferredPrompt.prompt();
+        
+        // Wait for the user's response
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        console.log(`User ${outcome} the install prompt`);
+        
+        if (outcome === 'accepted') {
+          showStatus('✓ App installed successfully!', 'success');
+          isInstalled = true;
+        } else {
+          showStatus('Install dismissed by user', 'info');
+        }
+        
+        // Hide the banner after install attempt
+        installBanner.classList.remove('visible');
+        
+        // Clear the deferred prompt
+        deferredPrompt = null;
+        
+      } catch (error) {
+        console.error('Error during install:', error);
+        showStatus('Error during installation', 'error');
+        
+        // Re-enable button on error
+        installBtn.disabled = false;
+        installBtn.textContent = 'Add to Home Screen';
+      }
+    });
+
+    // Handle close button click
+    closeBtn.addEventListener('click', () => {
+      installBanner.classList.remove('visible');
+      showStatus('Install banner closed', 'info');
+    });
+
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+      console.log('App was installed');
+      isInstalled = true;
+      installBanner.classList.remove('visible');
+      deferredPrompt = null;
+      showStatus('✓ App installed successfully!', 'success');
+    });
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

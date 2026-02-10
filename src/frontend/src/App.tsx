@@ -8,7 +8,6 @@ import { AboutArtistScreen } from './pages/AboutArtistScreen';
 import { ThemesScreen } from './pages/ThemesScreen';
 import { SettingsScreen } from './pages/SettingsScreen';
 import { SupportScreen } from './pages/SupportScreen';
-import { CustomSongRequestsScreen } from './pages/CustomSongRequestsScreen';
 import { ContactScreen } from './pages/ContactScreen';
 import { ThemeProvider } from './hooks/useTheme';
 import { SettingsProvider } from './hooks/useSettings';
@@ -16,25 +15,38 @@ import { AuthProvider } from './context/AuthContext';
 import { HiddenAdminModeProvider } from './context/HiddenAdminModeContext';
 import { AdminProvider } from './context/AdminContext';
 import { AdminPasscodeModal } from './components/admin/AdminPasscodeModal';
+import { UnifiedMessagesDrawer } from './components/messaging/UnifiedMessagesDrawer';
+import { ProfileCompletionModal } from './components/account/ProfileCompletionModal';
 import { Toaster } from '@/components/ui/sonner';
 import { parseSongIdFromUrl, clearSongParamFromUrl } from './utils/deepLinks';
 import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
 import { FirstLaunchWelcomePopup } from './components/onboarding/FirstLaunchWelcomePopup';
 import { SignInModal } from './components/SignInModal';
 import { usePendingAction } from './hooks/usePendingAction';
+import { useInternetIdentity } from './hooks/useInternetIdentity';
+import { useProfileHelpers } from './hooks/useUserProfile';
+import { useAuth } from './context/AuthContext';
+import { toast } from 'sonner';
 
-export type Screen = 'home' | 'songs' | 'library' | 'search' | 'about' | 'themes' | 'settings' | 'support' | 'requests' | 'contact';
+export type Screen = 'home' | 'songs' | 'library' | 'search' | 'about' | 'themes' | 'settings' | 'support' | 'contact';
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [deepLinkSongId, setDeepLinkSongId] = useState<bigint | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const { isWelcomeOpen, dismissWelcome } = useFirstLaunchWelcome();
+  const { identity } = useInternetIdentity();
+  const { isProfileComplete, isLoading: profileLoading, isFetched: profileFetched } = useProfileHelpers();
+  const { requireAuth } = useAuth();
+  
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [messagePrefill, setMessagePrefill] = useState<string | undefined>(undefined);
 
-  // Initialize pending action handler
   usePendingAction();
 
-  // Handle deep link on app load
+  const isAuthenticated = !!identity;
+  const showProfileSetup = isAuthenticated && !profileLoading && profileFetched && !isProfileComplete;
+
   useEffect(() => {
     const songId = parseSongIdFromUrl();
     if (songId && !deepLinkHandled) {
@@ -47,6 +59,27 @@ function AppContent() {
     setDeepLinkHandled(true);
     clearSongParamFromUrl();
     setDeepLinkSongId(null);
+  };
+
+  const handleOpenMessages = (prefill?: string) => {
+    if (!isAuthenticated) {
+      requireAuth({ type: 'messaging' });
+      toast.error('Please sign in to send messages');
+      return;
+    }
+
+    if (!isProfileComplete) {
+      toast.error('Please complete your profile to send messages');
+      return;
+    }
+
+    setMessagePrefill(prefill);
+    setIsMessagesOpen(true);
+  };
+
+  const handleCloseMessages = () => {
+    setIsMessagesOpen(false);
+    setMessagePrefill(undefined);
   };
 
   const renderScreen = () => {
@@ -72,10 +105,8 @@ function AppContent() {
         return <SettingsScreen />;
       case 'support':
         return <SupportScreen />;
-      case 'requests':
-        return <CustomSongRequestsScreen />;
       case 'contact':
-        return <ContactScreen />;
+        return <ContactScreen onOpenMessages={handleOpenMessages} />;
       default:
         return <HomeScreen />;
     }
@@ -84,9 +115,19 @@ function AppContent() {
   return (
     <>
       {isWelcomeOpen && <FirstLaunchWelcomePopup onDismiss={dismissWelcome} />}
-      <AppShell currentScreen={currentScreen} onNavigate={setCurrentScreen}>
+      {showProfileSetup && <ProfileCompletionModal open={true} />}
+      <AppShell 
+        currentScreen={currentScreen} 
+        onNavigate={setCurrentScreen}
+        onOpenMessages={() => handleOpenMessages()}
+      >
         {renderScreen()}
       </AppShell>
+      <UnifiedMessagesDrawer 
+        open={isMessagesOpen} 
+        onOpenChange={handleCloseMessages}
+        prefillContent={messagePrefill}
+      />
       <SignInModal />
       <AdminPasscodeModal />
       <Toaster />

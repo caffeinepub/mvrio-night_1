@@ -1,11 +1,15 @@
-import { Home, User, Palette, Settings, Coffee, Music, Mail, Download, LogIn, LogOut } from 'lucide-react';
+import { Home, User, Palette, Settings, Coffee, Mail, Download, LogIn, LogOut, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Menu } from 'lucide-react';
 import { useA2HS } from '../../hooks/useA2HS';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
+import { useProfileHelpers } from '../../hooks/useUserProfile';
 import type { Screen } from '../../App';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   currentScreen: Screen;
@@ -13,8 +17,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
-  const { promptInstall } = useA2HS();
+  const { promptInstall, canInstall } = useA2HS();
   const { login, clear, loginStatus, identity } = useInternetIdentity();
+  const { profile, listeningTimeFormatted, isLoading: profileLoading } = useProfileHelpers();
   const [open, setOpen] = useState(false);
 
   const menuItems = [
@@ -23,8 +28,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     { id: 'themes' as Screen, label: 'Themes', icon: Palette },
     { id: 'settings' as Screen, label: 'Settings', icon: Settings },
     { id: 'support' as Screen, label: 'Support', icon: Coffee },
-    { id: 'requests' as Screen, label: 'Custom Song Requests', icon: Music },
-    { id: 'contact' as Screen, label: 'Contact', icon: Mail },
+    { id: 'contact' as Screen, label: 'Send a Message', icon: Mail },
   ];
 
   const handleNavigate = (screen: Screen) => {
@@ -32,8 +36,12 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     setOpen(false);
   };
 
-  const handleA2HS = () => {
-    promptInstall();
+  const handleInstallApp = async () => {
+    if (canInstall) {
+      await promptInstall();
+    } else {
+      toast.error('App is already installed or installation is not supported.');
+    }
     setOpen(false);
   };
 
@@ -73,14 +81,36 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
             );
           })}
           
+          {isAuthenticated && profile && !profileLoading && (
+            <>
+              <Separator className="my-4" />
+              <div className="px-2 py-2">
+                <Card className="bg-accent/50">
+                  <CardContent className="p-4 space-y-2">
+                    <p className="text-sm font-semibold text-foreground">Account</p>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <p><strong>Name:</strong> {profile.fullName}</p>
+                      <p><strong>Username:</strong> {profile.userName}</p>
+                      <p><strong>DOB:</strong> {profile.dateOfBirth}</p>
+                      <div className="flex items-center gap-1 pt-1">
+                        <Clock className="w-3 h-3" />
+                        <span><strong>Listening Time:</strong> {listeningTimeFormatted}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+          
           <div className="pt-4 border-t border-border/50 mt-4 space-y-1">
             <Button
               variant="outline"
               className="w-full justify-start dark:!text-white dark:hover:bg-white/10"
-              onClick={handleA2HS}
+              onClick={handleInstallApp}
             >
               <Download className="w-4 h-4 mr-3" />
-              Add to Home Screen
+              Install App
             </Button>
             
             <Button
@@ -132,7 +162,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:block w-72 border-r border-border/50 bg-sidebar/80 backdrop-blur-sm">
-        <div className="sticky top-0 h-screen">
+        <div className="sticky top-0 h-screen overflow-y-auto">
           <SidebarContent />
         </div>
       </aside>

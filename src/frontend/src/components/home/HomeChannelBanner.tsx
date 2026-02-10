@@ -5,13 +5,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useHomeBanner } from '../../hooks/useHomeBanner';
 import { useAdminContext } from '../../context/AdminContext';
+import { useHiddenAdminMode } from '../../context/HiddenAdminModeContext';
+import { useLongPress } from '../../hooks/useLongPress';
 import { toast } from 'sonner';
 
 export function HomeChannelBanner() {
   const { displayImage, imageUrl, imageFile, setImageUrl, setImageFile, clearBanner } = useHomeBanner();
   const { isAdmin } = useAdminContext();
+  const { openModal } = useHiddenAdminMode();
   const [urlInput, setUrlInput] = useState(imageUrl);
   const [showUrlInput, setShowUrlInput] = useState(false);
+
+  // Long-press handler for admin mode activation
+  const longPressHandlers = useLongPress({
+    onLongPress: () => {
+      openModal();
+    },
+    delay: 5000,
+    movementThreshold: 10,
+  });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAdmin) {
@@ -64,12 +76,15 @@ export function HomeChannelBanner() {
     <div className="w-full mb-8">
       <div className="relative w-full max-w-5xl mx-auto">
         <div className="flex items-stretch bg-card/30 rounded-lg overflow-hidden h-[200px] md:h-[280px]">
-          {/* Left: Banner Image */}
-          <div className="w-1/2 bg-gradient-to-br from-background/80 to-card/50 flex items-center justify-center p-4">
+          {/* Left: Banner Image with long-press trigger */}
+          <div
+            className="w-1/2 bg-gradient-to-br from-background/80 to-card/50 flex items-center justify-center p-4 touch-none select-none"
+            {...longPressHandlers}
+          >
             <img
               src={displayImage}
               alt="Channel Banner"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain pointer-events-none"
             />
           </div>
           

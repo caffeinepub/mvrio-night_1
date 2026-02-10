@@ -1,119 +1,58 @@
 {
   "kind": "build_request",
-  "title": "Playlist detail screen, Spotify-like playlist controls, and Admin-only Create Official Playlist",
-  "priority": "high",
+  "title": "Add 5-second long-press Home banner trigger for Hidden Admin Mode passcode modal",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-130",
-      "text": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
+      "id": "REQ-191",
+      "text": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-4",
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "Make each playlist card clickable. When clicked, it opens a page showing all songs in that playlist."
+          "to activate admin mode in mobile a altanative , admin has to click on the banner image and hold for 5 sec then the password bar appears so , admin can input the password and turn on admin mode",
+          "1. no it's an additional way , and keep the cntl + shift + u shortcut . 2. can work in both but it's important in mobile . 3. yeah , same password",
+          "build it now"
         ]
       },
       "acceptanceCriteria": [
-        "In Library → Playlists, clicking a playlist card opens a playlist detail view without triggering any unintended playback.",
-        "The playlist detail view shows the playlist name and a list of songs contained in that playlist.",
-        "A clear Back control returns the user to the Library → Playlists list with the prior tab selection preserved."
-      ]
-    },
-    {
-      "id": "REQ-131",
-      "text": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "...opens a page showing all songs in that playlist."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Playlist detail song list renders using the existing Song UI patterns (e.g., SongListRow) including title image/title and the existing per-song controls (play/⋮/like) where applicable.",
-        "Clicking a song row in the playlist detail view starts playback using the existing player behavior (no new audio implementation).",
-        "Next/Previous from the MusicPlayer navigates within the playlist’s song list while the playlist detail view is open."
-      ]
-    },
-    {
-      "id": "REQ-132",
-      "text": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "On the playlist page, add a Play button with controls: Shuffle, Repeat, and Play Modes like Spotify."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Playlist detail view includes a prominent Play button plus distinct controls labeled or iconified for Shuffle, Repeat, and Play Mode.",
-        "Toggling Shuffle changes the order used when starting playlist playback from the Play button and when navigating Next/Previous.",
-        "Repeat control supports at minimum Off and Repeat All for playlist playback behavior within the playlist detail view.",
-        "Play Mode control is present and changes playback behavior/state in a visible way (e.g., a dropdown or cycle button) without breaking existing player UI or other screens.",
-        "All user-facing labels for these controls are in English."
-      ]
-    },
-    {
-      "id": "REQ-133",
-      "text": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Add a ‘Create Official Playlist’ button that only appears for admins when Hidden Admin Mode is enabled. Normal users can create their own playlists but cannot see or use the official playlist button."
-        ]
-      },
-      "acceptanceCriteria": [
-        "When Hidden Admin Mode is disabled, the “Create Official Playlist” button is not rendered anywhere in the Library UI.",
-        "When Hidden Admin Mode is enabled, the “Create Official Playlist” button is rendered beside the “Official Playlists” header in Library → Playlists.",
-        "Normal users (not in Hidden Admin Mode) can still create their own playlists via the existing “Create Playlist” flow and cannot see the official playlist creation control.",
-        "Clicking “Create Official Playlist” opens a dialog to enter a playlist name and confirms creation with an English success toast; errors show an English failure toast."
-      ]
-    },
-    {
-      "id": "REQ-134",
-      "text": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "...can go throught inside and see the songs added in the play list...",
-          "...inside library -> playlist -> side of the offical play list"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Backend exposes a query method to list all official playlists (names + songIds) so the frontend can render the “Official Playlists” section without hardcoded placeholders.",
-        "Frontend renders official playlist cards with name + song count in the “Official Playlists” section.",
-        "Clicking an official playlist card opens the playlist detail view and displays the songs for that official playlist using the backend’s official-playlist details API.",
-        "Guests can view official playlists and their contents (read-only) without being forced into sign-in, while user playlists remain restricted to signed-in users per existing authorization behavior."
+        "On mobile, pressing and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
+        "On desktop, clicking and holding on the Home banner image continuously for 5 seconds opens the existing Admin passcode modal (no navigation).",
+        "Releasing early, moving pointer/finger off the banner, or canceling the gesture prevents the modal from opening.",
+        "The existing Ctrl+Shift+U shortcut continues to open the same Admin passcode modal exactly as before.",
+        "The passcode flow remains unchanged: the modal still accepts the same passcode and enables/disables Admin Mode using the existing Hidden Admin Mode logic.",
+        "No new admin-only UI controls become visible unless Admin Mode is enabled; the long-press only opens the passcode modal."
       ]
     }
   ],
   "constraints": [
-    "Frontend immutable paths must not be edited: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
-    "Keep the existing BottomTabBar/Sidebar navigation behavior intact (no breaking changes to current screen switching).",
-    "Use English for all user-facing text.",
-    "Preserve existing authentication rules: user playlists and playlist mutations require Internet Identity; official playlist reads remain accessible to guests.",
-    "Do not introduce additional backend services or databases; keep Motoko single-actor architecture (all logic in backend/main.mo)."
+    "Do not edit any frontend files under the immutable paths listed in SYSTEM_CONTEXT (compose and integrate via non-immutable components/hooks only).",
+    "Keep all user-facing text in English.",
+    "Do not change the existing Ctrl+Shift+U Hidden Admin Mode activation flow; add long-press as an additional trigger only.",
+    "Do not change the admin passcode value or modal copy/labels beyond what is necessary to wire in the new trigger."
   ],
   "nonGoals": [
-    "Implementing real audio queue persistence across app restarts for playlist playback.",
-    "Adding collaborative playlists or sharing playlists between users.",
-    "Adding playlist artwork upload/editing beyond what already exists.",
-    "Changing existing song playback UI outside what is necessary to support playlist-context next/previous ordering."
+    "Replacing the Ctrl+Shift+U shortcut with long-press.",
+    "Changing the passcode or introducing a new admin credential scheme.",
+    "Adding new admin UI features beyond opening the existing passcode modal from a long-press gesture.",
+    "Backend changes or state migrations for this request."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

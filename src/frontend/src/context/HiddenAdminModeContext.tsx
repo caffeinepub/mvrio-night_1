@@ -8,17 +8,13 @@ import {
   createElement,
 } from 'react';
 
-const ADMIN_PASSCODE = 'A1B2D3ABD';
-const STORAGE_KEY_ENABLED = 'mvrio_admin_mode_enabled';
-const STORAGE_KEY_PASSCODE = 'mvrio_admin_mode_passcode';
-
-export interface HiddenAdminModeContextValue {
+interface HiddenAdminModeContextValue {
   isAdminModeEnabled: boolean;
   isModalOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
-  submitPasscode: (passcode: string) => boolean;
-  clearAdminMode: () => void;
+  enableAdminMode: (passcode: string) => boolean;
+  disableAdminMode: () => void;
   getPasscode: () => string | null;
 }
 
@@ -32,6 +28,9 @@ export function useHiddenAdminMode(): HiddenAdminModeContextValue {
   return context;
 }
 
+const CORRECT_PASSCODE = 'A1B2D3ABD';
+const STORAGE_KEY = 'hiddenAdminMode';
+
 interface HiddenAdminModeProviderProps {
   children: ReactNode;
 }
@@ -40,21 +39,15 @@ export function HiddenAdminModeProvider({ children }: HiddenAdminModeProviderPro
   const [isAdminModeEnabled, setIsAdminModeEnabled] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Load admin mode state from sessionStorage on mount
+  // Initialize from sessionStorage
   useEffect(() => {
-    const enabled = sessionStorage.getItem(STORAGE_KEY_ENABLED) === 'true';
-    const passcode = sessionStorage.getItem(STORAGE_KEY_PASSCODE);
-    
-    if (enabled && passcode === ADMIN_PASSCODE) {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored === CORRECT_PASSCODE) {
       setIsAdminModeEnabled(true);
-    } else {
-      // Clear invalid state
-      sessionStorage.removeItem(STORAGE_KEY_ENABLED);
-      sessionStorage.removeItem(STORAGE_KEY_PASSCODE);
     }
   }, []);
 
-  // Listen for Ctrl+Shift+U key combo
+  // Listen for Ctrl+Shift+U
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'U') {
@@ -75,35 +68,22 @@ export function HiddenAdminModeProvider({ children }: HiddenAdminModeProviderPro
     setIsModalOpen(false);
   }, []);
 
-  const submitPasscode = useCallback((passcode: string): boolean => {
-    if (passcode === ADMIN_PASSCODE) {
+  const enableAdminMode = useCallback((passcode: string): boolean => {
+    if (passcode === CORRECT_PASSCODE) {
+      sessionStorage.setItem(STORAGE_KEY, passcode);
       setIsAdminModeEnabled(true);
-      sessionStorage.setItem(STORAGE_KEY_ENABLED, 'true');
-      sessionStorage.setItem(STORAGE_KEY_PASSCODE, passcode);
-      setIsModalOpen(false);
       return true;
     }
     return false;
   }, []);
 
-  const clearAdminMode = useCallback(() => {
+  const disableAdminMode = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEY);
     setIsAdminModeEnabled(false);
-    sessionStorage.removeItem(STORAGE_KEY_ENABLED);
-    sessionStorage.removeItem(STORAGE_KEY_PASSCODE);
-    setIsModalOpen(false);
   }, []);
 
   const getPasscode = useCallback((): string | null => {
-    // Always read from sessionStorage to ensure consistency
-    const passcode = sessionStorage.getItem(STORAGE_KEY_PASSCODE);
-    const enabled = sessionStorage.getItem(STORAGE_KEY_ENABLED) === 'true';
-    
-    // Only return passcode if admin mode is enabled and passcode is valid
-    if (enabled && passcode === ADMIN_PASSCODE) {
-      return passcode;
-    }
-    
-    return null;
+    return sessionStorage.getItem(STORAGE_KEY);
   }, []);
 
   const value: HiddenAdminModeContextValue = {
@@ -111,8 +91,8 @@ export function HiddenAdminModeProvider({ children }: HiddenAdminModeProviderPro
     isModalOpen,
     openModal,
     closeModal,
-    submitPasscode,
-    clearAdminMode,
+    enableAdminMode,
+    disableAdminMode,
     getPasscode,
   };
 

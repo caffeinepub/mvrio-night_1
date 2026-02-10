@@ -1,56 +1,15 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T11:34:39.146Z",
-  "summary": "The diff adds a new PlaylistDetailView, introduces playlist-context playback handling (next/previous within a playlist queue) in LibraryScreen, adds React Query hooks and UI plumbing for user vs official playlist fetching, and adds backend playlist data structure changes plus a migration module. However, some requested UI/behavior (notably the Play Mode control) and backend official-playlist listing/details APIs cannot be confirmed from the provided diff summary.",
-  "missing_requirements": [
-    {
-      "id": "REQ-132",
-      "requirement": "Add Spotify-like controls for Shuffle, Repeat, and Play Mode on the playlist detail view; Play Mode must be present and visibly change state/behavior.",
-      "reason": "Shuffle and Repeat controls are visible in the added PlaylistDetailView, but there is no clear evidence (in the truncated component) of any 'Play Mode' control being rendered or handled.",
-      "evidence": [
-        "frontend/src/components/library/PlaylistDetailView.tsx"
-      ]
-    },
-    {
-      "id": "REQ-134",
-      "requirement": "Backend exposes a query method to list all official playlists (names + songIds) and an official-playlist details API used by the frontend to load official playlist songs; guests can read official playlists without sign-in.",
-      "reason": "Frontend introduces hooks named useGetOfficialPlaylists and useGetOfficialPlaylistDetails, but the backend diff snippet does not show any new/updated public query methods for listing official playlists or fetching official playlist details, nor any explicit guest-access read behavior for these APIs. The backend changes shown are primarily type/storage changes and migration wiring.",
-      "evidence": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/components/library/PlaylistDetailView.tsx",
-        "backend/main.mo"
-      ]
-    },
-    {
-      "id": "REQ-133",
-      "requirement": "Render an Admin-Mode-only “Create Official Playlist” button beside the “Official Playlists” section header in Library → Playlists, opening a name dialog and showing English success/failure toasts.",
-      "reason": "LibraryPlaylistsPanel adds state and a createOfficialPlaylistMutation plus toast messages, and imports useHiddenAdminMode, but the diff snippet is truncated before showing the actual rendering of the button beside the section header and the conditional visibility tied to Hidden Admin Mode.",
-      "evidence": [
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx"
-      ]
-    }
-  ],
-  "hallucinated_features": [
-    {
-      "description": "Backend upgrade migration module added and wired to run on canister upgrades.",
-      "reason": "The BuildRequest did not request adding an explicit migration module or always-on upgrade migration wiring; this appears to be additional infrastructure beyond the stated requirements.",
-      "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo"
-      ]
-    }
-  ],
-  "confidence": 0.56,
+  "generatedAt": "2026-02-10T15:35:13.759Z",
+  "summary": "Implemented a reusable 5-second long-press hook using pointer events and wired it into the Home channel banner image area to open the existing Hidden Admin Mode passcode modal via `openModal()`; cancellation is handled on pointer up/cancel/leave and on movement beyond a threshold.",
+  "missing_requirements": [],
+  "hallucinated_features": [],
+  "confidence": 0.74,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-    "frontend/src/components/library/PlaylistDetailView.tsx",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/LibraryScreen.tsx",
-    "frontend/src/utils/playlistPlayback.ts",
+    "frontend/src/components/home/HomeChannelBanner.tsx",
+    "frontend/src/hooks/useLongPress.ts",
     "project_state.json"
   ]
 }

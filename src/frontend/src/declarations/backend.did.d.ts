@@ -10,7 +10,36 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ArtistProfile {
+  'bio' : string,
+  'instagram' : string,
+  'buyMeACoffee' : string,
+  'youtube' : string,
+}
+export interface ContactInfo {
+  'instagram' : string,
+  'name' : string,
+  'email' : string,
+  'youtube' : string,
+  'phone' : string,
+}
 export type ExternalBlob = Uint8Array;
+export interface Message {
+  'id' : bigint,
+  'content' : string,
+  'audioAttachment' : [] | [ExternalBlob],
+  'pdfAttachment' : [] | [ExternalBlob],
+  'isRead' : boolean,
+  'sender' : string,
+  'imageAttachment' : [] | [ExternalBlob],
+  'timestamp' : bigint,
+  'isAdmin' : boolean,
+  'recipientSeen' : boolean,
+}
+export interface MessagesView {
+  'contactInfo' : [] | [ContactInfo],
+  'messages' : Array<Message>,
+}
 export interface PlaylistView { 'name' : string, 'songIds' : Array<bigint> }
 export interface SongView {
   'id' : bigint,
@@ -24,7 +53,12 @@ export interface SongView {
   'likesCount' : bigint,
   'titleImage' : ExternalBlob,
 }
-export interface UserProfile { 'name' : string }
+export interface UserProfileRecord {
+  'totalListeningTime' : bigint,
+  'userName' : string,
+  'dateOfBirth' : string,
+  'fullName' : string,
+}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -56,42 +90,86 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addListeningTime' : ActorMethod<[bigint], undefined>,
   'addSong' : ActorMethod<
     [string, string, ExternalBlob, ExternalBlob, ExternalBlob, string, string],
     bigint
   >,
   'addToOfficialPlaylist' : ActorMethod<[string, bigint, string], undefined>,
   'addToPlaylist' : ActorMethod<[string, bigint], undefined>,
+  'adminDeleteConversation' : ActorMethod<
+    [[] | [string], string, string],
+    undefined
+  >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'checkAuthorization' : ActorMethod<[], boolean>,
   'clearFavorites' : ActorMethod<[], undefined>,
+  'clearMessages' : ActorMethod<[], undefined>,
   'createOfficialPlaylist' : ActorMethod<[string, string], undefined>,
   'createPlaylist' : ActorMethod<[string], undefined>,
+  'deleteMessage' : ActorMethod<[bigint], undefined>,
+  'deletePlaylist' : ActorMethod<[string, [] | [string]], undefined>,
   'deleteSong' : ActorMethod<[bigint, string], undefined>,
+  'deleteUserMessage' : ActorMethod<[Principal, bigint, string], undefined>,
+  'getAllConversations' : ActorMethod<[string], Array<Principal>>,
+  'getAllConversationsByUserIdPasscode' : ActorMethod<
+    [string],
+    Array<Principal>
+  >,
+  'getAllMessages' : ActorMethod<[Principal, string], [] | [MessagesView]>,
   'getAllSongs' : ActorMethod<[], Array<SongView>>,
   'getAllSongsByTitle' : ActorMethod<[], Array<SongView>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getArtistProfile' : ActorMethod<[], ArtistProfile>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfileRecord]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getFavorites' : ActorMethod<[], Array<bigint>>,
+  'getHiddenAdminModeStatus' : ActorMethod<[string], boolean>,
+  'getMessages' : ActorMethod<[], [] | [MessagesView]>,
   'getOfficialPlaylist' : ActorMethod<[string], [] | [PlaylistView]>,
   'getOfficialPlaylistDetails' : ActorMethod<[string], Array<SongView>>,
   'getPlaylist' : ActorMethod<[string], PlaylistView>,
   'getPlaylistDetails' : ActorMethod<[string], Array<SongView>>,
   'getSong' : ActorMethod<[bigint], SongView>,
+  'getTotalListeningTime' : ActorMethod<[], bigint>,
+  'getUnreadMessagesCount' : ActorMethod<[string], bigint>,
   'getUserPlaylists' : ActorMethod<[], Array<PlaylistView>>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfileRecord]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listOfficialPlaylists' : ActorMethod<[], Array<PlaylistView>>,
+  'markAllMessagesAsSeen' : ActorMethod<[string, Principal, string], undefined>,
+  'markLastMessageAsRead' : ActorMethod<[], undefined>,
+  'markMessagesAsSeen' : ActorMethod<[boolean], undefined>,
   'playSong' : ActorMethod<[bigint], undefined>,
   'removeFromOfficialPlaylist' : ActorMethod<
     [string, bigint, string],
     undefined
   >,
   'removeFromPlaylist' : ActorMethod<[string, bigint], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'replyToMessage' : ActorMethod<[Principal, string, string], bigint>,
+  'replyWithAttachments' : ActorMethod<
+    [
+      Principal,
+      string,
+      [] | [ExternalBlob],
+      [] | [ExternalBlob],
+      [] | [ExternalBlob],
+      string,
+    ],
+    bigint
+  >,
+  'saveCallerUserProfile' : ActorMethod<[UserProfileRecord], undefined>,
   'searchSongs' : ActorMethod<[string], Array<SongView>>,
+  'sendMessage' : ActorMethod<[string], bigint>,
+  'sendMessageWithAttachments' : ActorMethod<
+    [string, [] | [ExternalBlob], [] | [ExternalBlob], [] | [ExternalBlob]],
+    bigint
+  >,
+  'setHiddenAdminMode' : ActorMethod<[boolean, string], undefined>,
   'toggleFavorite' : ActorMethod<[bigint], boolean>,
   'toggleLikeSong' : ActorMethod<[bigint], bigint>,
+  'updateAdminInfo' : ActorMethod<[[] | [ContactInfo]], undefined>,
+  'updateArtistProfile' : ActorMethod<[ArtistProfile], undefined>,
+  'updateTotalListeningTime' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

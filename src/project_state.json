@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 57,
-  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system using Internet Identity only for normal user authentication; guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Replace the existing Internet Identity `adminPrincipal`-based Admin/Artist role system entirely with a Hidden Admin Mode that is activated via a secret key combo (Ctrl+Shift+U) and ALWAYS requires a passcode to enable. The backend must store only a hashed passcode and must verify admin authorization server-side for every admin-only mutation (song upload/manage, banner/home layout edits, official playlist management, and app settings/updates). When Admin Mode is OFF, all admin UI and capabilities must be completely hidden/blocked for normal users.",
+  "projectStateVersion": 79,
+  "summary": "Project scope update: enhance the “Send a Message” in-app messaging so users message the admin identity “MARIO” (replies display MARIO as sender, and MARIO’s avatar uses the current Home channel banner image). Admin online status is displayed Instagram-style (green dot + “online” when Hidden Admin Mode is ON; gray dot + “offline” when Hidden Admin Mode is OFF). Implement message seen/read receipts for both sides and ensure unread notification dots clear after messages are seen. Maintain a single per-user conversation thread (Normal Message + Custom Song Request via a fillable form + optional free-text) and remove any separate admin inbox UI view while still allowing the admin (when Hidden Admin Mode is ON) to see the list of all user conversations and reply within the same thread. Add file attachments to messages (images, MP3s, PDFs). Keep user hard-deletion of their own messages; allow MARIO (Hidden Admin Mode) to delete any messages (user or admin) and delete entire conversations via a delete icon on each user conversation card. Additionally, update auth/account so first launch requires Internet Identity login + required profile completion (full name, username, date of birth) and show this under a new “Account” sidebar area along with total listening time aggregated across songs played. Hidden Admin Mode activation must support BOTH Ctrl+Shift+U and a 5-second long-press on the Home banner image (especially for mobile), using the same passcode + backend verification flow.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
     "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
@@ -22,7 +22,9 @@
     "Like button is not working; it must toggle like/unlike on repeated taps.",
     "Add Song flow: after successful uploads, clicking “Add Song” fails with message “failed to upload” (final submit/save step failing).",
     "After Hidden Admin Mode update: Add Song fails with admin auth error “You do not have permission to perform this action.” even when Admin Mode is ON and passcode entry succeeded; banner editing works, suggesting Add Song mutation is not including/using the admin passcode credential.",
-    "Build failed with generic tooling limit (“AI was unable to fulfill your request”) when attempting to implement playlist card → playlist detail screen + playlist-level controls (Play/Shuffle/Repeat/Modes) + Admin-Mode-only 'Create Official Playlist' button in one pass; may require splitting into smaller builds."
+    "Build failed with generic tooling limit (“AI was unable to fulfill your request”) when attempting to implement playlist card → playlist detail screen + playlist-level controls (Play/Shuffle/Repeat/Modes) + Admin-Mode-only 'Create Official Playlist' button in one pass; may require splitting into smaller builds.",
+    "Admin inbox in Hidden Admin Mode is not receiving/displaying user messages (admin conversation thread appears blank/empty even though user can see their own sent messages).",
+    "Admin reply/send message from the admin path fails with a permission error (\"You don't have the permission to send messages\")."
   ],
   "isFixRequest": false,
   "existing_features": [
@@ -922,6 +924,374 @@
         "REQ-134"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-about-the-artist-screen-to-render-its-bio-text-and-the-three-social-links-youtube-instagram-buy-me-a-coffee-from-the-backend-artist-about-profile-instead-of-hard-coded-strings-urls",
+      "title": "Update the About the Artist screen to render its bio text and the three social links (YouTube, Instagram, Buy Me a Coffee) from the backend Artist/About profile instead of hard-coded strings/URLs.",
+      "reqIds": [
+        "REQ-136"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-dedicated-on-page-admin-editing-ui-on-the-about-the-artist-page-that-is-visible-only-when-hidden-admin-mode-is-enabled-the-editor-must-allow-editing-the-bio-text-and-the-three-links-youtube-instagram-buy-me-a-coffee-and-saving-them-to-the-backend-using-the-admin-passcode-from-hidden-admin-mode",
+      "title": "Implement a dedicated on-page Admin Editing UI on the About the Artist page that is visible only when Hidden Admin Mode is enabled. The editor must allow editing the bio text and the three links (YouTube, Instagram, Buy Me a Coffee) and saving them to the backend using the admin passcode from Hidden Admin Mode.",
+      "reqIds": [
+        "REQ-137"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-admin-edit-about-profile-failures-are-handled-cleanly-in-the-ui-if-the-backend-rejects-the-update-due-to-missing-invalid-admin-passcode-show-an-english-error-message-and-do-not-route-the-user-into-the-soft-sign-in-modal-this-is-admin-required-not-user-auth-required",
+      "title": "Ensure admin-edit About profile failures are handled cleanly in the UI: if the backend rejects the update due to missing/invalid admin passcode, show an English error message and do not route the user into the soft sign-in modal (this is admin-required, not user-auth-required).",
+      "reqIds": [
+        "REQ-138"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-in-app-header-branding-frontend-src-components-branding-appheader-tsx-so-the-header-icon-uses-the-exact-same-logo-image-as-the-app-s-install-favicon-icon-currently-referenced-as-assets-icon-192-png-in-frontend-index-html-replacing-the-current-lucide-music-icon-keep-the-existing-header-layout-styling-unchanged-image-swap-only-including-the-same-sizing-rounded-container-spacing-and-text",
+      "title": "Update the in-app header branding (`frontend/src/components/branding/AppHeader.tsx`) so the header icon uses the exact same logo image as the app’s install/favicon icon (currently referenced as `/assets/icon-192.png` in `frontend/index.html`), replacing the current Lucide `Music` icon. Keep the existing header layout/styling unchanged (image swap only), including the same sizing, rounded container, spacing, and text.",
+      "reqIds": [
+        "REQ-140"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-existing-add-to-home-screen-install-prompt-logic-to-follow-the-standard-beforeinstallprompt-flow-listen-for-beforeinstallprompt-preventdefault-store-the-event-for-later-use-and-expose-a-callable-promptinstall-that-triggers-event-prompt-and-reads-event-userchoice-to-determine-whether-the-user-accepted-or-dismissed-the-install",
+      "title": "Update the existing Add-to-Home-Screen install prompt logic to follow the standard `beforeinstallprompt` flow: listen for `beforeinstallprompt`, preventDefault, store the event for later use, and expose a callable `promptInstall()` that triggers `event.prompt()` and reads `event.userChoice` to determine whether the user accepted or dismissed the install.",
+      "reqIds": [
+        "REQ-141"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-only-show-any-add-to-home-screen-button-banner-ui-when-pwa-installation-is-supported-and-the-app-is-not-already-installed-do-not-render-the-ui-when-running-in-standalone-mode-already-installed-or-when-beforeinstallprompt-is-not-available",
+      "title": "Only show any “Add to Home Screen” button/banner UI when PWA installation is supported and the app is not already installed; do not render the UI when running in standalone mode (already installed) or when `beforeinstallprompt` is not available.",
+      "reqIds": [
+        "REQ-142"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-existing-top-a2hs-banner-component-to-display-a-call-to-action-labeled-exactly-add-to-home-screen-english-and-hide-the-banner-after-the-user-clicks-install-regardless-of-accepted-dismissed-the-banner-must-work-on-both-mobile-and-desktop",
+      "title": "Update the existing top A2HS banner component to display a call-to-action labeled exactly “Add to Home Screen” (English) and hide the banner after the user clicks install (regardless of accepted/dismissed). The banner must work on both mobile and desktop.",
+      "reqIds": [
+        "REQ-143"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-sidebar-add-to-home-screen-navigation-control-so-it-is-only-rendered-or-is-disabled-with-no-action-when-install-is-supported-and-the-app-is-not-installed-and-ensure-triggering-it-does-not-throw-errors-when-beforeinstallprompt-is-unavailable",
+      "title": "Update the sidebar “Add to Home Screen” navigation/control so it is only rendered (or is disabled with no action) when install is supported and the app is not installed, and ensure triggering it does not throw errors when `beforeinstallprompt` is unavailable.",
+      "reqIds": [
+        "REQ-144"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-small-standalone-reference-snippet-html-minimal-css-javascript-to-the-frontend-codebase-that-demonstrates-the-requested-behavior-in-plain-dom-terms-listen-for-beforeinstallprompt-show-hide-add-to-home-screen-button-conditionally-call-prompt-handle-accepted-dismissed-this-snippet-must-use-english-only-user-facing-text",
+      "title": "Add a small standalone reference snippet (HTML + minimal CSS + JavaScript) to the frontend codebase that demonstrates the requested behavior in plain DOM terms (listen for `beforeinstallprompt`, show/hide “Add to Home Screen” button conditionally, call `prompt()`, handle accepted/dismissed). This snippet must use English-only user-facing text.",
+      "reqIds": [
+        "REQ-145"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-sidebar-navigation-so-it-always-shows-a-single-button-labeled-exactly-install-app-english-in-both-the-mobile-drawer-sidebar-and-the-desktop-sidebar-replacing-the-current-conditional-sidebar-add-to-home-screen-entry",
+      "title": "Update the sidebar navigation so it always shows a single button labeled exactly “Install App” (English) in both the mobile drawer sidebar and the desktop sidebar, replacing the current conditional sidebar “Add to Home Screen” entry.",
+      "reqIds": [
+        "REQ-146"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-new-sidebar-install-app-click-behavior-when-clicked-trigger-the-pwa-install-prompt-if-available-otherwise-show-a-toast-notification-with-the-exact-message-app-is-already-installed-or-installation-is-not-supported",
+      "title": "Implement the new sidebar “Install App” click behavior: when clicked, trigger the PWA install prompt if available; otherwise show a toast notification with the exact message “App is already installed or installation is not supported.”",
+      "reqIds": [
+        "REQ-147"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-keep-the-existing-top-add-to-home-screen-banner-behavior-and-rules-unchanged-including-its-conditional-visibility-rules-session-only-dismissal-and-existing-install-checks-do-not-modify-frontend-src-components-pwa-a2hsbanner-tsx-behavior-as-part-of-this-change",
+      "title": "Keep the existing top Add-to-Home-Screen banner behavior and rules unchanged (including its conditional visibility rules, session-only dismissal, and existing install checks). Do not modify `frontend/src/components/pwa/A2HSBanner.tsx` behavior as part of this change.",
+      "reqIds": [
+        "REQ-148"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-sidebar-install-app-button-does-not-rely-on-beforeinstallprompt-for-ui-visibility-decisions-it-must-be-always-visible-but-may-still-use-existing-usea2hs-state-to-decide-whether-to-prompt-vs-show-the-fallback-toast-on-click",
+      "title": "Ensure the sidebar “Install App” button does not rely on `beforeinstallprompt` for UI visibility decisions (it must be always visible), but may still use existing `useA2HS` state to decide whether to prompt vs show the fallback toast on click.",
+      "reqIds": [
+        "REQ-149"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-mutations-hooks-for-deleting-a-a-user-playlist-and-b-an-official-playlist-wired-to-the-new-backend-canister-methods-and-ensure-query-caches-for-playlist-lists-details-are-invalidated-refetched-after-deletion",
+      "title": "Add React Query mutations/hooks for deleting (a) a user playlist and (b) an official playlist, wired to the new backend canister methods, and ensure query caches for playlist lists/details are invalidated/refetched after deletion.",
+      "reqIds": [
+        "REQ-151"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-library-playlists-ui-playlist-cards-to-include-a-delete-trash-icon-button-with-the-correct-visibility-and-click-behavior-user-playlist-cards-show-a-delete-icon-for-signed-in-users-official-playlist-cards-show-a-delete-icon-only-when-hidden-admin-mode-is-enabled-clicking-the-delete-icon-must-not-open-the-playlist-card",
+      "title": "Update the Library → Playlists UI playlist cards to include a delete (trash) icon button with the correct visibility and click behavior: user playlist cards show a delete icon for signed-in users; official playlist cards show a delete icon only when Hidden Admin Mode is enabled; clicking the delete icon must not open the playlist card.",
+      "reqIds": [
+        "REQ-152"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-confirmation-step-before-deleting-a-playlist-user-or-official-to-prevent-accidental-deletion-using-english-only-user-facing-text",
+      "title": "Add a confirmation step before deleting a playlist (user or official) to prevent accidental deletion, using English-only user-facing text.",
+      "reqIds": [
+        "REQ-153"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-frontend-user-messaging-ui-a-contact-message-composer-form-with-fields-name-email-or-phone-number-optional-social-link-and-message-text-submitting-sends-a-message-to-the-backend-and-then-shows-the-conversation-thread-in-app",
+      "title": "Add frontend user messaging UI: a contact message composer form with fields Name, Email or phone number, Optional social link, and Message text; submitting sends a message to the backend and then shows the conversation thread in-app.",
+      "reqIds": [
+        "REQ-158"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-user-inbox-entry-point-via-a-small-inbox-icon-in-the-app-header-that-appears-only-when-the-user-has-messages-replies-to-read-clicking-it-opens-the-user-s-in-app-conversation-inbox-thread-view",
+      "title": "Add a user inbox entry point via a small inbox icon in the app header that appears only when the user has messages/replies to read; clicking it opens the user’s in-app conversation inbox/thread view.",
+      "reqIds": [
+        "REQ-159"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-frontend-admin-inbox-ui-visible-only-when-hidden-admin-mode-is-enabled-show-a-mail-inbox-icon-entry-point-list-all-user-conversations-sender-name-contact-details-open-a-conversation-and-send-replies-replies-must-appear-for-the-user-in-their-inbox-view",
+      "title": "Add frontend admin inbox UI visible only when Hidden Admin Mode is enabled: show a mail/inbox icon entry point, list all user conversations (sender name + contact details), open a conversation, and send replies; replies must appear for the user in their inbox view.",
+      "reqIds": [
+        "REQ-160"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-integrate-custom-song-requests-into-the-same-in-app-conversation-thread-provide-a-way-from-the-custom-song-requests-screen-to-open-the-in-app-messaging-composer-thread-with-a-request-context-without-creating-a-separate-conversation",
+      "title": "Integrate custom song requests into the same in-app conversation thread: provide a way from the Custom Song Requests screen to open the in-app messaging composer/thread with a request context, without creating a separate conversation.",
+      "reqIds": [
+        "REQ-161"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-message-notification-behavior-so-that-when-the-admin-replies-the-user-sees-the-header-inbox-icon-and-any-unread-indicator-and-can-read-replies-inside-the-app",
+      "title": "Update frontend message notification behavior so that when the admin replies, the user sees the header inbox icon (and any unread indicator) and can read replies inside the app.",
+      "reqIds": [
+        "REQ-162"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-authorization-and-offline-admin-online-rules-match-the-specification-admin-offline-is-determined-by-hidden-admin-mode-being-disabled-no-real-time-presence-and-the-auto-reply-logic-is-triggered-accordingly-without-exposing-admin-contact-details-by-default",
+      "title": "Ensure authorization and offline/admin-online rules match the specification: admin offline is determined by Hidden Admin Mode being disabled (no real-time presence), and the auto-reply logic is triggered accordingly without exposing admin contact details by default.",
+      "reqIds": [
+        "REQ-163"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-admin-messaging-hooks-and-admin-inbox-ui-to-use-the-passcode-gated-backend-messaging-apis-consistently-admin-conversation-list-admin-open-conversation-and-admin-reply-must-all-supply-the-hidden-admin-mode-passcode-from-hiddenadminmodecontext-to-the-backend-methods-that-require-it",
+      "title": "Update the frontend admin messaging hooks and admin inbox UI to use the passcode-gated backend messaging APIs consistently: admin conversation list, admin open conversation, and admin reply must all supply the Hidden Admin Mode passcode (from HiddenAdminModeContext) to the backend methods that require it.",
+      "reqIds": [
+        "REQ-167"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-frontend-authorization-error-messaging-for-admin-messaging-failures-is-correct-and-does-not-mis-route-the-user-into-any-sign-in-required-flow-admin-messaging-failures-must-show-an-english-permission-passcode-related-message-and-not-trigger-the-soft-sign-in-modal",
+      "title": "Ensure frontend authorization error messaging for admin messaging failures is correct and does not mis-route the user into any sign-in-required flow: admin messaging failures must show an English permission/passcode-related message (and not trigger the soft sign-in modal).",
+      "reqIds": [
+        "REQ-168"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-rename-the-sidebar-navigation-item-currently-labeled-contact-to-be-labeled-exactly-send-a-message-and-keep-it-as-the-single-entry-point-for-in-app-messaging-no-separate-contact-label",
+      "title": "Rename the sidebar navigation item currently labeled “Contact” to be labeled exactly “Send a Message”, and keep it as the single entry point for in-app messaging (no separate “Contact” label).",
+      "reqIds": [
+        "REQ-169"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-send-a-message-screen-currently-frontend-src-pages-contactscreen-tsx-to-present-exactly-two-message-types-normal-message-and-custom-song-request-selecting-either-type-must-show-a-structured-fillable-layout-with-predefined-fields-plus-an-optional-free-text-field-and-submitting-either-type-must-post-into-the-same-single-per-user-conversation-thread-in-chronological-order",
+      "title": "Update the “Send a Message” screen (currently `frontend/src/pages/ContactScreen.tsx`) to present exactly two message types: “Normal Message” and “Custom Song Request”. Selecting either type must show a structured, fillable layout with predefined fields plus an optional free-text field, and submitting either type must post into the same single per-user conversation thread in chronological order.",
+      "reqIds": [
+        "REQ-170"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-persist-the-structured-message-submission-in-a-consistent-readable-format-inside-the-conversation-thread-single-message-content-so-that-the-predefined-fields-and-optional-free-text-are-visible-when-viewing-messages-on-both-the-user-thread-view-frontend-src-components-messaging-messagethread-tsx-and-the-admin-thread-view-frontend-src-components-messaging-admininboxdrawer-tsx",
+      "title": "Persist the structured message submission in a consistent, readable format inside the conversation thread (single message content) so that the predefined fields and optional free-text are visible when viewing messages on both the user thread view (`frontend/src/components/messaging/MessageThread.tsx`) and the admin thread view (`frontend/src/components/messaging/AdminInboxDrawer.tsx`).",
+      "reqIds": [
+        "REQ-171"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-permanent-hard-deletion-of-a-user-s-own-messages-from-the-conversation-thread-users-must-be-able-to-delete-messages-they-sent-and-deletion-must-remove-the-message-from-the-thread-with-no-placeholder-entry",
+      "title": "Implement permanent (hard) deletion of a user’s own messages from the conversation thread: users must be able to delete messages they sent, and deletion must remove the message from the thread with no placeholder entry.",
+      "reqIds": [
+        "REQ-172"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-admin-moderation-deletion-when-hidden-admin-mode-is-enabled-the-admin-conversation-view-must-show-a-delete-cross-icon-in-the-corner-of-each-user-authored-message-allowing-the-admin-to-remove-unwanted-user-messages-admin-deletion-must-not-require-internet-identity-admin-principal-checks-it-must-be-authorized-using-the-hidden-admin-mode-passcode-same-passcode-gating-style-used-by-other-admin-mutations",
+      "title": "Add admin moderation deletion: when Hidden Admin Mode is enabled, the admin conversation view must show a delete (cross) icon in the corner of each user-authored message, allowing the admin to remove unwanted user messages. Admin deletion must not require Internet Identity admin principal checks; it must be authorized using the Hidden Admin Mode passcode (same passcode gating style used by other admin mutations).",
+      "reqIds": [
+        "REQ-173"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-admin-messaging-backend-api-usage-so-the-admin-can-reliably-1-list-all-conversations-2-open-a-user-conversation-thread-and-3-reply-to-a-user-using-passcode-gated-backend-apis-consistently-update-frontend-admin-messaging-hooks-to-call-passcode-accepting-backend-methods-removing-reliance-on-the-currently-called-methods-that-are-commented-as-backend-bugs",
+      "title": "Fix admin messaging backend API usage so the admin can reliably: (1) list all conversations, (2) open a user conversation thread, and (3) reply to a user—using passcode-gated backend APIs consistently. Update frontend admin messaging hooks to call passcode-accepting backend methods (removing reliance on the currently-called methods that are commented as backend bugs).",
+      "reqIds": [
+        "REQ-174"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-keep-the-existing-first-launch-welcome-popup-behavior-exactly-as-is-and-do-not-add-a-conversation-thread-welcome-message-the-welcome-message-on-first-launch-requirement-refers-only-to-the-existing-first-launch-popup",
+      "title": "Keep the existing first-launch welcome popup behavior exactly as-is, and do not add a conversation-thread welcome message. The “welcome message on first launch” requirement refers only to the existing first-launch popup.",
+      "reqIds": [
+        "REQ-176"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-require-users-to-sign-in-with-internet-identity-before-they-can-use-account-features-and-messaging-and-add-a-required-account-profile-completion-flow-that-collects-full-name-user-name-and-date-of-birth-persist-these-fields-to-the-backend-user-profile-record-and-re-prompt-until-completed",
+      "title": "Require users to sign in with Internet Identity before they can use account features and messaging, and add a required account profile completion flow that collects: full name, user name, and date of birth. Persist these fields to the backend user profile record and re-prompt until completed.",
+      "reqIds": [
+        "REQ-177"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-account-section-in-the-sidebar-ui-that-displays-the-signed-in-user-s-personal-details-full-name-user-name-date-of-birth-and-the-total-listening-time-hours-minutes-aggregated-across-songs-played",
+      "title": "Add an “Account” section in the sidebar UI that displays the signed-in user’s personal details (full name, user name, date of birth) and the total listening time (hours/minutes) aggregated across songs played.",
+      "reqIds": [
+        "REQ-178"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-total-listening-time-tracking-per-user-and-persist-it-in-the-backend-so-it-survives-reloads-listening-time-must-be-aggregated-across-all-songs-a-user-has-played-and-displayed-in-hours-minutes-in-the-sidebar-account-section",
+      "title": "Implement total listening time tracking per user and persist it in the backend so it survives reloads. Listening time must be aggregated across all songs a user has played and displayed in hours/minutes in the sidebar Account section.",
+      "reqIds": [
+        "REQ-179"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-in-app-messaging-ui-so-that-users-are-messaging-a-single-admin-identity-named-mario-and-all-admin-replies-display-mario-as-the-sender-name-for-the-user",
+      "title": "Update the in-app messaging UI so that users are messaging a single admin identity named “MARIO”, and all admin replies display “MARIO” as the sender name for the user.",
+      "reqIds": [
+        "REQ-180"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-use-the-current-home-channel-banner-image-as-mario-s-profile-picture-avatar-everywhere-mario-is-shown-in-the-messaging-ui-thread-header-message-bubbles-if-avatars-are-shown-and-any-conversation-list-items",
+      "title": "Use the current Home channel banner image as MARIO’s profile picture/avatar everywhere MARIO is shown in the messaging UI (thread header, message bubbles if avatars are shown, and any conversation list items).",
+      "reqIds": [
+        "REQ-181"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-display-mario-s-online-status-in-the-messaging-ui-in-an-instagram-like-style-a-green-dot-with-the-text-online-under-his-name-when-hidden-admin-mode-is-on-and-a-gray-dot-with-the-text-offline-when-hidden-admin-mode-is-off",
+      "title": "Display MARIO’s online status in the messaging UI in an Instagram-like style: a green dot with the text “online” under his name when Hidden Admin Mode is ON, and a gray dot with the text “offline” when Hidden Admin Mode is OFF.",
+      "reqIds": [
+        "REQ-182"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-the-separate-admin-inbox-ui-as-a-distinct-drawer-view-and-replace-it-with-a-single-unified-messaging-drawer-experience-each-signed-in-user-has-a-single-conversation-thread-when-hidden-admin-mode-is-on-mario-can-also-access-the-list-of-all-user-conversations-and-open-any-one-but-replies-and-reading-happen-in-the-same-thread-ui-no-separate-admin-inbox-screen",
+      "title": "Remove the separate Admin Inbox UI as a distinct drawer/view and replace it with a single unified messaging drawer experience: each signed-in user has a single conversation thread; when Hidden Admin Mode is ON, MARIO can also access the list of all user conversations and open any one, but replies and reading happen in the same thread UI (no separate ‘admin inbox’ screen).",
+      "reqIds": [
+        "REQ-183"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-message-seen-read-receipt-functionality-for-both-sides-so-both-the-user-and-mario-can-tell-when-messages-have-been-read-and-ensure-unread-indicators-clear-after-messages-are-seen",
+      "title": "Implement message seen/read receipt functionality for both sides so both the user and MARIO can tell when messages have been read, and ensure unread indicators clear after messages are seen.",
+      "reqIds": [
+        "REQ-184"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-support-for-file-attachments-in-messages-for-both-users-and-mario-allow-attaching-images-mp3-audio-files-and-pdfs-store-attachments-in-a-deployment-safe-way-render-attachments-appropriately-in-the-conversation-thread",
+      "title": "Add support for file attachments in messages for both users and MARIO: allow attaching images, MP3 audio files, and PDFs; store attachments in a deployment-safe way; render attachments appropriately in the conversation thread.",
+      "reqIds": [
+        "REQ-185"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-allow-message-deletion-with-the-following-rules-users-can-hard-delete-their-own-sent-messages-when-hidden-admin-mode-is-on-mario-can-delete-any-message-user-authored-or-mario-authored-in-any-conversation-thread",
+      "title": "Allow message deletion with the following rules: users can hard-delete their own sent messages; when Hidden Admin Mode is ON, MARIO can delete any message (user-authored or MARIO-authored) in any conversation thread.",
+      "reqIds": [
+        "REQ-186"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-allow-mario-hidden-admin-mode-to-delete-entire-conversations-via-a-delete-icon-shown-on-each-user-conversation-card-in-the-admin-conversation-list",
+      "title": "Allow MARIO (Hidden Admin Mode) to delete entire conversations via a delete icon shown on each user conversation card in the admin conversation list.",
+      "reqIds": [
+        "REQ-187"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-combine-custom-song-request-messaging-into-the-same-send-a-message-entry-point-keep-exactly-two-message-types-normal-message-and-custom-song-request-with-a-structured-fillable-form-plus-optional-free-text-and-remove-any-separate-admin-inbox-entry-point-and-any-separate-custom-song-requests-messaging-entry-point",
+      "title": "Combine Custom Song Request messaging into the same “Send a Message” entry point: keep exactly two message types (“Normal Message” and “Custom Song Request”) with a structured fillable form plus optional free-text, and remove any separate admin inbox entry point and any separate Custom Song Requests messaging entry point.",
+      "reqIds": [
+        "REQ-188"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-first-launch-onboarding-and-account-gating-so-that-on-first-launch-the-user-must-sign-in-with-internet-identity-no-guest-path-and-must-complete-personal-details-full-name-user-name-date-of-birth-before-accessing-messaging-and-account-features-keep-all-user-facing-text-in-english",
+      "title": "Update first-launch onboarding and account gating so that on first launch the user must sign in with Internet Identity (no guest path) and must complete personal details (full name, user name, date of birth) before accessing messaging and account features; keep all user-facing text in English.",
+      "reqIds": [
+        "REQ-189"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-message-notification-dot-behavior-is-correct-for-both-user-and-admin-contexts-the-inbox-messages-icon-shows-a-red-unread-indicator-only-when-there-are-unread-messages-for-the-currently-active-role-user-unread-mario-replies-admin-unread-user-messages-and-the-dot-clears-immediately-after-the-messages-are-marked-as-seen",
+      "title": "Ensure message notification dot behavior is correct for both user and admin contexts: the inbox/messages icon shows a red unread indicator only when there are unread messages for the currently active role (user unread MARIO replies; admin unread user messages), and the dot clears immediately after the messages are marked as seen.",
+      "reqIds": [
+        "REQ-190"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-an-additional-hidden-admin-mode-activation-method-a-press-and-hold-long-press-gesture-on-the-home-channel-banner-image-area-that-after-a-continuous-5-seconds-opens-the-existing-admin-passcode-modal-the-same-modal-used-by-the-ctrl-shift-u-shortcut-so-the-admin-can-enter-the-existing-passcode-and-enable-admin-mode-this-long-press-trigger-must-work-on-both-mobile-touch-and-desktop-mouse-pointer-must-not-replace-or-modify-the-existing-ctrl-shift-u-shortcut-behavior-and-must-not-interfere-with-normal-song-playback-navigation-interactions-elsewhere-on-the-home-screen",
+      "title": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
+      "reqIds": [
+        "REQ-191"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -1324,6 +1694,214 @@
     {
       "id": "AR-96",
       "summary": "Admin-only Official Playlists: add a 'Create Official Playlist' button visible only when Hidden Admin Mode is enabled, placed in Library → Playlists beside the Official Playlists section; normal users can create only their own playlists and must not see/use the official playlist button.",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-97",
+      "summary": "Admin-editable About the Artist page content: allow editing Bio text + YouTube/Instagram/Buy Me a Coffee links via a dedicated on-page Admin Editing UI visible only when Hidden Admin Mode is enabled; persist changes in the Motoko backend so they survive reloads/deployments",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-98",
+      "summary": "Add a backend-persisted Artist/About profile record that stores exactly these editable fields for the About the Artist page: (1) bio text, (2) YouTube link, (3) Instagram link, (4) Buy Me a Coffee link. Provide a public query to read the current profile (guest-accessible) and an admin-only update method that persists changes across reloads/upgrades.",
+      "reqIds": [
+        "REQ-135"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-99",
+      "summary": "Update PWA install icons (manifest icons for desktop + mobile home-screen) to use the newly uploaded image exactly as-is (no background/padding changes), same icon for light/dark themes, and do NOT change/replace the header logo",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-100",
+      "summary": "Update ONLY the PWA install icons (desktop install icon + mobile home-screen icon) to use the uploaded image file “ARIO (1).jpg” exactly as-is (no background/padding/composition changes). Do not change/replace the app header logo (the in-app header branding must remain unchanged). The same icon must be used for both Day and Night themes.",
+      "reqIds": [
+        "REQ-139"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-101",
+      "summary": "Update the in-app header logo/icon to use the same uploaded logo image (ARIO (1).jpg) as the PWA install icons; keep the header layout/styling unchanged (image swap only).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-102",
+      "summary": "Implement conditional PWA Add-to-Home-Screen install prompt UI using `beforeinstallprompt`: show an “Add to Home Screen” button/banner only when install is supported and app is not already installed (standalone); on click call savedEvent.prompt(); hide UI after install attempt and handle accepted/dismissed result; must work on mobile + desktop; provide minimal HTML/CSS/JS snippet",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-103",
+      "summary": "Replace ONLY the sidebar A2HS behavior with a single always-visible “Install App” button: on click, call the PWA install prompt if available; otherwise show a toast “App is already installed or installation is not supported.” Do not permanently hide the button and do not use beforeinstallprompt to control sidebar UI visibility. Keep the top A2HS banner unchanged.",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-104",
+      "summary": "Playlist cards: add delete (trash) icon/action. Signed-in users can delete only their own user-created playlists; in Hidden Admin Mode, admins can delete official playlists.",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-105",
+      "summary": "Add backend support for deleting playlists with correct authorization rules: (1) a signed-in user can delete only their own user-created playlist by name, and (2) an Admin-Mode user can delete an official playlist by name only when providing the valid Hidden Admin Mode passcode.",
+      "reqIds": [
+        "REQ-150"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-106",
+      "summary": "In-app contact messaging system with backend persistence and unified per-user single-thread conversation (includes contact messages + custom song requests). User form fields: name, email/phone, optional social link, message text. Auto-reply when Admin is offline (Admin offline == Hidden Admin Mode disabled). User header inbox icon appears only when user has messages/replies. Admin-only (Hidden Admin Mode) inbox UI to view all messages, open conversations, reply; replies appear in user inbox. Admin contact card is not shown by default and can only be shared manually as a chat message.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-107",
+      "summary": "Implement a backend-persisted in-app messaging system that stores contact messages and admin replies and supports a single ongoing conversation thread per end-user, including both normal contact messages and custom song requests in the same thread.",
+      "reqIds": [
+        "REQ-154"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-108",
+      "summary": "Add backend auto-reply behavior when the admin is considered offline: when a user sends a message and admin is offline, automatically append a system/admin reply message to the same conversation thread.",
+      "reqIds": [
+        "REQ-155"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-109",
+      "summary": "Implement backend admin messaging features gated by admin passcode (Hidden Admin Mode): list all conversations, open a conversation, and reply to a user; admin replies must appear in the user’s inbox/conversation view.",
+      "reqIds": [
+        "REQ-156"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-110",
+      "summary": "Implement backend support for an admin contact card that is NOT shown by default and can only appear when the admin explicitly shares it inside a chat as a message.",
+      "reqIds": [
+        "REQ-157"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-111",
+      "summary": "Fix the backend messaging authorization so that admin messaging actions (listing conversations, reading any user conversation, replying) do not rely on principal-based AccessControl admin permissions, and instead are authorized using the Hidden Admin Mode passcode verification (same passcode verification style already used by other admin mutations like addSong/deleteSong).",
+      "reqIds": [
+        "REQ-164"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-112",
+      "summary": "Fix the backend data access paths used by the Admin Inbox so that the admin can reliably fetch a non-empty conversation thread for a user who has sent messages, and so that the admin conversation list includes every user principal that has an existing conversation in canister state.",
+      "reqIds": [
+        "REQ-165"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-113",
+      "summary": "Fix backend message read/unread fields so that: (1) user-sent messages are treated as unread for admin until the admin views them (if the app uses isRead for admin-side unread logic), and (2) admin replies are treated as unread for the user until the user views them (so the user header inbox icon can correctly reflect unread replies).",
+      "reqIds": [
+        "REQ-166"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-114",
+      "summary": "Rename the sidebar/navigation option “Contact” to “Send a Message” and make it the entry point to in-app messaging (no separate Contact label).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-115",
+      "summary": "Within “Send a Message”, provide two message types: Normal Message and Custom Song Request, each using a structured fillable layout (predefined fields) plus optional free-text; both post into the same single per-user conversation thread in chronological order.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-116",
+      "summary": "User message deletion: allow users to permanently delete their own messages from the conversation thread (hard delete; no placeholders).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-117",
+      "summary": "Admin moderation: when Hidden Admin Mode is enabled, show a delete (cross) icon on each user message in the admin conversation view, allowing the admin to remove unwanted user messages.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-118",
+      "summary": "Authentication/account scope change: require users to sign in with Internet Identity and collect required personal details (full name, username, date of birth), then display this info in the sidebar under a new “Account” section.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-119",
+      "summary": "Listening analytics: track and display total listening time (hours/minutes) aggregated across all songs a user has played; show it in the sidebar under “Account”.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-126",
+      "summary": "Preserve and enforce the existing admin offline auto-reply behavior for user-submitted messages: when the admin is considered offline (Hidden Admin Mode is disabled), sending a user message must automatically append an instant auto-reply to the same conversation thread. Ensure this behavior continues to work after the messaging API passcode fixes.",
+      "reqIds": [
+        "REQ-175"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-127",
+      "summary": "Messaging identity + presence UI: show admin as “MARIO” with avatar from current Home channel banner image; display Instagram-like online/offline indicator where online=Hidden Admin Mode ON and offline=Hidden Admin Mode OFF.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-128",
+      "summary": "Implement message seen/read receipts for both user and admin, and clear unread/red notification dots on inbox indicators after messages are seen.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-129",
+      "summary": "Unify messaging UI into a single per-user conversation thread and remove any separate Admin Inbox UI view; admin (Hidden Admin Mode) still can list all user conversations and reply within the same thread.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-130",
+      "summary": "Messaging attachments: allow users and admin to attach files to messages (images, MP3s, PDFs) and display them appropriately in the conversation thread.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-131",
+      "summary": "Admin conversation moderation: in Hidden Admin Mode, allow MARIO to delete any individual message (user or admin) and delete entire conversations via a delete icon on each user conversation card; users can still hard-delete their own messages.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-132",
+      "summary": "Auth flow change: on first launch require Internet Identity login (no guest path) + required profile completion (full name, username, date of birth) before accessing messaging/account; display profile + total listening time in sidebar Account area.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-133",
+      "summary": "Add an additional Hidden Admin Mode activation method: long-press/press-and-hold on the Home banner image for 5 seconds to reveal the passcode input modal; keep the existing Ctrl+Shift+U shortcut; support both mobile and desktop (mobile is most important); use the same passcode (A1B2D3ABD) and backend verification flow.",
       "reqIds": [],
       "status": "in_progress"
     }

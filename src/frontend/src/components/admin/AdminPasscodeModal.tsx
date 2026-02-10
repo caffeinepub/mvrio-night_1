@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, LogOut } from 'lucide-react';
 
 export function AdminPasscodeModal() {
-  const { isModalOpen, closeModal, submitPasscode, isAdminModeEnabled, clearAdminMode } = useHiddenAdminMode();
+  const { isModalOpen, closeModal, enableAdminMode, isAdminModeEnabled, disableAdminMode } = useHiddenAdminMode();
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
 
@@ -34,15 +34,18 @@ export function AdminPasscodeModal() {
       return;
     }
 
-    const success = submitPasscode(passcode);
-    if (!success) {
+    const success = enableAdminMode(passcode);
+    if (success) {
+      closeModal();
+    } else {
       setError('Incorrect passcode');
       setPasscode('');
     }
   };
 
   const handleDisable = () => {
-    clearAdminMode();
+    disableAdminMode();
+    closeModal();
   };
 
   const handleCancel = () => {

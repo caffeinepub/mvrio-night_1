@@ -6,15 +6,9 @@ import {
   type ReactNode,
   createElement,
 } from 'react';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import type { Screen } from '../App';
 
-export type PendingActionType =
-  | 'like'
-  | 'create-playlist'
-  | 'add-to-playlist'
-  | 'offline-cache'
-  | 'device-download';
+export type PendingActionType = 'like' | 'create-playlist' | 'add-to-playlist' | 'offline-cache' | 'device-download' | 'messaging';
 
 export interface PendingAction {
   type: PendingActionType;
@@ -24,14 +18,19 @@ export interface PendingAction {
   songTitle?: string;
 }
 
+interface ReturnPath {
+  screen: Screen;
+  scrollY: number;
+}
+
 interface AuthContextValue {
   isAuthenticated: boolean;
-  requireAuth: (action: PendingAction) => void;
-  isSignInModalOpen: boolean;
-  closeSignInModal: () => void;
   pendingAction: PendingAction | null;
+  isSignInModalOpen: boolean;
+  returnPath: ReturnPath | null;
+  requireAuth: (action: PendingAction) => void;
   clearPendingAction: () => void;
-  returnPath: { screen: Screen; scrollY: number } | null;
+  closeSignInModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -51,45 +50,36 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children, currentScreen, onNavigate }: AuthProviderProps) {
-  const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-
-  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
-  const [returnPath, setReturnPath] = useState<{ screen: Screen; scrollY: number } | null>(null);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [returnPath, setReturnPath] = useState<ReturnPath | null>(null);
 
-  const requireAuth = useCallback(
-    (action: PendingAction) => {
-      // Capture current scroll position
-      const scrollY = window.scrollY;
-      setReturnPath({ screen: currentScreen, scrollY });
-      
-      // Store pending action
-      setPendingAction(action);
-      
-      // Open sign-in modal
-      setIsSignInModalOpen(true);
-    },
-    [currentScreen]
-  );
-
-  const closeSignInModal = useCallback(() => {
-    setIsSignInModalOpen(false);
-  }, []);
+  const requireAuth = useCallback((action: PendingAction) => {
+    setPendingAction(action);
+    setReturnPath({
+      screen: currentScreen,
+      scrollY: window.scrollY,
+    });
+    setIsSignInModalOpen(true);
+  }, [currentScreen]);
 
   const clearPendingAction = useCallback(() => {
     setPendingAction(null);
     setReturnPath(null);
   }, []);
 
+  const closeSignInModal = useCallback(() => {
+    setIsSignInModalOpen(false);
+  }, []);
+
   const value: AuthContextValue = {
-    isAuthenticated,
-    requireAuth,
-    isSignInModalOpen,
-    closeSignInModal,
+    isAuthenticated: false,
     pendingAction,
-    clearPendingAction,
+    isSignInModalOpen,
     returnPath,
+    requireAuth,
+    clearPendingAction,
+    closeSignInModal,
   };
 
   return createElement(AuthContext.Provider, { value }, children);

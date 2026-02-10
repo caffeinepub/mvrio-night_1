@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SongEngagementBar } from '../songs/SongEngagementBar';
 import { usePlaySong } from '../../hooks/useQueries';
+import { useAddListeningTime } from '../../hooks/useListeningTime';
+import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import type { SongView } from '../../backend';
 
 interface MusicPlayerProps {
@@ -21,7 +23,14 @@ export function MusicPlayer({ song, onNext, onPrevious }: MusicPlayerProps) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [hasIncrementedPlay, setHasIncrementedPlay] = useState(false);
+  const [accumulatedTime, setAccumulatedTime] = useState(0);
+  const lastUpdateTimeRef = useRef<number>(0);
+  
   const playSongMutation = usePlaySong();
+  const addListeningTimeMutation = useAddListeningTime();
+  const { identity } = useInternetIdentity();
+
+  const isAuthenticated = !!identity;
 
   useEffect(() => {
     if (audioRef.current && song) {
@@ -30,6 +39,8 @@ export function MusicPlayer({ song, onNext, onPrevious }: MusicPlayerProps) {
         audioRef.current.src = audioUrl;
         audioRef.current.load();
         setHasIncrementedPlay(false);
+        setAccumulatedTime(0);
+        lastUpdateTimeRef.current = 0;
         if (isPlaying) {
           audioRef.current.play().catch(console.error);
         }
@@ -41,23 +52,63 @@ export function MusicPlayer({ song, onNext, onPrevious }: MusicPlayerProps) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateTime = () => {
+      const newTime = audio.currentTime;
+      setCurrentTime(newTime);
+
+      if (isAuthenticated && isPlaying && !audio.paused) {
+        const now = Date.now();
+        if (lastUpdateTimeRef.current > 0) {
+          const delta = (now - lastUpdateTimeRef.current) / 1000;
+          if (delta > 0 && delta < 5) {
+            setAccumulatedTime(prev => prev + delta);
+          }
+        }
+        lastUpdateTimeRef.current = now;
+      }
+    };
+
     const updateDuration = () => setDuration(audio.duration);
     const handleEnded = () => {
       setIsPlaying(false);
+      persistListeningTime();
       onNext();
+    };
+
+    const handlePause = () => {
+      persistListeningTime();
     };
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
     };
-  }, [onNext]);
+  }, [onNext, isPlaying, isAuthenticated]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isAuthenticated && isPlaying && accumulatedTime >= 10) {
+        persistListeningTime();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, isPlaying, accumulatedTime]);
+
+  const persistListeningTime = () => {
+    if (isAuthenticated && accumulatedTime > 0) {
+      addListeningTimeMutation.mutate(Math.floor(accumulatedTime));
+      setAccumulatedTime(0);
+      lastUpdateTimeRef.current = Date.now();
+    }
+  };
 
   const togglePlay = async () => {
     if (!audioRef.current || !song) return;
@@ -65,12 +116,13 @@ export function MusicPlayer({ song, onNext, onPrevious }: MusicPlayerProps) {
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      persistListeningTime();
     } else {
       try {
         await audioRef.current.play();
         setIsPlaying(true);
+        lastUpdateTimeRef.current = Date.now();
         
-        // Increment play count only once per song load
         if (!hasIncrementedPlay) {
           playSongMutation.mutate(song.id);
           setHasIncrementedPlay(true);
@@ -151,62 +203,64 @@ export function MusicPlayer({ song, onNext, onPrevious }: MusicPlayerProps) {
                 onValueChange={handleSeek}
                 className="cursor-pointer"
               />
-              <div className="flex justify-between text-sm text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{formatTime(currentTime)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
             </div>
-            
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={onPrevious}
-              >
-                <SkipBack className="w-5 h-5" />
-              </Button>
-              
-              <Button
-                size="icon"
-                className="w-14 h-14 rounded-full neon-glow"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="w-6 h-6" fill="currentColor" />
-                ) : (
-                  <Play className="w-6 h-6" fill="currentColor" />
-                )}
-              </Button>
-              
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={onNext}
-              >
-                <SkipForward className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-4">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <Slider
-                value={[volume]}
-                max={1}
-                step={0.01}
-                onValueChange={handleVolumeChange}
-                className="w-24"
-              />
-            </div>
           </div>
         </div>
-        
+
+        <div className="flex items-center justify-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onPrevious}
+            className="h-10 w-10"
+          >
+            <SkipBack className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            size="icon"
+            onClick={togglePlay}
+            className="h-14 w-14 rounded-full"
+          >
+            {isPlaying ? (
+              <Pause className="h-6 w-6" />
+            ) : (
+              <Play className="h-6 w-6 ml-1" />
+            )}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onNext}
+            className="h-10 w-10"
+          >
+            <SkipForward className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Volume2 className="h-4 w-4 text-muted-foreground" />
+          <Slider
+            value={[volume]}
+            max={1}
+            step={0.01}
+            onValueChange={handleVolumeChange}
+            className="w-24"
+          />
+        </div>
+
         {song.lyrics && (
-          <div className="border-t border-border/50 pt-4">
-            <h3 className="font-semibold mb-2">Lyrics</h3>
-            <ScrollArea className="h-48 rounded-md border border-border/50 p-4">
-              <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans">
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-semibold mb-2">Lyrics</h3>
+            <ScrollArea className="h-32">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {song.lyrics}
-              </pre>
+              </p>
             </ScrollArea>
           </div>
         )}

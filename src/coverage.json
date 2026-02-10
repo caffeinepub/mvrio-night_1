@@ -1,108 +1,37 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T11:34:39.157Z",
+  "generatedAt": "2026-02-10T15:35:13.767Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 5,
+    "total": 1,
+    "implemented": 1,
     "items": [
       {
-        "id": "REQ-130",
-        "summary": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
+        "id": "REQ-191",
+        "summary": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/library/PlaylistDetailView.tsx"
+          "frontend/src/hooks/useLongPress.ts",
+          "frontend/src/components/home/HomeChannelBanner.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/library/PlaylistDetailView.tsx"
-        ]
-      },
-      {
-        "id": "REQ-131",
-        "summary": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/library/PlaylistDetailView.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/utils/playlistPlayback.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/library/PlaylistDetailView.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/utils/playlistPlayback.ts"
-        ]
-      },
-      {
-        "id": "REQ-132",
-        "summary": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/library/PlaylistDetailView.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/utils/playlistPlayback.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/library/PlaylistDetailView.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/utils/playlistPlayback.ts"
-        ]
-      },
-      {
-        "id": "REQ-133",
-        "summary": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/hooks/useQueries.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/hooks/useQueries.ts"
-        ]
-      },
-      {
-        "id": "REQ-134",
-        "summary": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/components/library/PlaylistDetailView.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/pages/LibraryScreen.tsx",
-          "frontend/src/components/library/PlaylistDetailView.tsx"
+          "frontend/src/hooks/useLongPress.ts",
+          "frontend/src/components/home/HomeChannelBanner.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-    "frontend/src/components/library/PlaylistDetailView.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/LibraryScreen.tsx",
-    "frontend/src/utils/playlistPlayback.ts",
+    "frontend/src/components/home/HomeChannelBanner.tsx",
+    "frontend/src/hooks/useLongPress.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -2,12 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-make-each-playlist-card-in-library-playlists-fully-clickable-so-clicking-tapping-the-card-opens-a-dedicated-playlist-detail-view-that-shows-the-songs-inside-that-playlist",
-      "featureTitle": "Make each playlist card in Library → Playlists fully clickable so clicking/tapping the card opens a dedicated playlist detail view that shows the songs inside that playlist.",
+      "featureId": "feature-implement-an-additional-hidden-admin-mode-activation-method-a-press-and-hold-long-press-gesture-on-the-home-channel-banner-image-area-that-after-a-continuous-5-seconds-opens-the-existing-admin-passcode-modal-the-same-modal-used-by-the-ctrl-shift-u-shortcut-so-the-admin-can-enter-the-existing-passcode-and-enable-admin-mode-this-long-press-trigger-must-work-on-both-mobile-touch-and-desktop-mouse-pointer-must-not-replace-or-modify-the-existing-ctrl-shift-u-shortcut-behavior-and-must-not-interfere-with-normal-song-playback-navigation-interactions-elsewhere-on-the-home-screen",
+      "featureTitle": "Implement an additional Hidden Admin Mode activation method: a press-and-hold (long-press) gesture on the Home channel banner image area that, after a continuous 5 seconds, opens the existing Admin passcode modal (the same modal used by the Ctrl+Shift+U shortcut) so the admin can enter the existing passcode and enable Admin Mode. This long-press trigger must work on both mobile (touch) and desktop (mouse/pointer), must not replace or modify the existing Ctrl+Shift+U shortcut behavior, and must not interfere with normal song playback/navigation interactions elsewhere on the Home screen.",
       "files": [
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-        "frontend/src/components/library/PlaylistDetailView.tsx",
-        "frontend/src/pages/LibraryScreen.tsx"
+        "frontend/src/components/home/HomeChannelBanner.tsx",
+        "frontend/src/hooks/useLongPress.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -19,95 +18,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-130"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-implement-the-playlist-detail-view-to-render-all-songs-in-the-playlist-using-existing-song-row-components-and-existing-playback-behavior-so-that-selecting-a-song-from-the-playlist-starts-playback-in-the-existing-musicplayer-within-the-playlist-context",
-      "featureTitle": "Implement the playlist detail view to render all songs in the playlist using existing song row components and existing playback behavior, so that selecting a song from the playlist starts playback in the existing MusicPlayer within the playlist context.",
-      "files": [
-        "frontend/src/components/library/PlaylistDetailView.tsx",
-        "frontend/src/pages/LibraryScreen.tsx",
-        "frontend/src/utils/playlistPlayback.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-131"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-on-the-playlist-detail-view-add-a-playlist-level-play-button-and-spotify-like-controls-for-shuffle-repeat-and-play-mode-these-controls-must-affect-the-playlist-s-playback-order-when-using-next-previous-and-when-starting-playback-from-the-playlist-level-play-button",
-      "featureTitle": "On the playlist detail view, add a playlist-level Play button and Spotify-like controls for Shuffle, Repeat, and Play Mode; these controls must affect the playlist’s playback order when using Next/Previous and when starting playback from the playlist-level Play button.",
-      "files": [
-        "frontend/src/components/library/PlaylistDetailView.tsx",
-        "frontend/src/pages/LibraryScreen.tsx",
-        "frontend/src/utils/playlistPlayback.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-132"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-an-admin-mode-only-create-official-playlist-button-in-library-playlists-positioned-beside-the-official-playlists-section-header-it-must-only-appear-when-hidden-admin-mode-is-enabled-and-must-not-be-visible-to-normal-users-or-guests",
-      "featureTitle": "Add an Admin-Mode-only “Create Official Playlist” button in Library → Playlists, positioned beside the “Official Playlists” section header; it must only appear when Hidden Admin Mode is enabled and must not be visible to normal users or guests.",
-      "files": [
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-        "frontend/src/hooks/useQueries.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-133"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-support-listing-and-opening-official-playlists-show-a-real-list-of-official-playlists-in-the-official-playlists-section-allow-clicking-an-official-playlist-card-to-open-the-same-playlist-detail-view-and-load-its-songs-using-backend-apis-intended-for-official-playlists",
-      "featureTitle": "Support listing and opening Official Playlists: show a real list of official playlists in the “Official Playlists” section, allow clicking an official playlist card to open the same playlist detail view, and load its songs using backend APIs intended for official playlists.",
-      "files": [
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-        "frontend/src/components/library/PlaylistDetailView.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/LibraryScreen.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-134"
+        "REQ-191"
       ],
       "confidence": "high"
     }

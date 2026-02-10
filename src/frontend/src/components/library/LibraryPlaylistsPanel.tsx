@@ -9,19 +9,21 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Music2, Loader2 } from 'lucide-react';
+import { Plus, Music2, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useHiddenAdminMode } from '@/context/HiddenAdminModeContext';
+import { useActor } from '@/hooks/useActor';
 import { 
   useGetUserPlaylists, 
   useCreatePlaylist,
   useGetOfficialPlaylists,
-  useGetPlaylistDetails,
-  useGetOfficialPlaylistDetails,
   useCreateOfficialPlaylist,
+  useDeleteUserPlaylist,
+  useDeleteOfficialPlaylist,
 } from '@/hooks/useQueries';
 import { toast } from 'sonner';
 import type { SongView } from '@/backend';
+import { DeletePlaylistConfirmDialog } from './DeletePlaylistConfirmDialog';
 
 type PlaylistContext = {
   type: 'user' | 'official';
@@ -36,14 +38,25 @@ interface LibraryPlaylistsPanelProps {
 export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelProps) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { isAdminModeEnabled } = useHiddenAdminMode();
+  const { actor } = useActor();
   const { data: userPlaylists, isLoading: userPlaylistsLoading } = useGetUserPlaylists();
   const { data: officialPlaylists, isLoading: officialPlaylistsLoading } = useGetOfficialPlaylists();
   const createPlaylistMutation = useCreatePlaylist();
   const createOfficialPlaylistMutation = useCreateOfficialPlaylist();
+  const deleteUserPlaylistMutation = useDeleteUserPlaylist();
+  const deleteOfficialPlaylistMutation = useDeleteOfficialPlaylist();
+  
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createOfficialDialogOpen, setCreateOfficialDialogOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newOfficialPlaylistName, setNewOfficialPlaylistName] = useState('');
+  
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState<{
+    name: string;
+    type: 'user' | 'official';
+  } | null>(null);
 
   const handleCreatePlaylistClick = () => {
     if (!isAuthenticated) {
@@ -116,188 +129,228 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
   };
 
   const handleOpenUserPlaylist = async (playlistName: string) => {
+    if (!actor) {
+      toast.error('Unable to load playlist');
+      return;
+    }
+    
     try {
-      // Fetch playlist details from backend
-      const response = await fetch(`/api/playlists/${playlistName}`);
-      // This is a placeholder - we'll use the hook instead
-      const songs: SongView[] = []; // Will be populated by the hook
+      // Fetch playlist details directly from actor
+      const songs = await actor.getPlaylistDetails(playlistName);
       
       onOpenPlaylist({
         type: 'user',
         name: playlistName,
-        songs,
+        songs: songs || [],
       });
     } catch (error) {
-      console.error('Failed to load playlist:', error);
+      console.error('Failed to open user playlist:', error);
       toast.error('Failed to load playlist');
     }
   };
 
   const handleOpenOfficialPlaylist = async (playlistName: string) => {
+    if (!actor) {
+      toast.error('Unable to load playlist');
+      return;
+    }
+    
     try {
-      // Fetch official playlist details from backend
-      const songs: SongView[] = []; // Will be populated by the hook
+      // Fetch official playlist details directly from actor
+      const songs = await actor.getOfficialPlaylistDetails(playlistName);
       
       onOpenPlaylist({
         type: 'official',
         name: playlistName,
-        songs,
+        songs: songs || [],
       });
     } catch (error) {
-      console.error('Failed to load official playlist:', error);
-      toast.error('Failed to load official playlist');
+      console.error('Failed to open official playlist:', error);
+      toast.error('Failed to load playlist');
     }
   };
 
-  if (!isAuthenticated && officialPlaylistsLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const handleDeleteClick = (name: string, type: 'user' | 'official', e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPlaylistToDelete({ name, type });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!playlistToDelete) return;
+
+    try {
+      if (playlistToDelete.type === 'user') {
+        await deleteUserPlaylistMutation.mutateAsync(playlistToDelete.name);
+      } else {
+        await deleteOfficialPlaylistMutation.mutateAsync(playlistToDelete.name);
+      }
+      setDeleteConfirmOpen(false);
+      setPlaylistToDelete(null);
+    } catch (error) {
+      // Error handling is done in the mutation hooks
+      console.error('Delete playlist error:', error);
+    }
+  };
+
+  const isPendingDelete = deleteUserPlaylistMutation.isPending || deleteOfficialPlaylistMutation.isPending;
 
   return (
     <div className="space-y-8">
       {/* Official Playlists Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Official Playlists</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">Official Playlists</h3>
           {isAdminModeEnabled && (
             <Button
-              size="sm"
               onClick={() => setCreateOfficialDialogOpen(true)}
+              size="sm"
+              variant="outline"
               className="gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Create Official Playlist
             </Button>
           )}
         </div>
-        
+
         {officialPlaylistsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : officialPlaylists && officialPlaylists.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {officialPlaylists.map((playlist) => (
               <div
                 key={playlist.name}
-                className="p-4 rounded-lg bg-card hover:bg-accent transition-colors cursor-pointer"
                 onClick={() => handleOpenOfficialPlaylist(playlist.name)}
+                className="group relative cursor-pointer rounded-lg bg-card p-4 transition-colors hover:bg-accent"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                    <Music2 className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{playlist.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
-                    </p>
-                  </div>
+                <div className="mb-3 flex h-24 items-center justify-center rounded-md bg-muted">
+                  <Music2 className="h-10 w-10 text-muted-foreground" />
                 </div>
+                <h4 className="truncate text-sm font-medium text-foreground">{playlist.name}</h4>
+                <p className="text-xs text-muted-foreground">
+                  {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
+                </p>
+                
+                {/* Delete button - only visible in admin mode */}
+                {isAdminModeEnabled && (
+                  <button
+                    onClick={(e) => handleDeleteClick(playlist.name, 'official', e)}
+                    className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                    aria-label="Delete playlist"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Music2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No official playlists yet</p>
+          <div className="rounded-lg border border-dashed border-border p-8 text-center">
+            <Music2 className="mx-auto mb-2 h-12 w-12 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No official playlists yet</p>
           </div>
         )}
       </div>
 
-      {/* Your Playlists Section */}
-      {isAuthenticated && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Your Playlists</h2>
+      {/* User Playlists Section */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">Your Playlists</h3>
+          <Button
+            onClick={handleCreatePlaylistClick}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Create Playlist
+          </Button>
+        </div>
+
+        {!isAuthenticated ? (
+          <div className="rounded-lg border border-dashed border-border p-8 text-center">
+            <Music2 className="mx-auto mb-2 h-12 w-12 text-muted-foreground" />
+            <p className="mb-4 text-sm text-muted-foreground">Sign in to create and manage your playlists</p>
             <Button
+              onClick={() => requireAuth({ type: 'create-playlist' })}
               size="sm"
-              onClick={handleCreatePlaylistClick}
-              className="gap-2"
             >
-              <Plus className="w-4 h-4" />
-              Create Playlist
+              Sign In
             </Button>
           </div>
-          
-          {userPlaylistsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : userPlaylists && userPlaylists.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userPlaylists.map((playlist) => (
-                <div
-                  key={playlist.name}
-                  className="p-4 rounded-lg bg-card hover:bg-accent transition-colors cursor-pointer"
-                  onClick={() => handleOpenUserPlaylist(playlist.name)}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                      <Music2 className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{playlist.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
-                      </p>
-                    </div>
-                  </div>
+        ) : userPlaylistsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : userPlaylists && userPlaylists.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {userPlaylists.map((playlist) => (
+              <div
+                key={playlist.name}
+                onClick={() => handleOpenUserPlaylist(playlist.name)}
+                className="group relative cursor-pointer rounded-lg bg-card p-4 transition-colors hover:bg-accent"
+              >
+                <div className="mb-3 flex h-24 items-center justify-center rounded-md bg-muted">
+                  <Music2 className="h-10 w-10 text-muted-foreground" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Music2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No playlists yet</p>
-              <p className="text-sm mt-1">Create your first playlist to get started</p>
-            </div>
-          )}
-        </div>
-      )}
+                <h4 className="truncate text-sm font-medium text-foreground">{playlist.name}</h4>
+                <p className="text-xs text-muted-foreground">
+                  {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
+                </p>
+                
+                {/* Delete button - visible when authenticated */}
+                {isAuthenticated && (
+                  <button
+                    onClick={(e) => handleDeleteClick(playlist.name, 'user', e)}
+                    className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                    aria-label="Delete playlist"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border p-8 text-center">
+            <Music2 className="mx-auto mb-2 h-12 w-12 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No playlists yet. Create your first one!</p>
+          </div>
+        )}
+      </div>
 
-      {!isAuthenticated && (
-        <div className="text-center py-12">
-          <Music2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">Sign in to view your playlists</h3>
-          <p className="text-muted-foreground">
-            Create and manage your playlists after signing in
-          </p>
-        </div>
-      )}
-
-      {/* Create Playlist Dialog */}
+      {/* Create User Playlist Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Playlist</DialogTitle>
+            <DialogTitle>Create Playlist</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="new-playlist-name">Playlist Name</Label>
+              <Label htmlFor="playlist-name">Playlist Name</Label>
               <Input
-                id="new-playlist-name"
+                id="playlist-name"
                 placeholder="My Awesome Playlist"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !createPlaylistMutation.isPending) {
+                  if (e.key === 'Enter') {
                     handleCreatePlaylist();
                   }
                 }}
-                disabled={createPlaylistMutation.isPending}
-                autoFocus
               />
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCreateDialogOpen(false)}
+              onClick={() => {
+                setCreateDialogOpen(false);
+                setNewPlaylistName('');
+              }}
               disabled={createPlaylistMutation.isPending}
             >
               Cancel
@@ -306,10 +359,14 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
               onClick={handleCreatePlaylist}
               disabled={createPlaylistMutation.isPending || !newPlaylistName.trim()}
             >
-              {createPlaylistMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {createPlaylistMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create'
               )}
-              Create
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -321,28 +378,29 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
           <DialogHeader>
             <DialogTitle>Create Official Playlist</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="new-official-playlist-name">Playlist Name</Label>
+              <Label htmlFor="official-playlist-name">Playlist Name</Label>
               <Input
-                id="new-official-playlist-name"
-                placeholder="Official Playlist Name"
+                id="official-playlist-name"
+                placeholder="Top Hits 2026"
                 value={newOfficialPlaylistName}
                 onChange={(e) => setNewOfficialPlaylistName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !createOfficialPlaylistMutation.isPending) {
+                  if (e.key === 'Enter') {
                     handleCreateOfficialPlaylist();
                   }
                 }}
-                disabled={createOfficialPlaylistMutation.isPending}
-                autoFocus
               />
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCreateOfficialDialogOpen(false)}
+              onClick={() => {
+                setCreateOfficialDialogOpen(false);
+                setNewOfficialPlaylistName('');
+              }}
               disabled={createOfficialPlaylistMutation.isPending}
             >
               Cancel
@@ -351,14 +409,33 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
               onClick={handleCreateOfficialPlaylist}
               disabled={createOfficialPlaylistMutation.isPending || !newOfficialPlaylistName.trim()}
             >
-              {createOfficialPlaylistMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {createOfficialPlaylistMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create'
               )}
-              Create
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeletePlaylistConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) {
+            setPlaylistToDelete(null);
+          }
+        }}
+        playlistName={playlistToDelete?.name || ''}
+        playlistType={playlistToDelete?.type || 'user'}
+        isPending={isPendingDelete}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
