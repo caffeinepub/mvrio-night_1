@@ -1,59 +1,87 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T03:17:22.760Z",
-  "summary": "REQ-81 (Like toggle) appears largely implemented via a corrected toggleLikeSong(songId) mutation, cache updates for likesCount, and click event propagation suppression. REQ-82 (Home banner should default to the provided uploaded static image and not require URL/upload) is not implemented as specified; instead, the diff adds user-configurable banner upload/URL behavior persisted in localStorage.",
+  "generatedAt": "2026-02-10T04:15:34.576Z",
+  "summary": "Core scaffolding for AuthContext, SignInModal, pending-action retry, and several restricted entry points was added, but multiple specified behaviors are incomplete or mismatched: AuthContext does not expose the required state shape/naming, pending-action retry/return-path restoration appears incomplete (and may be wired incorrectly), and the sign-in modal does not provide the required two auth actions or email-status states.",
   "missing_requirements": [
     {
-      "id": "REQ-82",
-      "requirement": "Home banner renders the uploaded image “Aesthetic Moments from My Week (1).jpeg” by default as a static frontend asset (no URL paste or re-upload required).",
-      "reason": "The banner defaults to a different asset path and the component/hook explicitly supports setting the banner via URL input or file upload (i.e., it does require URL paste or re-upload for a custom banner). No evidence shows “Aesthetic Moments from My Week (1).jpeg” being added/used as the default static asset.",
+      "id": "REQ-86",
+      "requirement": "AuthContext must expose `userAuthState` (\"guest\" | \"signedIn\"), `pendingAction`, and `loginReturnPath` (screen/params + scroll position) plus helpers to open/close modal, record pending restricted actions without navigating, and after successful sign-in restore prior screen+scroll and retry pending action exactly once then clear it.",
+      "reason": "The added AuthContext exposes `isAuthenticated` (boolean) instead of `userAuthState`, and `returnPath` instead of `loginReturnPath`. Also `executePendingAction` is explicitly described as a placeholder (truncated) rather than being the implemented central retry mechanism, and the exact once-only retry + clearing behavior cannot be confirmed from the truncated context implementation.",
       "evidence": [
-        "frontend/src/hooks/useHomeBanner.ts (DEFAULT_BANNER = '/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg')",
-        "frontend/src/components/home/HomeChannelBanner.tsx (URL input + file upload UI; setImageUrl/setImageFile)"
+        "frontend/src/context/AuthContext.tsx"
       ]
     },
     {
-      "id": "REQ-82",
-      "requirement": "Banner image should be served as a static frontend asset and only change the Home channel banner image behavior (no backend fetching/storage).",
-      "reason": "The implementation stores uploaded image data in localStorage as a base64 DataURL (via FileReader) and also supports remote URL banners, which is not “served as a static frontend asset” and goes beyond simply setting a fixed default banner asset.",
+      "id": "REQ-86",
+      "requirement": "Calling the restricted-feature context method stores `pendingAction` and captures `loginReturnPath` including current screen and scrollY without changing the current screen.",
+      "reason": "The context captures `currentScreen` and `window.scrollY`, but the integration in App creates two separate `currentScreen` states (one in `AppContent`, another in `App`) and only the outer one is passed into `AuthProvider`, while `AppShell` navigation updates the inner one. This suggests `AuthProvider` may not actually receive the correct current screen to capture/restore.",
       "evidence": [
-        "frontend/src/hooks/useHomeBanner.ts (FileReader.readAsDataURL; localStorage persistence; imageUrl support)",
-        "frontend/src/components/home/HomeChannelBanner.tsx (Image URL input flow; upload flow)"
+        "frontend/src/App.tsx"
+      ]
+    },
+    {
+      "id": "REQ-86",
+      "requirement": "After sign-in completes, restore captured screen + scroll position and retry pending action exactly once, then clear it.",
+      "reason": "Retry is handled in `usePendingAction` via an effect that triggers whenever `isAuthenticated && pendingAction`; there is no visible guard to ensure it runs \"exactly once\" per sign-in (e.g., no `hasExecutedPendingAction` usage shown there), and AuthContext’s own `executePendingAction` is noted as a placeholder. Scroll restoration is present as `restoreScrollPosition`, but no evidence shows it being invoked after successful login.",
+      "evidence": [
+        "frontend/src/hooks/usePendingAction.ts",
+        "frontend/src/context/AuthContext.tsx",
+        "frontend/src/components/SignInModal.tsx"
+      ]
+    },
+    {
+      "id": "REQ-87",
+      "requirement": "SignInModal must provide exactly two primary actions for authentication plus a cancel action, and must support dedicated message states for email sign-in (check email / in progress / expired or failed).",
+      "reason": "The modal provides only one authentication action (“Sign In with Internet Identity”) plus Cancel, and contains no email-flow UI states/messages (no check-email/in-progress/expired views).",
+      "evidence": [
+        "frontend/src/components/SignInModal.tsx"
+      ]
+    },
+    {
+      "id": "REQ-88",
+      "requirement": "Pending-action helper must standardize setting/clearing/executing pending actions and ensure retry runs at most once per successful sign-in and does not re-open the sign-in modal.",
+      "reason": "The hook auto-executes on every render where `isAuthenticated && pendingAction`, with no explicit once-per-login guard visible. It also does not show any coordination with modal state to ensure the retry does not re-open the modal.",
+      "evidence": [
+        "frontend/src/hooks/usePendingAction.ts"
+      ]
+    },
+    {
+      "id": "REQ-90",
+      "requirement": "As a guest, attempting either download option (offline cache or device download) opens the soft sign-in modal and after sign-in resumes and executes the selected download option automatically.",
+      "reason": "SongOverflowMenu shows gating for offline cache (`type: 'offline-cache'`), but `handleDownloadClick` opens the chooser regardless of auth, and the device-download path is not visible in the truncated diff. From the visible portion, it’s not confirmable that both download options consistently record pending action and resume after sign-in.",
+      "evidence": [
+        "frontend/src/components/songs/SongOverflowMenu.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added Home banner customization UI (upload button, URL input toggle, clear button) with toast notifications.",
-      "reason": "REQ-82 asks to replace the Home banner with a specific uploaded image as the default static asset; it does not request adding user-facing banner upload/URL management controls.",
+      "description": "Changed/added behavior in `useQueries.ts` around `toggleLikeSong` calling backend with only `songId` and updating cache with `likesCount` return value.",
+      "reason": "The BuildRequest focuses on adding AuthContext, soft sign-in modal, pending-action retry, and wiring restricted entry points. It does not request refactoring the underlying React Query mutation signatures/caching logic.",
       "evidence": [
-        "frontend/src/components/home/HomeChannelBanner.tsx"
+        "frontend-file-summaries.txt (frontend/src/hooks/useQueries.ts summary)"
       ]
     },
     {
-      "description": "Persisting Home banner state (imageUrl or uploaded image DataURL) to localStorage and reading it on load.",
-      "reason": "REQ-82 specifies the banner image should be served as a static frontend asset by default; persistence of user-selected banners via localStorage is not requested.",
+      "description": "LibraryPlaylistsPanel now blocks the entire playlists panel for guests with a 'Sign in to view playlists' empty state.",
+      "reason": "REQ-90 requires gating restricted actions (create/add), but does not explicitly request hiding playlist viewing UI entirely for guests. This is an additional behavioral change beyond the minimum specified entry-point gating.",
       "evidence": [
-        "frontend/src/hooks/useHomeBanner.ts (STORAGE_KEY, localStorage get/set, JSON state)"
-      ]
-    },
-    {
-      "description": "Support for setting the banner from an arbitrary external URL.",
-      "reason": "REQ-82 explicitly says the banner should not require the user to paste a URL and should be served as a static frontend asset.",
-      "evidence": [
-        "frontend/src/components/home/HomeChannelBanner.tsx (Image URL input; handleUrlSubmit)",
-        "frontend/src/hooks/useHomeBanner.ts (imageUrl state; displayImage uses imageUrl)"
+        "frontend/src/components/library/LibraryPlaylistsPanel.tsx"
       ]
     }
   ],
   "confidence": 0.74,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/home/HomeChannelBanner.tsx",
-    "frontend/src/components/songs/SongEngagementBar.tsx",
-    "frontend/src/hooks/useHomeBanner.ts",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/App.tsx",
+    "frontend/src/components/SignInModal.tsx",
+    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+    "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+    "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+    "frontend/src/components/songs/SongOverflowMenu.tsx",
+    "frontend/src/context/AuthContext.tsx",
+    "frontend/src/hooks/usePendingAction.ts",
     "frontend/src/hooks/useSongEngagement.ts",
     "project_state.json"
   ]

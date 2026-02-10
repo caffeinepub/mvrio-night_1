@@ -1,11 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the song Like button to behave as a true toggle and update the Home banner to use the uploaded image without cropping or stretching.
+**Goal:** Add a global authentication context and soft sign-in modal that gates restricted actions for guests, captures/recovers the user’s current screen + scroll position, and retries the blocked action after successful sign-in.
 
 **Planned changes:**
-- Update the Like (heart) button interaction to correctly call the existing `toggleLikeSong(songId)` mutation, toggle like/unlike on repeated taps, and refresh/update the displayed `likeCount` while staying in sync with the backend.
-- Ensure the Like button click/tap does not trigger song playback or any parent click handlers, and preserves existing “login required” behavior when the user is not authenticated.
-- Replace the Home channel banner image with the bundled static asset `Aesthetic Moments from My Week (1).jpeg`, rendering it with preserved aspect ratio and no cropping/stretching, while keeping current header/A2HS placement and avoiding overlap.
+- Create `frontend/src/context/AuthContext.tsx` providing `userAuthState` (`guest`/`signedIn`), `pendingAction`, `loginReturnPath`, and helpers to open/close the sign-in modal, record a pending restricted action without navigating away, and on successful sign-in restore prior screen + scroll position and retry the pending action once.
+- Add `frontend/src/components/SignInModal.tsx` as a globally rendered modal controlled by AuthContext, with exactly two primary sign-in actions plus Cancel, and status messaging for the email sign-in flow (in progress / check email / failed or expired).
+- Add `frontend/src/hooks/usePendingAction.ts` to standardize registering and executing pending actions for: Like/Unlike, Create Playlist, Add to Playlist, and Download (offline cache and device download).
+- Integrate `AuthProvider` and global `SignInModal` into the existing app shell (e.g., `frontend/src/App.tsx`) without modifying immutable files, while preserving existing navigation and the first-launch-only welcome popup behavior.
+- Update restricted-action entry points (like actions, playlist creation/add-to-playlist flows, and download chooser actions) to use the shared AuthContext + pending-action retry flow, while keeping existing event/propagation behavior intact.
+- Keep backend permission checks unchanged; ensure unauthorized failures in restricted calls trigger the soft sign-in flow without impacting guest read-only browsing/streaming/lyrics behavior.
 
-**User-visible outcome:** Users can like/unlike a song reliably with the heart button (with the count updating correctly), and the Home page shows the new uploaded banner image fully visible without being cropped or distorted.
+**User-visible outcome:** Guests can browse and play normally, but attempting restricted actions (like, playlist actions, downloads) opens a soft sign-in modal without leaving the current screen; after signing in, the app returns to the same screen and scroll position and automatically completes the action they originally attempted.

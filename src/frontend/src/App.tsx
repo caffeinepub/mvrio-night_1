@@ -12,15 +12,24 @@ import { CustomSongRequestsScreen } from './pages/CustomSongRequestsScreen';
 import { ContactScreen } from './pages/ContactScreen';
 import { ThemeProvider } from './hooks/useTheme';
 import { SettingsProvider } from './hooks/useSettings';
+import { AuthProvider } from './context/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 import { parseSongIdFromUrl, clearSongParamFromUrl } from './utils/deepLinks';
+import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
+import { FirstLaunchWelcomePopup } from './components/onboarding/FirstLaunchWelcomePopup';
+import { SignInModal } from './components/SignInModal';
+import { usePendingAction } from './hooks/usePendingAction';
 
 export type Screen = 'home' | 'songs' | 'library' | 'search' | 'about' | 'themes' | 'settings' | 'support' | 'requests' | 'contact';
 
-function App() {
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [deepLinkSongId, setDeepLinkSongId] = useState<bigint | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const { isWelcomeOpen, dismissWelcome } = useFirstLaunchWelcome();
+
+  // Initialize pending action handler
+  usePendingAction();
 
   // Handle deep link on app load
   useEffect(() => {
@@ -70,12 +79,26 @@ function App() {
   };
 
   return (
+    <>
+      {isWelcomeOpen && <FirstLaunchWelcomePopup onDismiss={dismissWelcome} />}
+      <AppShell currentScreen={currentScreen} onNavigate={setCurrentScreen}>
+        {renderScreen()}
+      </AppShell>
+      <SignInModal />
+      <Toaster />
+    </>
+  );
+}
+
+function App() {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+
+  return (
     <ThemeProvider>
       <SettingsProvider>
-        <AppShell currentScreen={currentScreen} onNavigate={setCurrentScreen}>
-          {renderScreen()}
-        </AppShell>
-        <Toaster />
+        <AuthProvider currentScreen={currentScreen} onNavigate={setCurrentScreen}>
+          <AppContent />
+        </AuthProvider>
       </SettingsProvider>
     </ThemeProvider>
   );

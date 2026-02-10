@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 33,
-  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
+  "projectStateVersion": 37,
+  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system: guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. Support Google OAuth and passwordless Email Magic Link (Magic.link SDK loginWithMagicLink using import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY). After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
     "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
@@ -21,8 +21,7 @@
     "Deployment step failed with generic “Deployment error” after code generation; likely due to deploy-service hiccup or platform/internal deployment limits rather than app logic.",
     "Like button is not working; it must toggle like/unlike on repeated taps."
   ],
-  "isFixRequest": true,
-  "imageRequirements": "## Required Images\n- Studio-room photo with a seated person in front of a desk setup (home-banner-aesthetic-moments.dim_463x453.jpeg)",
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-implement-the-mvrio-night-visual-system-exactly-as-specified-default-night-mode-with-a-dark-night-sky-gradient-background-0b0c1a-to-000000-hundreds-of-tiny-star-dots-scattered-across-the-background-a-lightweight-twinkle-animation-stars-brighten-randomly-over-time-and-neon-green-highlights-1ed760-for-buttons-progress-bars-and-active-elements-effects-must-be-subtle-and-deployment-safe-no-heavy-particle-systems",
@@ -584,6 +583,78 @@
         "REQ-82"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-add-a-first-launch-only-welcome-popup-that-appears-only-when-the-app-is-opened-for-the-very-first-time-in-a-browser-profile-and-never-appears-again-after-first-dismissal-tracked-via-a-single-localstorage-boolean-flag-named-firstlaunchshown",
+      "title": "Add a first-launch-only welcome popup that appears only when the app is opened for the very first time in a browser/profile, and never appears again after first dismissal (tracked via a single localStorage boolean flag named `firstLaunchShown`).",
+      "reqIds": [
+        "REQ-83"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-welcome-popup-ui-and-behavior-include-a-short-english-greeting-and-exactly-two-action-buttons-labeled-continue-as-guest-and-sign-in-tapping-either-button-dismisses-the-popup-and-permanently-sets-firstlaunchshown-to-true-continue-as-guest-proceeds-without-authentication-and-sign-in-triggers-the-existing-internet-identity-login-flow",
+      "title": "Implement the welcome popup UI and behavior: include a short English greeting and exactly two action buttons labeled “Continue as Guest” and “Sign In”. Tapping either button dismisses the popup and permanently sets `firstLaunchShown` to true; “Continue as Guest” proceeds without authentication, and “Sign In” triggers the existing Internet Identity login flow.",
+      "reqIds": [
+        "REQ-84"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-integrate-the-first-launch-welcome-popup-into-the-existing-app-shell-so-that-it-blocks-interaction-until-dismissed-without-modifying-existing-navigation-behavior-bottomtabbar-sidebar-or-existing-pwa-a2hs-banner-behavior",
+      "title": "Integrate the first-launch welcome popup into the existing app shell so that it blocks interaction until dismissed, without modifying existing navigation behavior (BottomTabBar/Sidebar) or existing PWA A2HS banner behavior.",
+      "reqIds": [
+        "REQ-85"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-new-global-authentication-context-at-frontend-src-context-authcontext-tsx-that-models-the-app-s-approved-auth-behavior-using-the-existing-internet-identity-identity-as-the-source-of-truth-for-signed-in-state-expose-userauthstate-guest-signedin-pendingaction-and-loginreturnpath-screen-params-scroll-position-plus-helper-methods-to-a-open-close-the-soft-sign-in-modal-b-record-a-pending-restricted-action-without-navigating-away-and-c-complete-sign-in-and-then-restore-the-prior-screen-scroll-position-and-automatically-retry-any-pending-action",
+      "title": "Create a new global authentication context at `frontend/src/context/AuthContext.tsx` that models the app’s approved auth behavior using the existing Internet Identity identity as the source of truth for signed-in state: expose `userAuthState` (`\"guest\" | \"signedIn\"`), `pendingAction`, and `loginReturnPath` (screen/params + scroll position), plus helper methods to (a) open/close the soft sign-in modal, (b) record a pending restricted action without navigating away, and (c) complete sign-in and then restore the prior screen + scroll position and automatically retry any pending action.",
+      "reqIds": [
+        "REQ-86"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-soft-sign-in-modal-component-at-frontend-src-components-signinmodal-tsx-that-matches-the-approved-ux-constraints-it-must-open-on-top-of-the-current-screen-no-navigation-show-a-clear-sign-in-prompt-and-provide-exactly-the-two-primary-actions-for-authentication-and-a-cancel-action-the-modal-must-integrate-with-the-new-authcontext-so-that-restricted-actions-can-trigger-it-and-it-must-support-showing-a-check-your-email-sign-in-in-progress-link-expired-or-failed-message-state-when-using-the-email-flow",
+      "title": "Add a soft sign-in modal component at `frontend/src/components/SignInModal.tsx` that matches the approved UX constraints: it must open on top of the current screen (no navigation), show a clear sign-in prompt, and provide exactly the two primary actions for authentication and a cancel action. The modal must integrate with the new AuthContext so that restricted actions can trigger it, and it must support showing a “check your email” / “sign-in in progress” / “link expired or failed” message state when using the email flow.",
+      "reqIds": [
+        "REQ-87"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-pending-action-helper-hook-at-frontend-src-hooks-usependingaction-ts-that-standardizes-how-restricted-ui-elements-register-actions-for-retry-and-how-the-retry-is-executed-after-authentication-the-hook-must-support-the-app-s-restricted-actions-set-like-unlike-create-playlist-add-to-playlist-download-offline-cache-and-device-download",
+      "title": "Add a pending-action helper hook at `frontend/src/hooks/usePendingAction.ts` that standardizes how restricted UI elements register actions for retry and how the retry is executed after authentication. The hook must support the app’s restricted actions set: Like/Unlike, Create Playlist, Add to Playlist, Download (offline cache and device download).",
+      "reqIds": [
+        "REQ-88"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-integrate-authcontext-signinmodal-into-the-existing-app-shell-without-editing-immutable-files-wrap-the-existing-app-tree-in-frontend-src-app-tsx-or-another-non-immutable-file-with-the-new-authprovider-and-render-the-signinmodal-at-a-global-level-so-any-screen-component-can-trigger-it-preserve-the-existing-first-launch-only-welcome-popup-behavior-and-copy-and-do-not-change-existing-navigation-bottomtabbar-sidebar-a2hs-banner-or-theming-behavior",
+      "title": "Integrate AuthContext + SignInModal into the existing app shell without editing immutable files: wrap the existing app tree in `frontend/src/App.tsx` (or another non-immutable file) with the new `AuthProvider`, and render the `SignInModal` at a global level so any screen/component can trigger it. Preserve the existing first-launch-only welcome popup behavior and copy, and do not change existing navigation, BottomTabBar, Sidebar, A2HS banner, or theming behavior.",
+      "reqIds": [
+        "REQ-89"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-all-restricted-action-entry-points-to-use-the-new-authcontext-soft-sign-in-modal-and-pending-action-retry-flow-rather-than-showing-only-toasts-or-ad-hoc-login-calls-at-minimum-ensure-the-following-areas-are-consistent-1-like-actions-via-frontend-src-hooks-usesongengagement-ts-and-any-like-buttons-2-playlist-creation-add-to-playlist-flows-e-g-createplaylistdialog-playlistchooserdialog-libraryplaylistspanel-and-3-download-chooser-actions-in-songoverflowmenu-secondary-controls-menu-button-play-buttons-etc-must-continue-to-stop-propagation-and-must-not-unintentionally-trigger-playback",
+      "title": "Update all restricted-action entry points to use the new AuthContext soft sign-in modal and pending-action retry flow rather than showing only toasts or ad-hoc login calls. At minimum, ensure the following areas are consistent: (1) Like actions (via `frontend/src/hooks/useSongEngagement.ts` and any Like buttons), (2) Playlist creation/add-to-playlist flows (e.g., `CreatePlaylistDialog`, `PlaylistChooserDialog`, `LibraryPlaylistsPanel`), and (3) Download chooser actions in `SongOverflowMenu`. Secondary controls (⋮ menu button, play buttons, etc.) must continue to stop propagation and must not unintentionally trigger playback.",
+      "reqIds": [
+        "REQ-90"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-keep-backend-permission-checks-unchanged-and-ensure-frontend-error-handling-continues-to-respect-them-backend-methods-already-trap-on-unauthorized-access-for-user-only-operations-like-playlist-favorites-the-frontend-must-treat-authorization-failures-as-a-sign-in-requirement-and-route-the-user-into-the-soft-sign-in-flow-without-breaking-guest-read-only-actions-like-browsing-searching-streaming-urls-and-play-count-incrementing",
+      "title": "Keep backend permission checks unchanged and ensure frontend error handling continues to respect them: backend methods already trap on unauthorized access for user-only operations (like/playlist/favorites). The frontend must treat authorization failures as a sign-in requirement and route the user into the soft sign-in flow (without breaking guest read-only actions like browsing, searching, streaming URLs, and play-count incrementing).",
+      "reqIds": [
+        "REQ-91"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -864,6 +935,18 @@
     {
       "id": "AR-63",
       "summary": "Set the provided image as the Home channel-style banner image and ensure it displays exactly as-is (no cropping and no stretching)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-64",
+      "summary": "First-launch-only welcome popup user access flow: allow guest access without login; on first app launch show a welcome popup with two buttons “Continue as Guest” and “Sign In”; once dismissed via either button never show again (track via single localStorage flag `firstLaunchShown`); no Terms & Conditions checkbox; returning users open app directly without popup.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-65",
+      "summary": "Implement full authentication system: Guest read-only access; restricted actions (Like/Create Playlist/Add to Playlist/Download) trigger soft sign-in modal; support Google OAuth + Email Magic Link (Magic.link loginWithMagicLink); global AuthContext state (userAuthState/pendingAction/loginReturnPath); post-login return to exact screen+scroll with automatic pending-action retry; keep existing UI and behaviors unchanged",
       "reqIds": [],
       "status": "pending"
     }

@@ -1,24 +1,36 @@
-import { useInternetIdentity } from './useInternetIdentity';
+import { useAuth } from '../context/AuthContext';
 import { useToggleLikeSong, usePlaySong } from './useQueries';
-import { toast } from 'sonner';
 
 export function useSongEngagement() {
-  const { identity } = useInternetIdentity();
+  const { isAuthenticated, requireAuth } = useAuth();
   const toggleLikeMutation = useToggleLikeSong();
   const playSongMutation = usePlaySong();
 
-  const isAuthenticated = !!identity;
-
   const handleLike = async (songId: bigint) => {
     if (!isAuthenticated) {
-      toast.error('Please log in to like songs');
+      // Trigger soft sign-in modal with pending action
+      requireAuth({
+        type: 'like',
+        songId,
+      });
       return;
     }
 
     try {
       await toggleLikeMutation.mutateAsync(songId);
-    } catch (error) {
-      // Error handling is done in the mutation
+    } catch (error: any) {
+      // Check for authorization errors
+      if (
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('Only users can')
+      ) {
+        // Trigger auth flow even if we thought we were authenticated
+        requireAuth({
+          type: 'like',
+          songId,
+        });
+      }
+      // Other error handling is done in the mutation
     }
   };
 

@@ -13,9 +13,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useIsMobile } from '@/hooks/useMediaQuery';
-import { useInternetIdentity } from '@/hooks/useInternetIdentity';
+import { useAuth } from '@/context/AuthContext';
 import { useToggleFavorite, useGetFavorites } from '@/hooks/useQueries';
 import { hasUsableAudioUrl, downloadSong } from '@/utils/download';
 import { cacheAudioForOffline } from '@/utils/offlineAudioCache';
@@ -31,19 +31,14 @@ interface SongOverflowMenuProps {
   song: SongView;
 }
 
-type PendingAction = 'offline-cache' | 'device-download' | null;
-
 export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [playlistChooserOpen, setPlaylistChooserOpen] = useState(false);
   const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
   const [downloadChooserOpen, setDownloadChooserOpen] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const pendingActionRef = useRef<PendingAction>(null);
   
-  const { identity, login, loginStatus } = useInternetIdentity();
-  const isAuthenticated = !!identity;
+  const { isAuthenticated, requireAuth } = useAuth();
   
   const toggleFavoriteMutation = useToggleFavorite();
   const { data: favorites } = useGetFavorites();
@@ -54,8 +49,11 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
 
   const handleAddToFavorites = async () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to add favorites');
       setOpen(false);
+      requireAuth({
+        type: 'like',
+        songId: song.id,
+      });
       return;
     }
     
@@ -67,16 +65,30 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
         toast.success('Added to favorites');
       }
       setOpen(false);
-    } catch (error) {
-      toast.error('Failed to update favorites');
-      console.error(error);
+    } catch (error: any) {
+      if (
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('Only users can')
+      ) {
+        setOpen(false);
+        requireAuth({
+          type: 'like',
+          songId: song.id,
+        });
+      } else {
+        toast.error('Failed to update favorites');
+        console.error(error);
+      }
     }
   };
 
   const handleAddToPlaylist = () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to manage playlists');
       setOpen(false);
+      requireAuth({
+        type: 'add-to-playlist',
+        songId: song.id,
+      });
       return;
     }
     
@@ -86,8 +98,11 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
 
   const handleCreateNewPlaylist = () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to create playlists');
       setOpen(false);
+      requireAuth({
+        type: 'create-playlist',
+        songId: song.id,
+      });
       return;
     }
     
@@ -106,76 +121,74 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
     setDownloadChooserOpen(true);
   };
 
-  const executeOfflineCache = async () => {
+  const handleOfflineCache = async () => {
+    if (!isAuthenticated) {
+      setDownloadChooserOpen(false);
+      requireAuth({
+        type: 'offline-cache',
+        songId: song.id,
+        audioUrl,
+        songTitle: song.title,
+      });
+      return;
+    }
+    
     try {
       await cacheAudioForOffline(audioUrl, song.title);
       toast.success('Saved for offline');
       setDownloadChooserOpen(false);
-    } catch (error) {
-      toast.error('Failed to save for offline');
-      console.error(error);
-    }
-  };
-
-  const executeDeviceDownload = async () => {
-    try {
-      await downloadSong(audioUrl, song.title);
-      toast.success('Download started');
-      setDownloadChooserOpen(false);
-    } catch (error) {
-      toast.error('Failed to download song');
-      console.error(error);
-    }
-  };
-
-  const handleOfflineCache = async () => {
-    if (!isAuthenticated) {
-      pendingActionRef.current = 'offline-cache';
-      setDownloadChooserOpen(false);
-      setIsAuthenticating(true);
-      
-      try {
-        await login();
-        // After successful login, execute the pending action
-        if (pendingActionRef.current === 'offline-cache') {
-          await executeOfflineCache();
-        }
-      } catch (error) {
-        toast.error('Sign-in required to download');
+    } catch (error: any) {
+      if (
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('Only users can')
+      ) {
+        setDownloadChooserOpen(false);
+        requireAuth({
+          type: 'offline-cache',
+          songId: song.id,
+          audioUrl,
+          songTitle: song.title,
+        });
+      } else {
+        toast.error('Failed to save for offline');
         console.error(error);
-      } finally {
-        setIsAuthenticating(false);
-        pendingActionRef.current = null;
       }
-      return;
     }
-    
-    await executeOfflineCache();
   };
 
   const handleDeviceDownload = async () => {
     if (!isAuthenticated) {
-      pendingActionRef.current = 'device-download';
       setDownloadChooserOpen(false);
-      setIsAuthenticating(true);
-      
-      try {
-        await login();
-        // After successful login, execute the pending action
-        if (pendingActionRef.current === 'device-download') {
-          await executeDeviceDownload();
-        }
-      } catch (error) {
-        toast.error('Sign-in required to download');
-        console.error(error);
-      } finally {
-        setIsAuthenticating(false);
-        pendingActionRef.current = null;
-      }
+      requireAuth({
+        type: 'device-download',
+        songId: song.id,
+        audioUrl,
+        songTitle: song.title,
+      });
       return;
     }
     
-    await executeDeviceDownload();
+    try {
+      await downloadSong(audioUrl, song.title);
+      toast.success('Download started');
+      setDownloadChooserOpen(false);
+    } catch (error: any) {
+      if (
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('Only users can')
+      ) {
+        setDownloadChooserOpen(false);
+        requireAuth({
+          type: 'device-download',
+          songId: song.id,
+          audioUrl,
+          songTitle: song.title,
+        });
+      } else {
+        toast.error('Failed to download song');
+        console.error(error);
+      }
+    }
   };
 
   const handleShare = async () => {
@@ -293,7 +306,7 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
           onOpenChange={setDownloadChooserOpen}
           onOfflineCache={handleOfflineCache}
           onDeviceDownload={handleDeviceDownload}
-          isLoading={isAuthenticating || loginStatus === 'logging-in'}
+          isLoading={false}
         />
       </>
     );
@@ -361,7 +374,7 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
         onOpenChange={setDownloadChooserOpen}
         onOfflineCache={handleOfflineCache}
         onDeviceDownload={handleDeviceDownload}
-        isLoading={isAuthenticating || loginStatus === 'logging-in'}
+        isLoading={false}
       />
     </>
   );

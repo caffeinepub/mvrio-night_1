@@ -10,21 +10,34 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Music2, Loader2 } from 'lucide-react';
-import { useInternetIdentity } from '@/hooks/useInternetIdentity';
+import { useAuth } from '@/context/AuthContext';
 import { useGetUserPlaylists, useCreatePlaylist } from '@/hooks/useQueries';
 import { toast } from 'sonner';
 
 export function LibraryPlaylistsPanel() {
-  const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
+  const { isAuthenticated, requireAuth } = useAuth();
   const { data: userPlaylists, isLoading } = useGetUserPlaylists();
   const createPlaylistMutation = useCreatePlaylist();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
 
+  const handleCreatePlaylistClick = () => {
+    if (!isAuthenticated) {
+      requireAuth({
+        type: 'create-playlist',
+      });
+      return;
+    }
+    setCreateDialogOpen(true);
+  };
+
   const handleCreatePlaylist = async () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to create playlists');
+      setCreateDialogOpen(false);
+      requireAuth({
+        type: 'create-playlist',
+        playlistName: newPlaylistName.trim(),
+      });
       return;
     }
     
@@ -39,7 +52,16 @@ export function LibraryPlaylistsPanel() {
       setNewPlaylistName('');
       setCreateDialogOpen(false);
     } catch (error: any) {
-      if (error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('Only users can')
+      ) {
+        setCreateDialogOpen(false);
+        requireAuth({
+          type: 'create-playlist',
+          playlistName: newPlaylistName.trim(),
+        });
+      } else if (error.message?.includes('already exists')) {
         toast.error('A playlist with this name already exists');
       } else {
         toast.error('Failed to create playlist');
@@ -87,7 +109,7 @@ export function LibraryPlaylistsPanel() {
           <h2 className="text-xl font-semibold">Your Playlists</h2>
           <Button
             size="sm"
-            onClick={() => setCreateDialogOpen(true)}
+            onClick={handleCreatePlaylistClick}
             className="gap-2"
           >
             <Plus className="w-4 h-4" />

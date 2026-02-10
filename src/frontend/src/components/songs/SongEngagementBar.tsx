@@ -39,7 +39,7 @@ export function SongEngagementBar({ song, variant = 'default', showLikeButton = 
         <Button
           variant="ghost"
           size={isCompact ? 'sm' : 'default'}
-          className="gap-1.5 h-auto px-2 py-1 text-muted-foreground hover:text-primary"
+          className="gap-1.5 h-auto px-2 py-1 text-muted-foreground hover:text-primary transition-all duration-200"
           onClick={handleLikeClick}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -47,7 +47,7 @@ export function SongEngagementBar({ song, variant = 'default', showLikeButton = 
           style={{ pointerEvents: 'auto' }}
         >
           <Heart
-            className={isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'}
+            className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} transition-transform duration-200 ${isLiking ? 'scale-125' : 'scale-100'}`}
             fill="none"
           />
           <span className="font-medium">{likesCount}</span>

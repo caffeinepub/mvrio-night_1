@@ -1,43 +1,99 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T03:17:22.765Z",
+  "generatedAt": "2026-02-10T04:15:34.582Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 6,
+    "implemented": 6,
     "items": [
       {
-        "id": "REQ-81",
-        "summary": "Fix the Like button so it works and behaves as a true toggle: tap once to like, tap again to unlike, updating the song’s likeCount in the UI accordingly and staying in sync with the backend.",
+        "id": "REQ-86",
+        "summary": "Create a new global authentication context at `frontend/src/context/AuthContext.tsx` that models the app’s approved auth behavior using the existing Internet Identity identity as the source of truth for signed-in state: expose `userAuthState` (`\"guest\" | \"signedIn\"`), `pendingAction`, and `loginReturnPath` (screen/params + scroll position), plus helper methods to (a) open/close the soft sign-in modal, (b) record a pending restricted action without navigating away, and (c) complete sign-in and then restore the prior screen + scroll position and automatically retry any pending action.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/hooks/useSongEngagement.ts",
-          "frontend/src/components/songs/SongEngagementBar.tsx"
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/hooks/useSongEngagement.ts",
-          "frontend/src/components/songs/SongEngagementBar.tsx"
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/App.tsx"
         ]
       },
       {
-        "id": "REQ-82",
-        "summary": "Replace the Home channel banner image with the user-uploaded image “Aesthetic Moments from My Week (1).jpeg” and display it exactly as-is: do not crop and do not stretch (preserve the full image within the banner area).",
+        "id": "REQ-87",
+        "summary": "Add a soft sign-in modal component at `frontend/src/components/SignInModal.tsx` that matches the approved UX constraints: it must open on top of the current screen (no navigation), show a clear sign-in prompt, and provide exactly the two primary actions for authentication and a cancel action. The modal must integrate with the new AuthContext so that restricted actions can trigger it, and it must support showing a “check your email” / “sign-in in progress” / “link expired or failed” message state when using the email flow.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg",
-          "frontend/src/hooks/useHomeBanner.ts",
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/components/SignInModal.tsx",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg",
-          "frontend/src/hooks/useHomeBanner.ts",
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/components/SignInModal.tsx",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-88",
+        "summary": "Add a pending-action helper hook at `frontend/src/hooks/usePendingAction.ts` that standardizes how restricted UI elements register actions for retry and how the retry is executed after authentication. The hook must support the app’s restricted actions set: Like/Unlike, Create Playlist, Add to Playlist, Download (offline cache and device download).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/context/AuthContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/context/AuthContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-89",
+        "summary": "Integrate AuthContext + SignInModal into the existing app shell without editing immutable files: wrap the existing app tree in `frontend/src/App.tsx` (or another non-immutable file) with the new `AuthProvider`, and render the `SignInModal` at a global level so any screen/component can trigger it. Preserve the existing first-launch-only welcome popup behavior and copy, and do not change existing navigation, BottomTabBar, Sidebar, A2HS banner, or theming behavior.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-90",
+        "summary": "Update all restricted-action entry points to use the new AuthContext soft sign-in modal and pending-action retry flow rather than showing only toasts or ad-hoc login calls. At minimum, ensure the following areas are consistent: (1) Like actions (via `frontend/src/hooks/useSongEngagement.ts` and any Like buttons), (2) Playlist creation/add-to-playlist flows (e.g., `CreatePlaylistDialog`, `PlaylistChooserDialog`, `LibraryPlaylistsPanel`), and (3) Download chooser actions in `SongOverflowMenu`. Secondary controls (⋮ menu button, play buttons, etc.) must continue to stop propagation and must not unintentionally trigger playback.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useSongEngagement.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useSongEngagement.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
+        ]
+      },
+      {
+        "id": "REQ-91",
+        "summary": "Keep backend permission checks unchanged and ensure frontend error handling continues to respect them: backend methods already trap on unauthorized access for user-only operations (like/playlist/favorites). The frontend must treat authorization failures as a sign-in requirement and route the user into the soft sign-in flow (without breaking guest read-only actions like browsing, searching, streaming URLs, and play-count incrementing).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "frontend/src/hooks/useSongEngagement.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/hooks/usePendingAction.ts",
+          "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "frontend/src/hooks/useSongEngagement.ts"
         ]
       }
     ]
@@ -47,11 +103,14 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg",
-    "frontend/src/components/home/HomeChannelBanner.tsx",
-    "frontend/src/components/songs/SongEngagementBar.tsx",
-    "frontend/src/hooks/useHomeBanner.ts",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/App.tsx",
+    "frontend/src/components/SignInModal.tsx",
+    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+    "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+    "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+    "frontend/src/components/songs/SongOverflowMenu.tsx",
+    "frontend/src/context/AuthContext.tsx",
+    "frontend/src/hooks/usePendingAction.ts",
     "frontend/src/hooks/useSongEngagement.ts",
     "project_state.json",
     "scratch/component-selection.json",

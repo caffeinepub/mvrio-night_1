@@ -1,59 +1,157 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Like toggle behavior and set Home banner to provided image without crop/stretch",
+  "title": "Global AuthContext with soft sign-in modal and pending-action retry (guest vs signed-in)",
   "requirements": [
     {
-      "id": "REQ-81",
-      "summary": "Make the heart Like button a true toggle that calls the backend correctly, updates likeCount in UI after mutation settles, prevents parent click/playback, and respects unauthenticated behavior.",
+      "id": "REQ-86",
+      "summary": "Create a global AuthContext derived from Internet Identity that supports a soft sign-in modal, pending-action capture, and post-login return-path + scroll restoration with one-time retry.",
       "acceptanceCriteria": [
-        "Clicking/tapping the heart Like button calls the existing backend toggleLikeSong(songId) mutation successfully (no parameter-shape mismatch).",
-        "A second click/tap on the same Like button unlikes the song (backend toggles back) and the displayed likeCount updates accordingly after mutation settle/refetch.",
-        "The Like interaction does not trigger song playback or other parent click handlers.",
-        "If the user is not authenticated, the app shows the existing login-required messaging behavior and does not optimistically flip the Like state."
+        "`frontend/src/context/AuthContext.tsx` exists and exports an `AuthProvider` and a `useAuth()` hook (or equivalent) that can be consumed by any component.",
+        "`userAuthState` is derived from the current authenticated identity (signed in when the identity is present and non-anonymous; otherwise guest).",
+        "Calling the context method used by restricted features stores a `pendingAction` object describing the requested action and captures a `loginReturnPath` including current screen and `scrollY`, without changing the current screen.",
+        "After sign-in completes successfully, the app restores the captured screen (if applicable) and scroll position and then retries the recorded `pendingAction` exactly once, then clears it.",
+        "If sign-in fails or is cancelled, the user remains on the current screen and `pendingAction` is preserved or cleared in a predictable way (documented in code comments)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Fix the toggle-like mutation to call the backend with the correct parameter shape (bigint songId only), remove incorrect optimistic +1 behavior, and update the React Query cache with the returned new likesCount (then invalidate/refetch songs to stay in sync)."
+          "path": "frontend/src/context/AuthContext.tsx",
+          "operation": "create",
+          "description": "Implement `AuthProvider` + `useAuth()` that derives `userAuthState` from the existing Internet Identity state, stores `pendingAction` + `loginReturnPath` (screen/params + scrollY), controls soft-modal open/close, and supports (1) recording a restricted action without navigation, (2) completing sign-in, (3) restoring prior screen + scroll position, and (4) retrying the pending action exactly once before clearing it. Document predictable behavior for cancel/failure in code comments."
         },
         {
-          "path": "frontend/src/hooks/useSongEngagement.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Update like handling to call the corrected toggle-like mutation with only songId, preserve existing login-required messaging when unauthenticated, and only update any local 'liked' UI state after a successful mutation (no unauth optimistic flip)."
-        },
-        {
-          "path": "frontend/src/components/songs/SongEngagementBar.tsx",
-          "operation": "modify",
-          "description": "Replace per-render local isLiked state with engagement state sourced from the hook (or derived local store) so the heart acts as a toggle across re-renders; ensure the Like button fully stops propagation (and optionally pointer/mousedown) so it never triggers parent onClick/playback; keep likesCount displayed from song.likesCount updated via query refresh."
+          "description": "Wire App-level navigation + scroll restoration into AuthContext by providing the current screen and a way for AuthContext to restore the prior screen (using existing `currentScreen`/`setCurrentScreen`) without changing existing routing/deep-link logic."
         }
       ]
     },
     {
-      "id": "REQ-82",
-      "summary": "Replace the Home channel banner with the provided uploaded image, served as a static asset and rendered with preserved aspect ratio (no crop/no stretch) while keeping existing header/A2HS placement.",
+      "id": "REQ-87",
+      "summary": "Add a globally-rendered soft sign-in modal controlled by AuthContext with exactly two auth actions plus cancel, including email-flow status messaging states.",
       "acceptanceCriteria": [
-        "The Home banner renders the uploaded image by default (without requiring the user to paste a URL or re-upload).",
-        "The banner image is rendered with preserved aspect ratio and without cropping (e.g., no object-cover behavior); no dimension causes visible stretching.",
-        "The banner container/background styling still fits the existing MVRIO Night layout and does not overlap the A2HS banner, header, or content.",
-        "The banner image is served as a static frontend asset (not stored in or fetched from the backend)."
+        "`frontend/src/components/SignInModal.tsx` exists and can be rendered globally (once) while being controlled by AuthContext state.",
+        "The modal blocks interaction with underlying UI until dismissed, but does not change the current screen or reset existing UI state.",
+        "The modal exposes buttons labeled in English and wired into AuthContext sign-in actions, plus a Cancel button that closes the modal and keeps the user in place.",
+        "The modal supports a dedicated status view/state for email sign-in (e.g., “Check your email for a secure sign-in link.”) and for common failure modes (expired/invalid link, network error)."
       ],
       "file_operations": [
         {
-          "path": "frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg",
+          "path": "frontend/src/components/SignInModal.tsx",
           "operation": "create",
-          "description": "Add the generated static banner image asset (Studio-room photo with a seated person in front of a desk setup) at the exact path required so the Home banner can render it by default."
+          "description": "Create a soft sign-in modal UI that overlays the current screen (no navigation) and is controlled by AuthContext (open/close + status). Use existing shadcn/ui primitives (e.g., dialog/drawer/buttons) to block background interaction; include exactly two primary authentication actions and a Cancel action; include dedicated email sign-in status messaging states (in progress/check email/failed/expired). Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/hooks/useHomeBanner.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Set the default banner to the static asset frontend/public/assets/generated/home-banner-aesthetic-moments.dim_463x453.jpeg when no user-selected banner is stored; keep persistence behavior for user overrides without involving backend storage."
+          "description": "Render `SignInModal` once at a global level (inside providers) so any screen/component can trigger it via AuthContext, without altering existing navigation, layout, or theming behavior."
+        }
+      ]
+    },
+    {
+      "id": "REQ-88",
+      "summary": "Add a typed pending-action hook to standardize registering and executing restricted actions (Like/Unlike, Create Playlist, Add to Playlist, Download) with one-time retry after authentication.",
+      "acceptanceCriteria": [
+        "`frontend/src/hooks/usePendingAction.ts` exists and provides typed helpers to set/clear/execute a `pendingAction` compatible with the AuthContext.",
+        "Pending actions include enough payload to retry (e.g., songId, playlistName/playlistId where relevant, and which download option was selected).",
+        "Retry execution uses the same existing mutation/utilities currently used by the UI so behavior remains unchanged aside from the authentication gating.",
+        "Retry runs at most once per successful sign-in and does not re-open the sign-in modal."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/usePendingAction.ts",
+          "operation": "create",
+          "description": "Implement a typed `usePendingAction` hook that integrates with AuthContext to (a) register restricted actions with required payload (like/unlike, create playlist, add/remove to playlist, offline cache/device download), (b) execute the retry using existing hooks/utilities (`useQueries` mutations, `offlineAudioCache`, `download`), and (c) ensure retries run once per successful sign-in without re-opening the modal."
         },
         {
-          "path": "frontend/src/components/home/HomeChannelBanner.tsx",
+          "path": "frontend/src/context/AuthContext.tsx",
           "operation": "modify",
-          "description": "Render the default banner image using non-cropping, non-stretching styling (e.g., object-contain and centered with a suitable background), while keeping the existing Home placement/spacing and avoiding overlap with A2HS banner/header; do not introduce performance-heavy image processing."
+          "description": "Add/align pending-action types and execution semantics to match `usePendingAction` (typed payloads, execute-once guard, clear-on-success), ensuring the context can trigger the retry after successful sign-in and then clear state."
+        }
+      ]
+    },
+    {
+      "id": "REQ-89",
+      "summary": "Integrate AuthProvider + global SignInModal into the app shell via App.tsx without modifying immutable files and without breaking existing providers or the first-launch welcome popup behavior.",
+      "acceptanceCriteria": [
+        "The first-launch welcome popup (`frontend/src/components/onboarding/FirstLaunchWelcomePopup.tsx`) continues to show only once based on the existing `firstLaunchShown` localStorage flag and retains its current two-button behavior.",
+        "AuthProvider and SignInModal are integrated without modifying `frontend/src/main.tsx` (immutable) and without breaking existing providers (React Query + Internet Identity provider).",
+        "Existing screen routing and deep-link handling in `frontend/src/App.tsx` continues to work unchanged."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wrap the existing app tree with `AuthProvider` (without touching `frontend/src/main.tsx`) and mount `SignInModal` globally. Preserve the existing `useFirstLaunchWelcome` gating and `FirstLaunchWelcomePopup` behavior; do not alter existing screen routing, deep-link flow, AppShell, BottomTabBar, Sidebar, A2HS banner, Toaster, or theming providers."
+        }
+      ]
+    },
+    {
+      "id": "REQ-90",
+      "summary": "Update restricted-action entry points (Like, playlist create/add, download chooser) to use AuthContext soft sign-in and pending-action retry while preserving event propagation safeguards.",
+      "acceptanceCriteria": [
+        "As a guest, attempting to like a song opens the soft sign-in modal (no navigation) and records a pending action; after successful sign-in, the like action is retried automatically and the UI updates accordingly.",
+        "As a guest, attempting to create a playlist or add to playlist opens the same soft sign-in modal, records the appropriate pending action, and automatically resumes the intended flow after sign-in.",
+        "As a guest, attempting either download option (offline cache or device download) opens the soft sign-in modal and, after sign-in, resumes and executes the selected download option automatically.",
+        "Existing behavior for authenticated users remains unchanged aside from going through the shared context logic (i.e., actions still work and use the same backend calls/utilities)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useSongEngagement.ts",
+          "operation": "modify",
+          "description": "Replace ad-hoc guest toasts for Like with AuthContext + `usePendingAction` gating: as guest, open the soft sign-in modal and register a pending like/unlike action (capturing return path + scroll) without navigation; after sign-in, retry once using the existing like mutation."
+        },
+        {
+          "path": "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "operation": "modify",
+          "description": "Refactor restricted actions (Add to Playlist, Create New Playlist, Download offline cache/device download) to use AuthContext + `usePendingAction` instead of inline login/toasts/refs. Ensure existing stopPropagation behavior remains intact and does not trigger playback; keep existing share behavior unchanged."
+        },
+        {
+          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
+          "operation": "modify",
+          "description": "Update playlist creation entry point to use AuthContext soft sign-in modal + pending-action registration when guest attempts to create a playlist, and retry creation after sign-in using the existing playlist mutation; keep playlist browsing/read-only behavior unchanged for guests."
+        },
+        {
+          "path": "frontend/src/components/songs/CreatePlaylistDialog.tsx",
+          "operation": "modify",
+          "description": "Ensure the create-playlist flow can register a pending action (create playlist + add song) when triggered by a guest, so it can be retried post-auth using existing mutations without changing navigation."
+        },
+        {
+          "path": "frontend/src/components/songs/PlaylistChooserDialog.tsx",
+          "operation": "modify",
+          "description": "Ensure add/remove-to-playlist toggles are auth-gated via AuthContext + `usePendingAction` (guest triggers soft modal and records enough payload to retry) while keeping existing UI behavior for signed-in users unchanged."
+        }
+      ]
+    },
+    {
+      "id": "REQ-91",
+      "summary": "Treat backend authorization failures on restricted calls as a sign-in requirement in the frontend, triggering soft sign-in and preserving/resuming pending actions without blocking guest read-only usage.",
+      "acceptanceCriteria": [
+        "No changes are required to existing backend access-control logic in `backend/main.mo` for this build.",
+        "Guest users can continue to browse songs, play songs, and view lyrics without being blocked by auth UI.",
+        "If a restricted backend call fails due to authorization (e.g., traps with an Unauthorized message), the frontend triggers the soft sign-in modal and preserves/resumes the user’s pending action after sign-in.",
+        "No existing non-auth functionality (theme, navigation, star effects, PWA behavior, player) regresses."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/context/AuthContext.tsx",
+          "operation": "modify",
+          "description": "Add a small, centralized helper for detecting authorization failures from rejected restricted operations (e.g., message includes 'Unauthorized') and routing the user into the soft sign-in flow while preserving the pending action and return-path/scroll capture semantics."
+        },
+        {
+          "path": "frontend/src/hooks/usePendingAction.ts",
+          "operation": "modify",
+          "description": "When executing a pending action, catch authorization failures and route them back through the AuthContext soft sign-in flow (without navigation), ensuring the action is preserved for retry after a successful sign-in and is not executed more than once per sign-in."
+        },
+        {
+          "path": "frontend/src/components/songs/SongOverflowMenu.tsx",
+          "operation": "modify",
+          "description": "Ensure download/playlist restricted operations that fail due to authorization are handled via the shared AuthContext/pending-action logic (soft modal + preserved action), while keeping guest read-only controls (share, browsing) functional."
+        },
+        {
+          "path": "frontend/src/hooks/useSongEngagement.ts",
+          "operation": "modify",
+          "description": "Ensure like/unlike failures due to authorization are treated as sign-in required (open soft modal and preserve pending action) rather than only showing an error toast, without impacting play-count behavior for guests."
         }
       ]
     }
