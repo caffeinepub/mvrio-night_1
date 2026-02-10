@@ -1,143 +1,43 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Internet Identity auth state sync and soft sign-in modal retry loop",
+  "title": "Mobile playlist favorites per-user persistence UI + working mobile playlist share deep links",
   "requirements": [
     {
-      "id": "REQ-199",
-      "summary": "Ensure globally consistent authenticated state so restricted actions do not re-open the soft sign-in modal when already signed in.",
+      "id": "REQ-2",
+      "summary": "Make mobile PlaylistOverflowMenu Favorites toggle use authenticated per-user backend favorites with pending sign-in action support and correct UI updates.",
       "acceptanceCriteria": [
-        "After signing in with Internet Identity (sidebar shows Logout), clicking Like, Add to Favorites, Create Playlist, or Add to Playlist does NOT open the soft sign-in modal and proceeds with the action.",
-        "If the user is not signed in, restricted actions open the soft sign-in modal as before.",
-        "The fix works on both mobile and desktop."
+        "On mobile, tapping the Favorites action in `PlaylistOverflowMenu` toggles favorite state without requiring admin mode.",
+        "If the user is signed out, tapping the Favorites action triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
+        "After toggling, the menu closes and the favorite state reflects the new value (including after navigating away and back)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/context/AuthContext.tsx",
+          "path": "frontend/src/hooks/usePlaylistFavorites.ts",
           "operation": "modify",
-          "description": "Derive `isAuthenticated` from the active Internet Identity state (identity presence / non-anonymous principal) and ensure `requireAuth(...)` only opens the soft sign-in modal when truly unauthenticated. Also synchronize modal/pending state with auth changes to avoid the \"logged in in sidebar but treated as guest\" mismatch."
+          "description": "Tighten playlist favorites auth gating for mobile flows: ensure `useGetPlaylistFavorites()` only runs for authenticated (non-anonymous) users to avoid unauthorized reads, and keep mutation error handling aligned with pending action type `playlist-favorites` so sign-in can resume the toggle correctly."
         },
         {
-          "path": "frontend/src/hooks/usePendingAction.ts",
+          "path": "frontend/src/components/library/PlaylistOverflowMenu.tsx",
           "operation": "modify",
-          "description": "Ensure restricted actions that defer via AuthContext retry correctly after login and that pending state is cleared so the modal does not reappear for subsequent actions."
-        },
-        {
-          "path": "frontend/src/components/songs/SongOverflowMenu.tsx",
-          "operation": "modify",
-          "description": "Fix \"Add to Favorites\" to register a favorites-specific pending action (not a like action) so the correct restricted action runs after authentication and does not loop back into the modal."
+          "description": "Update the mobile overflow Favorites click handling to mirror the song overflow pattern: if not authenticated, close the drawer and call `requireAuth({ type: 'playlist-favorites', playlistName })` without attempting a backend call; if authenticated, call the existing `usePlaylistFavorites(playlistName)` toggle and ensure the menu closes and UI reflects the updated favorite state."
         }
       ]
     },
     {
-      "id": "REQ-200",
-      "summary": "Update AuthContext to compute `isAuthenticated` from `useInternetIdentity().identity` and stay in sync on login/logout.",
+      "id": "REQ-3",
+      "summary": "Make mobile PlaylistOverflowMenu Share action generate a hash/query playlist deep link and share via Web Share API when supported, otherwise copy to clipboard with toasts, without redesigning the menu.",
       "acceptanceCriteria": [
-        "`useAuth().isAuthenticated` becomes `true` when `useInternetIdentity().identity` is present, and becomes `false` after logout.",
-        "Restricted-action guards using `useAuth().isAuthenticated` stop incorrectly treating signed-in users as guests."
+        "On mobile, tapping “Share” in `PlaylistOverflowMenu` attempts to open the native share sheet using the Web Share API when available.",
+        "If the Web Share API is unavailable or share fails (non-cancel), the deep link is copied to clipboard and a success/failure toast is shown.",
+        "The deep link is hash-based and query-param driven, matching the app’s existing song deep-link style (e.g. `#/?playlist=<name>&playlistType=<user|official>`).",
+        "No visual redesign of the existing overflow menu beyond changes strictly required to make the Share action function correctly."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/context/AuthContext.tsx",
+          "path": "frontend/src/components/library/PlaylistOverflowMenu.tsx",
           "operation": "modify",
-          "description": "Import and use `useInternetIdentity()` inside `AuthProvider` so `isAuthenticated` is computed from the live identity (and updates when identity changes). Add effects to keep AuthContext state consistent on login/logout (e.g., close modal when auth becomes true; clear pending action when auth becomes false)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-201",
-      "summary": "Make the soft sign-in modal login button reliably trigger Internet Identity login and auto-close on success without re-opening for the same action.",
-      "acceptanceCriteria": [
-        "When the soft sign-in modal is open and the user clicks “Sign In with Internet Identity”, the Internet Identity login flow is initiated (popup/new window as appropriate).",
-        "On successful Internet Identity login, the soft sign-in modal closes automatically without requiring user interaction.",
-        "After a successful login from the soft sign-in modal, re-trying the same restricted action does not prompt sign-in again."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useInternetIdentity.ts",
-          "operation": "modify",
-          "description": "Make `login()` reliably user-interaction-driven and non-noop by returning a Promise-based flow (resolve on success, reject on error), and avoid the \"already authenticated\" stuck state by handling that condition (e.g., clear stale identity then re-initiate login when appropriate)."
-        },
-        {
-          "path": "frontend/src/components/SignInModal.tsx",
-          "operation": "modify",
-          "description": "Update the modal's sign-in button to call the corrected Internet Identity login flow and ensure the modal closes automatically when authentication succeeds (driven by AuthContext syncing to identity changes). Use existing shadcn-ui `Dialog`/`Drawer` components for mobile/desktop behavior. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/context/AuthContext.tsx",
-          "operation": "modify",
-          "description": "Add/adjust AuthProvider effects so that when identity becomes authenticated the sign-in modal closes (and does not immediately reopen due to stale pending state), without changing user-facing text (keep English)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-202",
-      "summary": "Retry pending restricted actions once after successful authentication and clear pending state to prevent modal reappearing.",
-      "acceptanceCriteria": [
-        "Triggering Like/Add to Favorites/Create Playlist/Add to Playlist while signed out opens the modal; after signing in, the original action is executed once and pending state is cleared.",
-        "After the pending action runs, subsequent restricted actions do not reopen the modal (unless the user logs out or the identity is missing).",
-        "No infinite loop: the modal does not repeatedly reopen due to stale pendingAction or stale isAuthenticated state."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/context/AuthContext.tsx",
-          "operation": "modify",
-          "description": "Extend `PendingActionType` to include favorites (and align types used by restricted actions), and ensure pending action lifecycle (set, retry-after-login, clear) cannot get stuck across auth transitions."
-        },
-        {
-          "path": "frontend/src/hooks/usePendingAction.ts",
-          "operation": "modify",
-          "description": "Implement missing pending-action execution paths needed for the listed restricted actions: retry Create Playlist (and optionally Add-to-Playlist for a song if songId is present) and retry Add to Favorites using the existing mutations, then clear pending action and close the modal in all cases."
-        },
-        {
-          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "operation": "modify",
-          "description": "Ensure create-playlist flows triggered from the Library correctly set pending action details (e.g., playlist name when available) so the action can be retried after sign-in and does not immediately prompt again."
-        },
-        {
-          "path": "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "operation": "modify",
-          "description": "When a signed-out user attempts Create Playlist, store enough pending-action information (playlistName, songId) so it can be retried exactly once after authentication and then cleared."
-        },
-        {
-          "path": "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-          "operation": "modify",
-          "description": "When a signed-out user attempts Add to Playlist, store pending-action information (playlistName, songId) for a single post-login retry, then clear it to prevent repeat modal prompts."
-        }
-      ]
-    },
-    {
-      "id": "REQ-203",
-      "summary": "Standardize restricted-action gating so `requireAuth(...)` is only used for true unauthenticated state or sign-in-required backend errors; show non-auth errors as toasts without opening the sign-in modal.",
-      "acceptanceCriteria": [
-        "When a signed-in user hits a non-auth error (e.g., network/other failure), the UI shows an appropriate error toast and does not open the sign-in modal.",
-        "When the backend indicates a sign-in-required condition, the soft sign-in modal opens as before."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "operation": "modify",
-          "description": "Replace ad-hoc string checks that route users into `requireAuth(...)` with `isSignInRequiredError(...)` so only true sign-in-required conditions trigger the modal; preserve English user-facing messages."
-        },
-        {
-          "path": "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "operation": "modify",
-          "description": "Route to `requireAuth(...)` only when the user is truly unauthenticated or when `isSignInRequiredError(...)` indicates sign-in is required; otherwise show an error toast and keep the user in-context."
-        },
-        {
-          "path": "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-          "operation": "modify",
-          "description": "Standardize error handling: only trigger soft sign-in when `isSignInRequiredError(...)` is true; otherwise show an error toast and do not open the modal for non-auth failures."
-        },
-        {
-          "path": "frontend/src/hooks/useSongEngagement.ts",
-          "operation": "modify",
-          "description": "Confirm/adjust that Like uses `requireAuth(...)` only for truly unauthenticated state or `isSignInRequiredError(...)` results, and that other failures do not route the user into sign-in."
-        },
-        {
-          "path": "frontend/src/components/songs/SongOverflowMenu.tsx",
-          "operation": "modify",
-          "description": "Ensure favorites/offline-cache/device-download actions only invoke `requireAuth(...)` when unauthenticated or on `isSignInRequiredError(...)`, and show appropriate error toasts for non-auth issues without prompting sign-in."
+          "description": "Harden the existing Share action for mobile user-gesture reliability: build the deep link via `buildPlaylistDeepLink(playlistName, playlistType)` (hash + query params), attempt `shareViaWebShare` when supported, and on non-cancel failure (or unsupported) fall back to `copyToClipboard` with success/failure toasts; keep the existing menu UI and only adjust logic/close behavior as needed for functionality."
         }
       ]
     }

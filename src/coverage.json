@@ -1,106 +1,56 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T16:19:36.589Z",
+  "generatedAt": "2026-02-10T18:38:16.276Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 5,
+    "total": 3,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-199",
-        "summary": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
+        "id": "REQ-1",
+        "summary": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints used by the frontend: `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)`.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Fix the mobile playlist Favorites UI so tapping “Add to Favorites” / “Remove from Favorites” in the mobile playlist overflow menu successfully saves per-user favorites via the backend and updates UI state.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/context/AuthContext.tsx",
-          "frontend/src/hooks/usePendingAction.ts",
-          "frontend/src/components/songs/SongOverflowMenu.tsx"
+          "frontend/src/hooks/usePlaylistFavorites.ts",
+          "frontend/src/components/library/PlaylistOverflowMenu.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/context/AuthContext.tsx",
-          "frontend/src/hooks/usePendingAction.ts",
-          "frontend/src/components/songs/SongOverflowMenu.tsx"
+          "frontend/src/hooks/usePlaylistFavorites.ts",
+          "frontend/src/components/library/PlaylistOverflowMenu.tsx"
         ]
       },
       {
-        "id": "REQ-200",
-        "summary": "Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from the actual Internet Identity state (`useInternetIdentity().identity`) rather than being hard-coded false, and ensure the AuthContext stays in sync when identity changes (login/logout).",
+        "id": "REQ-3",
+        "summary": "Fix the mobile playlist Share action so it generates a playlist deep link using the same hash/query deep-link pattern used for songs (playlist instead of song) and allows users to share via native share sheet when supported, otherwise copies to clipboard, without redesigning the menu.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/context/AuthContext.tsx"
+          "frontend/src/components/library/PlaylistOverflowMenu.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/context/AuthContext.tsx"
-        ]
-      },
-      {
-        "id": "REQ-201",
-        "summary": "Fix the soft sign-in modal \"Sign In with Internet Identity\" button so it reliably triggers the Internet Identity login flow and does not appear “stuck” (no-op) when tapped/clicked. Ensure the modal closes automatically when authentication succeeds and does not immediately re-open for the same action once signed in.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useInternetIdentity.ts",
-          "frontend/src/components/SignInModal.tsx",
-          "frontend/src/context/AuthContext.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/SignInModal.tsx",
-          "frontend/src/context/AuthContext.tsx"
-        ]
-      },
-      {
-        "id": "REQ-202",
-        "summary": "Ensure pending restricted actions complete correctly after successful authentication: when a restricted action triggers `requireAuth(...)`, after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/context/AuthContext.tsx",
-          "frontend/src/hooks/usePendingAction.ts",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/context/AuthContext.tsx",
-          "frontend/src/hooks/usePendingAction.ts",
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "frontend/src/components/songs/PlaylistChooserDialog.tsx"
-        ]
-      },
-      {
-        "id": "REQ-203",
-        "summary": "Standardize restricted-action routing to `requireAuth(...)` only when the user is truly unauthenticated (anonymous) or when the backend returns a sign-in-required error; do not route signed-in users into the soft sign-in flow for non-auth issues. Keep user-facing text in English.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-          "frontend/src/hooks/useSongEngagement.ts",
-          "frontend/src/components/songs/SongOverflowMenu.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-          "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-          "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-          "frontend/src/components/songs/SongOverflowMenu.tsx"
+          "frontend/src/components/library/PlaylistOverflowMenu.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/SignInModal.tsx",
-    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-    "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-    "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-    "frontend/src/components/songs/SongOverflowMenu.tsx",
-    "frontend/src/context/AuthContext.tsx",
-    "frontend/src/hooks/usePendingAction.ts",
+    "frontend/src/components/library/PlaylistOverflowMenu.tsx",
+    "frontend/src/hooks/usePlaylistFavorites.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

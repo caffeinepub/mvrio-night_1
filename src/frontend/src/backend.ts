@@ -194,17 +194,21 @@ export interface backendInterface {
     getOfficialPlaylistDetails(playlistName: string): Promise<Array<SongView>>;
     getPlaylist(playlistName: string): Promise<PlaylistView>;
     getPlaylistDetails(playlistName: string): Promise<Array<SongView>>;
+    getPlaylistFavorites(): Promise<Array<string>>;
+    getPlaylistFavoritesLegacy(): Promise<Array<string>>;
     getSong(id: bigint): Promise<SongView>;
     getTotalListeningTime(): Promise<bigint>;
     getUnreadMessagesCount(passcode: string): Promise<bigint>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfileRecord | null>;
     isCallerAdmin(): Promise<boolean>;
+    isPlaylistFavorite(playlistName: string): Promise<boolean>;
     listOfficialPlaylists(): Promise<Array<PlaylistView>>;
     markAllMessagesAsSeen(senderType: string, user: Principal, passcode: string): Promise<void>;
     markLastMessageAsRead(): Promise<void>;
     markMessagesAsSeen(fileOnly: boolean): Promise<void>;
     playSong(id: bigint): Promise<void>;
+    playlistFavoritesLegacy(): Promise<Array<string> | null>;
     removeFromOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     removeFromPlaylist(playlistName: string, songId: bigint): Promise<void>;
     replyToMessage(user: Principal, content: string, passcode: string): Promise<bigint>;
@@ -216,9 +220,11 @@ export interface backendInterface {
     setHiddenAdminMode(enabled: boolean, passcode: string): Promise<void>;
     toggleFavorite(songId: bigint): Promise<boolean>;
     toggleLikeSong(id: bigint): Promise<bigint>;
-    updateAdminInfo(contactInfo: ContactInfo | null): Promise<void>;
-    updateArtistProfile(profile: ArtistProfile): Promise<void>;
+    togglePlaylistFavorite(playlistName: string): Promise<boolean>;
+    updateAdminInfo(contactInfo: ContactInfo | null, passcode: string): Promise<void>;
+    updateArtistProfile(profile: ArtistProfile, passcode: string): Promise<void>;
     updateTotalListeningTime(seconds: bigint): Promise<void>;
+    verifyAdminPasscodeForHiddenAdminMode(passcode: string): Promise<void>;
 }
 import type { ContactInfo as _ContactInfo, ExternalBlob as _ExternalBlob, Message as _Message, MessagesView as _MessagesView, PlaylistView as _PlaylistView, SongView as _SongView, UserProfileRecord as _UserProfileRecord, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -741,6 +747,34 @@ export class Backend implements backendInterface {
             return from_candid_vec_n21(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getPlaylistFavorites(): Promise<Array<string>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPlaylistFavorites();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPlaylistFavorites();
+            return result;
+        }
+    }
+    async getPlaylistFavoritesLegacy(): Promise<Array<string>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPlaylistFavoritesLegacy();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPlaylistFavoritesLegacy();
+            return result;
+        }
+    }
     async getSong(arg0: bigint): Promise<SongView> {
         if (this.processError) {
             try {
@@ -825,6 +859,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async isPlaylistFavorite(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isPlaylistFavorite(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isPlaylistFavorite(arg0);
+            return result;
+        }
+    }
     async listOfficialPlaylists(): Promise<Array<PlaylistView>> {
         if (this.processError) {
             try {
@@ -895,6 +943,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async playlistFavoritesLegacy(): Promise<Array<string> | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.playlistFavoritesLegacy();
+                return from_candid_opt_n28(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.playlistFavoritesLegacy();
+            return from_candid_opt_n28(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async removeFromOfficialPlaylist(arg0: string, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
@@ -940,14 +1002,14 @@ export class Backend implements backendInterface {
     async replyWithAttachments(arg0: Principal, arg1: string, arg2: ExternalBlob | null, arg3: ExternalBlob | null, arg4: ExternalBlob | null, arg5: string): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.replyWithAttachments(arg0, arg1, await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg3), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg4), arg5);
+                const result = await this.actor.replyWithAttachments(arg0, arg1, await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg3), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg4), arg5);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.replyWithAttachments(arg0, arg1, await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg3), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg4), arg5);
+            const result = await this.actor.replyWithAttachments(arg0, arg1, await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg3), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg4), arg5);
             return result;
         }
     }
@@ -996,14 +1058,14 @@ export class Backend implements backendInterface {
     async sendMessageWithAttachments(arg0: string, arg1: ExternalBlob | null, arg2: ExternalBlob | null, arg3: ExternalBlob | null): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.sendMessageWithAttachments(arg0, await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg1), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg3));
+                const result = await this.actor.sendMessageWithAttachments(arg0, await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg1), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg3));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.sendMessageWithAttachments(arg0, await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg1), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n28(this._uploadFile, this._downloadFile, arg3));
+            const result = await this.actor.sendMessageWithAttachments(arg0, await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg1), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg2), await to_candid_opt_n29(this._uploadFile, this._downloadFile, arg3));
             return result;
         }
     }
@@ -1049,31 +1111,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateAdminInfo(arg0: ContactInfo | null): Promise<void> {
+    async togglePlaylistFavorite(arg0: string): Promise<boolean> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateAdminInfo(to_candid_opt_n29(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.togglePlaylistFavorite(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateAdminInfo(to_candid_opt_n29(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.togglePlaylistFavorite(arg0);
             return result;
         }
     }
-    async updateArtistProfile(arg0: ArtistProfile): Promise<void> {
+    async updateAdminInfo(arg0: ContactInfo | null, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateArtistProfile(arg0);
+                const result = await this.actor.updateAdminInfo(to_candid_opt_n30(this._uploadFile, this._downloadFile, arg0), arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateArtistProfile(arg0);
+            const result = await this.actor.updateAdminInfo(to_candid_opt_n30(this._uploadFile, this._downloadFile, arg0), arg1);
+            return result;
+        }
+    }
+    async updateArtistProfile(arg0: ArtistProfile, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateArtistProfile(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateArtistProfile(arg0, arg1);
             return result;
         }
     }
@@ -1088,6 +1164,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.updateTotalListeningTime(arg0);
+            return result;
+        }
+    }
+    async verifyAdminPasscodeForHiddenAdminMode(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.verifyAdminPasscodeForHiddenAdminMode(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.verifyAdminPasscodeForHiddenAdminMode(arg0);
             return result;
         }
     }
@@ -1123,6 +1213,9 @@ function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PlaylistView]): PlaylistView | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Array<string>]): Array<string> | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
@@ -1254,10 +1347,10 @@ function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: Exte
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
     return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
-async function to_candid_opt_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob | null): Promise<[] | [_ExternalBlob]> {
+async function to_candid_opt_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob | null): Promise<[] | [_ExternalBlob]> {
     return value === null ? candid_none() : candid_some(await to_candid_ExternalBlob_n8(_uploadFile, _downloadFile, value));
 }
-function to_candid_opt_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ContactInfo | null): [] | [_ContactInfo] {
+function to_candid_opt_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ContactInfo | null): [] | [_ContactInfo] {
     return value === null ? candid_none() : candid_some(value);
 }
 function to_candid_opt_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,13 +18,14 @@ import {
   useCreatePlaylist,
   useGetOfficialPlaylists,
   useCreateOfficialPlaylist,
-  useDeleteUserPlaylist,
+  useDeletePlaylist,
   useDeleteOfficialPlaylist,
 } from '@/hooks/useQueries';
 import { isSignInRequiredError } from '@/utils/authorizationErrors';
 import { toast } from 'sonner';
 import type { SongView } from '@/backend';
 import { DeletePlaylistConfirmDialog } from './DeletePlaylistConfirmDialog';
+import { PlaylistOverflowMenu } from './PlaylistOverflowMenu';
 
 type PlaylistContext = {
   type: 'user' | 'official';
@@ -32,298 +33,286 @@ type PlaylistContext = {
   songs: SongView[];
 };
 
+type PlaylistDeepLink = {
+  name: string;
+  type: 'user' | 'official';
+};
+
 interface LibraryPlaylistsPanelProps {
   onOpenPlaylist: (playlist: PlaylistContext) => void;
+  initialDeepLink?: PlaylistDeepLink | null;
 }
 
-export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelProps) {
-  const { isAuthenticated, requireAuth } = useAuth();
+export function LibraryPlaylistsPanel({ onOpenPlaylist, initialDeepLink }: LibraryPlaylistsPanelProps) {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [isCreatingOfficial, setIsCreatingOfficial] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ name: string; type: 'user' | 'official' } | null>(null);
+  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
+  
+  const { requireAuth } = useAuth();
   const { isAdminModeEnabled } = useHiddenAdminMode();
   const { actor } = useActor();
+  
   const { data: userPlaylists, isLoading: userPlaylistsLoading } = useGetUserPlaylists();
   const { data: officialPlaylists, isLoading: officialPlaylistsLoading } = useGetOfficialPlaylists();
   const createPlaylistMutation = useCreatePlaylist();
   const createOfficialPlaylistMutation = useCreateOfficialPlaylist();
-  const deleteUserPlaylistMutation = useDeleteUserPlaylist();
+  const deleteUserPlaylistMutation = useDeletePlaylist();
   const deleteOfficialPlaylistMutation = useDeleteOfficialPlaylist();
-  
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [createOfficialDialogOpen, setCreateOfficialDialogOpen] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [newOfficialPlaylistName, setNewOfficialPlaylistName] = useState('');
-  
-  // Delete confirmation state
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState<{
-    name: string;
-    type: 'user' | 'official';
-  } | null>(null);
 
-  const handleCreatePlaylistClick = () => {
-    if (!isAuthenticated) {
-      requireAuth({
-        type: 'create-playlist',
-      });
-      return;
+  // Handle deep link
+  useEffect(() => {
+    if (initialDeepLink && !deepLinkProcessed && actor) {
+      setDeepLinkProcessed(true);
+      
+      const openDeepLinkedPlaylist = async () => {
+        try {
+          let songs: SongView[] = [];
+          
+          if (initialDeepLink.type === 'official') {
+            songs = await actor.getOfficialPlaylistDetails(initialDeepLink.name);
+          } else {
+            songs = await actor.getPlaylistDetails(initialDeepLink.name);
+          }
+          
+          onOpenPlaylist({
+            type: initialDeepLink.type,
+            name: initialDeepLink.name,
+            songs,
+          });
+        } catch (error) {
+          console.error('Failed to open deep-linked playlist:', error);
+          toast.error('Could not open playlist');
+        }
+      };
+      
+      openDeepLinkedPlaylist();
     }
-    setCreateDialogOpen(true);
-  };
+  }, [initialDeepLink, deepLinkProcessed, actor, onOpenPlaylist]);
 
   const handleCreatePlaylist = async () => {
-    if (!isAuthenticated) {
-      setCreateDialogOpen(false);
-      requireAuth({
-        type: 'create-playlist',
-        playlistName: newPlaylistName.trim(),
-      });
-      return;
-    }
-    
     if (!newPlaylistName.trim()) {
       toast.error('Please enter a playlist name');
       return;
     }
-    
+
     try {
-      await createPlaylistMutation.mutateAsync(newPlaylistName.trim());
-      toast.success(`Created "${newPlaylistName}"`);
+      if (isCreatingOfficial) {
+        await createOfficialPlaylistMutation.mutateAsync(newPlaylistName.trim());
+        toast.success('Official playlist created');
+      } else {
+        await createPlaylistMutation.mutateAsync(newPlaylistName.trim());
+        toast.success('Playlist created');
+      }
+      setIsCreateDialogOpen(false);
       setNewPlaylistName('');
-      setCreateDialogOpen(false);
+      setIsCreatingOfficial(false);
     } catch (error: any) {
       if (isSignInRequiredError(error)) {
-        setCreateDialogOpen(false);
-        requireAuth({
-          type: 'create-playlist',
-          playlistName: newPlaylistName.trim(),
-        });
-      } else if (error.message?.includes('already exists')) {
-        toast.error('A playlist with this name already exists');
+        requireAuth({ type: 'create-playlist', playlistName: newPlaylistName.trim() });
+        setIsCreateDialogOpen(false);
+        setNewPlaylistName('');
       } else {
-        toast.error('Failed to create playlist');
+        toast.error(error.message || 'Failed to create playlist');
       }
-      console.error(error);
     }
   };
 
-  const handleCreateOfficialPlaylist = async () => {
-    if (!newOfficialPlaylistName.trim()) {
-      toast.error('Please enter a playlist name');
-      return;
-    }
-    
-    try {
-      await createOfficialPlaylistMutation.mutateAsync(newOfficialPlaylistName.trim());
-      toast.success(`Created official playlist "${newOfficialPlaylistName}"`);
-      setNewOfficialPlaylistName('');
-      setCreateOfficialDialogOpen(false);
-    } catch (error: any) {
-      if (error.message?.includes('already exists')) {
-        toast.error('An official playlist with this name already exists');
-      } else {
-        toast.error('Failed to create official playlist');
-      }
-      console.error(error);
-    }
+  const handleOpenCreateDialog = (isOfficial: boolean) => {
+    setIsCreatingOfficial(isOfficial);
+    setIsCreateDialogOpen(true);
   };
 
-  const handleOpenUserPlaylist = async (playlistName: string) => {
-    if (!actor) {
-      toast.error('Unable to load playlist');
-      return;
-    }
-    
+  const handleOpenPlaylistClick = async (name: string, type: 'user' | 'official') => {
+    if (!actor) return;
+
     try {
-      // Fetch playlist details directly from actor
-      const songs = await actor.getPlaylistDetails(playlistName);
+      let songs: SongView[] = [];
       
-      onOpenPlaylist({
-        type: 'user',
-        name: playlistName,
-        songs: songs || [],
-      });
+      if (type === 'official') {
+        songs = await actor.getOfficialPlaylistDetails(name);
+      } else {
+        songs = await actor.getPlaylistDetails(name);
+      }
+      
+      onOpenPlaylist({ type, name, songs });
     } catch (error) {
-      console.error('Failed to open user playlist:', error);
+      console.error('Failed to load playlist:', error);
       toast.error('Failed to load playlist');
     }
   };
 
-  const handleOpenOfficialPlaylist = async (playlistName: string) => {
-    if (!actor) {
-      toast.error('Unable to load playlist');
-      return;
-    }
-    
-    try {
-      // Fetch official playlist details directly from actor
-      const songs = await actor.getOfficialPlaylistDetails(playlistName);
-      
-      onOpenPlaylist({
-        type: 'official',
-        name: playlistName,
-        songs: songs || [],
-      });
-    } catch (error) {
-      console.error('Failed to open official playlist:', error);
-      toast.error('Failed to load playlist');
-    }
-  };
-
-  const handleDeleteClick = (playlistName: string, type: 'user' | 'official', e: React.MouseEvent) => {
+  const handleDeleteClick = (name: string, type: 'user' | 'official', e: React.MouseEvent) => {
     e.stopPropagation();
-    setPlaylistToDelete({ name: playlistName, type });
-    setDeleteConfirmOpen(true);
+    setDeleteTarget({ name, type });
   };
 
   const handleConfirmDelete = async () => {
-    if (!playlistToDelete) return;
+    if (!deleteTarget) return;
 
     try {
-      if (playlistToDelete.type === 'user') {
-        await deleteUserPlaylistMutation.mutateAsync(playlistToDelete.name);
-        toast.success(`Deleted "${playlistToDelete.name}"`);
+      if (deleteTarget.type === 'official') {
+        await deleteOfficialPlaylistMutation.mutateAsync(deleteTarget.name);
+        toast.success('Official playlist deleted');
       } else {
-        await deleteOfficialPlaylistMutation.mutateAsync(playlistToDelete.name);
-        toast.success(`Deleted official playlist "${playlistToDelete.name}"`);
+        await deleteUserPlaylistMutation.mutateAsync(deleteTarget.name);
+        toast.success('Playlist deleted');
       }
-      setDeleteConfirmOpen(false);
-      setPlaylistToDelete(null);
+      setDeleteTarget(null);
     } catch (error: any) {
-      toast.error('Failed to delete playlist');
-      console.error(error);
+      toast.error(error.message || 'Failed to delete playlist');
     }
   };
 
+  const isLoading = userPlaylistsLoading || officialPlaylistsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Official Playlists */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Official Playlists</h3>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Official Playlists</h2>
           {isAdminModeEnabled && (
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => setCreateOfficialDialogOpen(true)}
+              onClick={() => handleOpenCreateDialog(true)}
+              className="gap-2"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Create Official Playlist
             </Button>
           )}
         </div>
-        
-        {officialPlaylistsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : !officialPlaylists || officialPlaylists.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Music2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No official playlists yet</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+
+        {officialPlaylists && officialPlaylists.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {officialPlaylists.map((playlist) => (
               <div
                 key={playlist.name}
-                className="relative group cursor-pointer bg-card hover:bg-accent rounded-lg p-4 transition-colors"
-                onClick={() => handleOpenOfficialPlaylist(playlist.name)}
+                className="group relative bg-card border border-border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer"
+                onClick={() => handleOpenPlaylistClick(playlist.name, 'official')}
               >
-                <div className="aspect-square bg-muted rounded-md mb-3 flex items-center justify-center">
-                  <Music2 className="w-8 h-8 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Music2 className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{playlist.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <PlaylistOverflowMenu
+                      playlistName={playlist.name}
+                      playlistType="official"
+                    />
+                    {isAdminModeEnabled && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => handleDeleteClick(playlist.name, 'official', e)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <h4 className="font-medium truncate">{playlist.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
-                </p>
-                
-                {isAdminModeEnabled && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteClick(playlist.name, 'official', e)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                )}
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No official playlists yet</p>
           </div>
         )}
       </div>
 
-      {/* User Playlists */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Your Playlists</h3>
+      {/* Your Playlists */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Your Playlists</h2>
           <Button
             size="sm"
-            variant="outline"
-            onClick={handleCreatePlaylistClick}
+            onClick={() => handleOpenCreateDialog(false)}
+            className="gap-2"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4" />
             Create Playlist
           </Button>
         </div>
-        
-        {userPlaylistsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : !userPlaylists || userPlaylists.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Music2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No playlists yet</p>
-            <p className="text-sm mt-1">Create your first playlist to get started</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+
+        {userPlaylists && userPlaylists.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {userPlaylists.map((playlist) => (
               <div
                 key={playlist.name}
-                className="relative group cursor-pointer bg-card hover:bg-accent rounded-lg p-4 transition-colors"
-                onClick={() => handleOpenUserPlaylist(playlist.name)}
+                className="group relative bg-card border border-border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer"
+                onClick={() => handleOpenPlaylistClick(playlist.name, 'user')}
               >
-                <div className="aspect-square bg-muted rounded-md mb-3 flex items-center justify-center">
-                  <Music2 className="w-8 h-8 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Music2 className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{playlist.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <PlaylistOverflowMenu
+                      playlistName={playlist.name}
+                      playlistType="user"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleDeleteClick(playlist.name, 'user', e)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <h4 className="font-medium truncate">{playlist.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
-                </p>
-                
-                {isAuthenticated && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteClick(playlist.name, 'user', e)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                )}
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No playlists yet. Create your first playlist!</p>
           </div>
         )}
       </div>
 
-      {/* Create User Playlist Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      {/* Create Playlist Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Playlist</DialogTitle>
+            <DialogTitle>
+              {isCreatingOfficial ? 'Create Official Playlist' : 'Create Playlist'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="playlist-name">Playlist Name</Label>
               <Input
                 id="playlist-name"
-                placeholder="My Playlist"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
+                placeholder="Enter playlist name"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newPlaylistName.trim()) {
+                  if (e.key === 'Enter') {
                     handleCreatePlaylist();
                   }
                 }}
@@ -333,56 +322,22 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCreateDialogOpen(false)}
-              disabled={createPlaylistMutation.isPending}
+              onClick={() => {
+                setIsCreateDialogOpen(false);
+                setNewPlaylistName('');
+                setIsCreatingOfficial(false);
+              }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreatePlaylist}
-              disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending}
+              disabled={createPlaylistMutation.isPending || createOfficialPlaylistMutation.isPending}
             >
-              {createPlaylistMutation.isPending ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Official Playlist Dialog */}
-      <Dialog open={createOfficialDialogOpen} onOpenChange={setCreateOfficialDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Official Playlist</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="official-playlist-name">Playlist Name</Label>
-              <Input
-                id="official-playlist-name"
-                placeholder="Official Playlist"
-                value={newOfficialPlaylistName}
-                onChange={(e) => setNewOfficialPlaylistName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newOfficialPlaylistName.trim()) {
-                    handleCreateOfficialPlaylist();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCreateOfficialDialogOpen(false)}
-              disabled={createOfficialPlaylistMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateOfficialPlaylist}
-              disabled={!newOfficialPlaylistName.trim() || createOfficialPlaylistMutation.isPending}
-            >
-              {createOfficialPlaylistMutation.isPending ? 'Creating...' : 'Create'}
+              {(createPlaylistMutation.isPending || createOfficialPlaylistMutation.isPending) && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -390,12 +345,12 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist }: LibraryPlaylistsPanelP
 
       {/* Delete Confirmation Dialog */}
       <DeletePlaylistConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
-        playlistName={playlistToDelete?.name || ''}
+        playlistName={deleteTarget?.name || ''}
+        playlistType={deleteTarget?.type || 'user'}
         isPending={deleteUserPlaylistMutation.isPending || deleteOfficialPlaylistMutation.isPending}
-        playlistType={playlistToDelete?.type || 'user'}
       />
     </div>
   );

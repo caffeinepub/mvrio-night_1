@@ -18,7 +18,7 @@ import { AdminPasscodeModal } from './components/admin/AdminPasscodeModal';
 import { UnifiedMessagesDrawer } from './components/messaging/UnifiedMessagesDrawer';
 import { ProfileCompletionModal } from './components/account/ProfileCompletionModal';
 import { Toaster } from '@/components/ui/sonner';
-import { parseSongIdFromUrl, clearSongParamFromUrl } from './utils/deepLinks';
+import { parseSongIdFromUrl, clearSongParamFromUrl, parsePlaylistFromUrl, clearPlaylistParamFromUrl } from './utils/deepLinks';
 import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
 import { FirstLaunchWelcomePopup } from './components/onboarding/FirstLaunchWelcomePopup';
 import { SignInModal } from './components/SignInModal';
@@ -30,10 +30,17 @@ import { toast } from 'sonner';
 
 export type Screen = 'home' | 'songs' | 'library' | 'search' | 'about' | 'themes' | 'settings' | 'support' | 'contact';
 
+type PlaylistDeepLink = {
+  name: string;
+  type: 'user' | 'official';
+};
+
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [deepLinkSongId, setDeepLinkSongId] = useState<bigint | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const [deepLinkPlaylist, setDeepLinkPlaylist] = useState<PlaylistDeepLink | null>(null);
+  const [playlistDeepLinkHandled, setPlaylistDeepLinkHandled] = useState(false);
   const { isWelcomeOpen, dismissWelcome } = useFirstLaunchWelcome();
   const { identity } = useInternetIdentity();
   const { isProfileComplete, isLoading: profileLoading, isFetched: profileFetched } = useProfileHelpers();
@@ -47,6 +54,7 @@ function AppContent() {
   const isAuthenticated = !!identity;
   const showProfileSetup = isAuthenticated && !profileLoading && profileFetched && !isProfileComplete;
 
+  // Handle song deep links
   useEffect(() => {
     const songId = parseSongIdFromUrl();
     if (songId && !deepLinkHandled) {
@@ -55,10 +63,25 @@ function AppContent() {
     }
   }, [deepLinkHandled]);
 
+  // Handle playlist deep links
+  useEffect(() => {
+    const playlist = parsePlaylistFromUrl();
+    if (playlist && !playlistDeepLinkHandled) {
+      setDeepLinkPlaylist(playlist);
+      setCurrentScreen('library');
+    }
+  }, [playlistDeepLinkHandled]);
+
   const handleDeepLinkHandled = () => {
     setDeepLinkHandled(true);
     clearSongParamFromUrl();
     setDeepLinkSongId(null);
+  };
+
+  const handlePlaylistDeepLinkHandled = () => {
+    setPlaylistDeepLinkHandled(true);
+    clearPlaylistParamFromUrl();
+    setDeepLinkPlaylist(null);
   };
 
   const handleOpenMessages = (prefill?: string) => {
@@ -94,7 +117,12 @@ function AppContent() {
           />
         );
       case 'library':
-        return <LibraryScreen />;
+        return (
+          <LibraryScreen
+            initialPlaylistDeepLink={deepLinkPlaylist}
+            onPlaylistDeepLinkHandled={handlePlaylistDeepLinkHandled}
+          />
+        );
       case 'search':
         return <SearchScreen />;
       case 'about':

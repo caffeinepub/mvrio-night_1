@@ -1,121 +1,81 @@
 {
   "kind": "build_request",
-  "title": "Fix sign-in state mismatch causing soft sign-in modal loop for restricted actions",
+  "title": "Fix mobile playlist Favorites persistence per user + make mobile playlist Share action work",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-199",
-      "text": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
-      "target": "frontend",
+      "id": "REQ-1",
+      "text": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints used by the frontend: `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)`.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-1"
         ],
         "quotes": [
-          "for every restricted action (like Add to Favorites, Create Playlist, Like)",
-          "always keep reappearing like we haven'r signed in",
-          "it's showing user have logged in but still this sign in use fetures are asking to sign in"
+          "Add to Favorites is failing because the playlist favorites backend is missing or broken. Fix it so playlist favorites are saved per user."
         ]
       },
       "acceptanceCriteria": [
-        "After signing in with Internet Identity (sidebar shows Logout), clicking Like, Add to Favorites, Create Playlist, or Add to Playlist does NOT open the soft sign-in modal and proceeds with the action.",
-        "If the user is not signed in, restricted actions open the soft sign-in modal as before.",
-        "The fix works on both mobile and desktop."
+        "Calling `getPlaylistFavorites()` as an authenticated user returns only that caller’s favorited playlist names.",
+        "Calling `togglePlaylistFavorite(playlistName)` as an authenticated user adds/removes that playlist name for that caller and returns a boolean consistent with the frontend’s expectation (`wasRemoved`).",
+        "Calls are authorized for any authenticated user (not admin-only); unauthenticated callers are rejected with an authorization error.",
+        "Playlist favorites persist across subsequent reads for the same user (i.e., after page refresh/re-login)."
       ]
     },
     {
-      "id": "REQ-200",
-      "text": "Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from the actual Internet Identity state (`useInternetIdentity().identity`) rather than being hard-coded false, and ensure the AuthContext stays in sync when identity changes (login/logout).",
+      "id": "REQ-2",
+      "text": "Fix the mobile playlist Favorites UI so tapping “Add to Favorites” / “Remove from Favorites” in the mobile playlist overflow menu successfully saves per-user favorites via the backend and updates UI state.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-1"
         ],
         "quotes": [
-          "it's showing user have logged in but still this sign in use fetures are asking to sign in"
+          "fix it now , only in the mobile"
         ]
       },
       "acceptanceCriteria": [
-        "`useAuth().isAuthenticated` becomes `true` when `useInternetIdentity().identity` is present, and becomes `false` after logout.",
-        "Restricted-action guards using `useAuth().isAuthenticated` stop incorrectly treating signed-in users as guests."
+        "On mobile, tapping the Favorites action in `PlaylistOverflowMenu` toggles favorite state without requiring admin mode.",
+        "If the user is signed out, tapping the Favorites action triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
+        "After toggling, the menu closes and the favorite state reflects the new value (including after navigating away and back)."
       ]
     },
     {
-      "id": "REQ-201",
-      "text": "Fix the soft sign-in modal \"Sign In with Internet Identity\" button so it reliably triggers the Internet Identity login flow and does not appear “stuck” (no-op) when tapped/clicked. Ensure the modal closes automatically when authentication succeeds and does not immediately re-open for the same action once signed in.",
+      "id": "REQ-3",
+      "text": "Fix the mobile playlist Share action so it generates a playlist deep link using the same hash/query deep-link pattern used for songs (playlist instead of song) and allows users to share via native share sheet when supported, otherwise copies to clipboard, without redesigning the menu.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-1"
         ],
         "quotes": [
-          "it's doing nothing and stucked",
-          "see the image"
+          "Share button is broken because no share logic is implemented. Generate a playlist deep link and allow users to copy or share it. IN MOBILE , fix it now",
+          "Yes, the playlist deep-link must use the exact same hash/query deep-link pattern already used for songs, just pointing to a playlist instead of a song.",
+          "Update the existing ⋮ menu UI only if needed to make the Share action actually work",
+          "Do NOT redesign the menu unless required for functionality"
         ]
       },
       "acceptanceCriteria": [
-        "When the soft sign-in modal is open and the user clicks “Sign In with Internet Identity”, the Internet Identity login flow is initiated (popup/new window as appropriate).",
-        "On successful Internet Identity login, the soft sign-in modal closes automatically without requiring user interaction.",
-        "After a successful login from the soft sign-in modal, re-trying the same restricted action does not prompt sign-in again."
-      ]
-    },
-    {
-      "id": "REQ-202",
-      "text": "Ensure pending restricted actions complete correctly after successful authentication: when a restricted action triggers `requireAuth(...)`, after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-1"
-        ],
-        "quotes": [
-          "always keep reappearing like we haven'r signed in"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Triggering Like/Add to Favorites/Create Playlist/Add to Playlist while signed out opens the modal; after signing in, the original action is executed once and pending state is cleared.",
-        "After the pending action runs, subsequent restricted actions do not reopen the modal (unless the user logs out or the identity is missing).",
-        "No infinite loop: the modal does not repeatedly reopen due to stale pendingAction or stale isAuthenticated state."
-      ]
-    },
-    {
-      "id": "REQ-203",
-      "text": "Standardize restricted-action routing to `requireAuth(...)` only when the user is truly unauthenticated (anonymous) or when the backend returns a sign-in-required error; do not route signed-in users into the soft sign-in flow for non-auth issues. Keep user-facing text in English.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-1"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When a signed-in user hits a non-auth error (e.g., network/other failure), the UI shows an appropriate error toast and does not open the sign-in modal.",
-        "When the backend indicates a sign-in-required condition, the soft sign-in modal opens as before."
+        "On mobile, tapping “Share” in `PlaylistOverflowMenu` attempts to open the native share sheet using the Web Share API when available.",
+        "If the Web Share API is unavailable or share fails (non-cancel), the deep link is copied to clipboard and a success/failure toast is shown.",
+        "The deep link is hash-based and query-param driven, matching the app’s existing song deep-link style (e.g. `#/?playlist=<name>&playlistType=<user|official>`).",
+        "No visual redesign of the existing overflow menu beyond changes strictly required to make the Share action function correctly."
       ]
     }
   ],
   "constraints": [
-    "Do not modify any files under the immutable frontend paths listed in SYSTEM_CONTEXT.",
-    "Keep all user-facing text in English.",
-    "Do not change backend authorization rules or Motoko canister behavior as part of this fix unless it is strictly required to resolve the sign-in state mismatch (frontend should be fixed first)."
+    "Apply fixes specifically to mobile behavior (do not introduce desktop-only changes beyond what is necessary to keep shared code working).",
+    "Do not redesign the playlist overflow menu UI; only adjust for functionality.",
+    "Do not edit files under frontend immutable paths (e.g., `frontend/src/hooks/useInternetIdentity.ts(x)`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, `frontend/src/components/ui`).",
+    "User-facing text must be English."
   ],
   "nonGoals": [
-    "Do not redesign the SignInModal UI beyond what is necessary to make the button functional and the modal close/retry behavior correct.",
-    "Do not add new authentication providers; Internet Identity remains the only auth mechanism.",
-    "Do not change admin Hidden Admin Mode behavior or passcode flows as part of this issue."
+    "Adding new social integrations beyond Web Share API and clipboard copying.",
+    "Changing playlist deep-link format away from the existing hash/query pattern.",
+    "Implementing sharing for songs (already exists) or adding new share destinations/UI beyond the existing Share action."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [
-      "User reports: restricted actions always prompt soft sign-in modal even after Internet Identity login; Sign In button in modal appears to do nothing; occurs on both mobile and desktop. Screenshot provided: Screenshot 2026-02-10 213855.png."
-    ],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

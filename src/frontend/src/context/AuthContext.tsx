@@ -10,7 +10,7 @@ import {
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import type { Screen } from '../App';
 
-export type PendingActionType = 'like' | 'favorites' | 'create-playlist' | 'add-to-playlist' | 'offline-cache' | 'device-download' | 'messaging';
+export type PendingActionType = 'like' | 'favorites' | 'create-playlist' | 'add-to-playlist' | 'offline-cache' | 'device-download' | 'messaging' | 'playlist-favorites';
 
 export interface PendingAction {
   type: PendingActionType;

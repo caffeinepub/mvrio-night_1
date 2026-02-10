@@ -7,13 +7,14 @@ import {
   type ReactNode,
   createElement,
 } from 'react';
+import { useActor } from '../hooks/useActor';
 
 interface HiddenAdminModeContextValue {
   isAdminModeEnabled: boolean;
   isModalOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
-  enableAdminMode: (passcode: string) => boolean;
+  enableAdminMode: (passcode: string) => Promise<{ success: boolean; error?: string }>;
   disableAdminMode: () => void;
   getPasscode: () => string | null;
 }
@@ -28,7 +29,6 @@ export function useHiddenAdminMode(): HiddenAdminModeContextValue {
   return context;
 }
 
-const CORRECT_PASSCODE = 'A1B2D3ABD';
 const STORAGE_KEY = 'hiddenAdminMode';
 
 interface HiddenAdminModeProviderProps {
@@ -38,11 +38,12 @@ interface HiddenAdminModeProviderProps {
 export function HiddenAdminModeProvider({ children }: HiddenAdminModeProviderProps) {
   const [isAdminModeEnabled, setIsAdminModeEnabled] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { actor } = useActor();
 
   // Initialize from sessionStorage
   useEffect(() => {
     const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored === CORRECT_PASSCODE) {
+    if (stored) {
       setIsAdminModeEnabled(true);
     }
   }, []);
@@ -68,14 +69,29 @@ export function HiddenAdminModeProvider({ children }: HiddenAdminModeProviderPro
     setIsModalOpen(false);
   }, []);
 
-  const enableAdminMode = useCallback((passcode: string): boolean => {
-    if (passcode === CORRECT_PASSCODE) {
+  const enableAdminMode = useCallback(async (passcode: string): Promise<{ success: boolean; error?: string }> => {
+    if (!actor) {
+      return { success: false, error: 'Backend not ready. Please try again.' };
+    }
+
+    try {
+      // Verify passcode with backend
+      await actor.verifyAdminPasscodeForHiddenAdminMode(passcode);
+      
+      // If verification succeeds, store and enable
       sessionStorage.setItem(STORAGE_KEY, passcode);
       setIsAdminModeEnabled(true);
-      return true;
+      return { success: true };
+    } catch (error: any) {
+      const errorMessage = error?.message || String(error);
+      
+      if (errorMessage.includes('Invalid admin passcode')) {
+        return { success: false, error: 'Incorrect passcode' };
+      }
+      
+      return { success: false, error: 'Verification failed. Please try again.' };
     }
-    return false;
-  }, []);
+  }, [actor]);
 
   const disableAdminMode = useCallback(() => {
     sessionStorage.removeItem(STORAGE_KEY);

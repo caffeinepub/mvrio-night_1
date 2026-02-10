@@ -7,6 +7,7 @@ import {
   useCreatePlaylist,
   useAddToPlaylist,
 } from './useQueries';
+import { useTogglePlaylistFavorite } from './usePlaylistFavorites';
 import { cacheAudioForOffline } from '../utils/offlineAudioCache';
 import { downloadSong } from '../utils/download';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ export function usePendingAction() {
   const toggleFavoriteMutation = useToggleFavorite();
   const createPlaylistMutation = useCreatePlaylist();
   const addToPlaylistMutation = useAddToPlaylist();
+  const togglePlaylistFavoriteMutation = useTogglePlaylistFavorite();
 
   useEffect(() => {
     if (
@@ -77,6 +79,17 @@ export function usePendingAction() {
               }
               break;
 
+            case 'playlist-favorites':
+              if (pendingAction.playlistName) {
+                const { wasRemoved } = await togglePlaylistFavoriteMutation.mutateAsync(pendingAction.playlistName);
+                if (wasRemoved) {
+                  toast.success('Removed from favorites');
+                } else {
+                  toast.success('Added to favorites');
+                }
+              }
+              break;
+
             case 'offline-cache':
               if (pendingAction.audioUrl && pendingAction.songTitle) {
                 await cacheAudioForOffline(pendingAction.audioUrl, pendingAction.songTitle);
@@ -123,6 +136,7 @@ export function usePendingAction() {
     toggleFavoriteMutation,
     createPlaylistMutation,
     addToPlaylistMutation,
+    togglePlaylistFavoriteMutation,
     clearPendingAction,
     closeSignInModal,
     returnPath,

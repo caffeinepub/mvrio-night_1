@@ -204,14 +204,30 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
     };
     
     if (isWebShareSupported()) {
-      const shared = await shareViaWebShare(shareData);
-      if (shared) {
+      const result = await shareViaWebShare(shareData);
+      
+      if (result.success) {
+        // Successfully shared via native share sheet
         setOpen(false);
+        return;
+      } else if (result.reason === 'cancelled') {
+        // User cancelled, do nothing (no error toast)
+        return;
+      } else {
+        // Share failed (non-cancel error), fall back to clipboard
+        const copied = await copyToClipboard(deepLink);
+        if (copied) {
+          toast.success('Link copied to clipboard');
+          setOpen(false);
+        } else {
+          toast.error('Failed to copy link');
+        }
       }
     } else {
+      // Web Share not supported, use clipboard
       const copied = await copyToClipboard(deepLink);
       if (copied) {
-        toast.success('Link copied');
+        toast.success('Link copied to clipboard');
         setOpen(false);
       } else {
         toast.error('Failed to copy link');

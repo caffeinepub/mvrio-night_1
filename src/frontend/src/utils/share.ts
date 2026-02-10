@@ -1,6 +1,14 @@
 /**
- * Utilities for sharing songs via Web Share API or clipboard
+ * Utilities for sharing songs and playlists via Web Share API or clipboard
  */
+
+/**
+ * Result of a share attempt
+ */
+export type ShareResult = 
+  | { success: true }
+  | { success: false; reason: 'cancelled' }
+  | { success: false; reason: 'failed' };
 
 /**
  * Checks if the Web Share API is available
@@ -11,24 +19,24 @@ export function isWebShareSupported(): boolean {
 
 /**
  * Shares content using the Web Share API
- * Returns true if successful, false if cancelled or unsupported
+ * Returns a result object indicating success, user cancellation, or failure
  */
-export async function shareViaWebShare(data: ShareData): Promise<boolean> {
+export async function shareViaWebShare(data: ShareData): Promise<ShareResult> {
   if (!isWebShareSupported()) {
-    return false;
+    return { success: false, reason: 'failed' };
   }
   
   try {
     await navigator.share(data);
-    return true;
+    return { success: true };
   } catch (error) {
-    // User cancelled or share failed
+    // User cancelled the share sheet
     if (error instanceof Error && error.name === 'AbortError') {
-      // User cancelled, not an error
-      return false;
+      return { success: false, reason: 'cancelled' };
     }
+    // Other errors (e.g., share failed)
     console.error('Web Share failed:', error);
-    return false;
+    return { success: false, reason: 'failed' };
   }
 }
 

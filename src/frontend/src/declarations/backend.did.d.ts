@@ -129,17 +129,21 @@ export interface _SERVICE {
   'getOfficialPlaylistDetails' : ActorMethod<[string], Array<SongView>>,
   'getPlaylist' : ActorMethod<[string], PlaylistView>,
   'getPlaylistDetails' : ActorMethod<[string], Array<SongView>>,
+  'getPlaylistFavorites' : ActorMethod<[], Array<string>>,
+  'getPlaylistFavoritesLegacy' : ActorMethod<[], Array<string>>,
   'getSong' : ActorMethod<[bigint], SongView>,
   'getTotalListeningTime' : ActorMethod<[], bigint>,
   'getUnreadMessagesCount' : ActorMethod<[string], bigint>,
   'getUserPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfileRecord]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isPlaylistFavorite' : ActorMethod<[string], boolean>,
   'listOfficialPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'markAllMessagesAsSeen' : ActorMethod<[string, Principal, string], undefined>,
   'markLastMessageAsRead' : ActorMethod<[], undefined>,
   'markMessagesAsSeen' : ActorMethod<[boolean], undefined>,
   'playSong' : ActorMethod<[bigint], undefined>,
+  'playlistFavoritesLegacy' : ActorMethod<[], [] | [Array<string>]>,
   'removeFromOfficialPlaylist' : ActorMethod<
     [string, bigint, string],
     undefined
@@ -167,9 +171,11 @@ export interface _SERVICE {
   'setHiddenAdminMode' : ActorMethod<[boolean, string], undefined>,
   'toggleFavorite' : ActorMethod<[bigint], boolean>,
   'toggleLikeSong' : ActorMethod<[bigint], bigint>,
-  'updateAdminInfo' : ActorMethod<[[] | [ContactInfo]], undefined>,
-  'updateArtistProfile' : ActorMethod<[ArtistProfile], undefined>,
+  'togglePlaylistFavorite' : ActorMethod<[string], boolean>,
+  'updateAdminInfo' : ActorMethod<[[] | [ContactInfo], string], undefined>,
+  'updateArtistProfile' : ActorMethod<[ArtistProfile, string], undefined>,
   'updateTotalListeningTime' : ActorMethod<[bigint], undefined>,
+  'verifyAdminPasscodeForHiddenAdminMode' : ActorMethod<[string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

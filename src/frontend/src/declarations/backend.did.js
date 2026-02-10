@@ -175,6 +175,8 @@ export const idlService = IDL.Service({
     ),
   'getPlaylist' : IDL.Func([IDL.Text], [PlaylistView], ['query']),
   'getPlaylistDetails' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
+  'getPlaylistFavorites' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+  'getPlaylistFavoritesLegacy' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
   'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
   'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
   'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
@@ -185,6 +187,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isPlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'listOfficialPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
   'markAllMessagesAsSeen' : IDL.Func(
       [IDL.Text, IDL.Principal, IDL.Text],
@@ -194,6 +197,11 @@ export const idlService = IDL.Service({
   'markLastMessageAsRead' : IDL.Func([], [], []),
   'markMessagesAsSeen' : IDL.Func([IDL.Bool], [], []),
   'playSong' : IDL.Func([IDL.Nat], [], []),
+  'playlistFavoritesLegacy' : IDL.Func(
+      [],
+      [IDL.Opt(IDL.Vec(IDL.Text))],
+      ['query'],
+    ),
   'removeFromOfficialPlaylist' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Text],
       [],
@@ -233,9 +241,11 @@ export const idlService = IDL.Service({
   'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
   'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
-  'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo)], [], []),
-  'updateArtistProfile' : IDL.Func([ArtistProfile], [], []),
+  'togglePlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo), IDL.Text], [], []),
+  'updateArtistProfile' : IDL.Func([ArtistProfile, IDL.Text], [], []),
   'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
+  'verifyAdminPasscodeForHiddenAdminMode' : IDL.Func([IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
@@ -408,6 +418,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getPlaylist' : IDL.Func([IDL.Text], [PlaylistView], ['query']),
     'getPlaylistDetails' : IDL.Func([IDL.Text], [IDL.Vec(SongView)], ['query']),
+    'getPlaylistFavorites' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+    'getPlaylistFavoritesLegacy' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
     'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
     'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
     'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
@@ -418,6 +430,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isPlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'listOfficialPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
     'markAllMessagesAsSeen' : IDL.Func(
         [IDL.Text, IDL.Principal, IDL.Text],
@@ -427,6 +440,11 @@ export const idlFactory = ({ IDL }) => {
     'markLastMessageAsRead' : IDL.Func([], [], []),
     'markMessagesAsSeen' : IDL.Func([IDL.Bool], [], []),
     'playSong' : IDL.Func([IDL.Nat], [], []),
+    'playlistFavoritesLegacy' : IDL.Func(
+        [],
+        [IDL.Opt(IDL.Vec(IDL.Text))],
+        ['query'],
+      ),
     'removeFromOfficialPlaylist' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Text],
         [],
@@ -466,9 +484,11 @@ export const idlFactory = ({ IDL }) => {
     'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
     'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
-    'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo)], [], []),
-    'updateArtistProfile' : IDL.Func([ArtistProfile], [], []),
+    'togglePlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo), IDL.Text], [], []),
+    'updateArtistProfile' : IDL.Func([ArtistProfile, IDL.Text], [], []),
     'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
+    'verifyAdminPasscodeForHiddenAdminMode' : IDL.Func([IDL.Text], [], []),
   });
 };
 

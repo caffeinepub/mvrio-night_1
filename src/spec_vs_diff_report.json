@@ -1,50 +1,34 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T16:19:36.577Z",
-  "summary": "Diff implements core auth-state derivation from Internet Identity in AuthContext, updates multiple restricted-action entry points to use isAuthenticated/requireAuth plus sign-in-required error detection, and improves the SignInModal login button behavior. However, the pending-action retry/clear flow (REQ-202) is not fully verifiable from the truncated diff, and coverage across all restricted actions listed in REQ-199 cannot be confirmed from the provided modified files.",
+  "generatedAt": "2026-02-10T18:38:16.273Z",
+  "summary": "Frontend changes add a dedicated playlist favorites hook and update the mobile PlaylistOverflowMenu to close the menu, require auth for favorites, and implement Share via Web Share API with clipboard/toast fallback. Backend shows a new per-principal playlistFavorites data structure, but the required backend endpoints/authorization/persistence behavior are not evidenced in the provided truncated diff.",
   "missing_requirements": [
     {
-      "id": "REQ-199",
-      "requirement": "Fix the global auth state so the app correctly treats an Internet Identity signed-in user as authenticated for all restricted actions (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging), preventing the soft sign-in modal from appearing when the sidebar already shows the user is logged in.",
-      "reason": "The diff shows updates for favorites/playlists/offline-cache in specific components, but does not provide evidence that all listed restricted actions (notably messaging and device download, and any other entry points for like/favorites outside SongOverflowMenu) are covered. With only a subset of files shown/modified, full app-wide coverage cannot be confirmed.",
+      "id": "REQ-1",
+      "requirement": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)` with proper authz (any authenticated user; unauth rejected), per-user isolation, and persistence.",
+      "reason": "The backend diff excerpt shows a new `playlistFavorites = Map.empty<Principal, Set.Set<Text>>()`, but does not show the required public methods `getPlaylistFavorites` / `togglePlaylistFavorite`, their authorization checks for authenticated users, their return value semantics (`wasRemoved`), or any persistence/stable storage handling. With the backend file truncated, these cannot be confirmed as implemented.",
       "evidence": [
-        "frontend/src/components/songs/SongOverflowMenu.tsx",
-        "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-        "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-        "frontend/src/context/AuthContext.tsx"
+        "backend/main.mo (truncated excerpt shows only data structure; no endpoints/persistence shown)"
       ]
     },
     {
-      "id": "REQ-202",
-      "requirement": "Ensure pending restricted actions complete correctly after successful authentication: after sign-in succeeds the app retries the pending action once and then clears pending state so the modal does not reappear for subsequent actions.",
-      "reason": "usePendingAction introduces a hasExecuted guard and executes actions after loginStatus === 'success', but the provided diff is truncated at the end of the try/catch/finally and does not show a definitive call to clearPendingAction (or other logic) that reliably clears pending state after execution.",
+      "id": "REQ-2",
+      "requirement": "If the user is signed out, tapping Favorites triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
+      "reason": "The menu triggers `requireAuth({ type: 'playlist-favorites', playlistName })`, but no evidence is shown that the pending action is resumed after sign-in to complete the toggle. That behavior would likely live in AuthContext or a pending-action handler, which is not part of the diff summary.",
       "evidence": [
-        "frontend/src/hooks/usePendingAction.ts (truncated, ends at `} finally` without showing pending-action clearing)"
+        "frontend/src/components/library/PlaylistOverflowMenu.tsx (calls requireAuth with type 'playlist-favorites')",
+        "frontend/src/hooks/usePlaylistFavorites.ts (onError calls requireAuth on sign-in required)"
       ]
     }
   ],
-  "hallucinated_features": [
-    {
-      "description": "Added playlist deletion capabilities (new delete playlist React Query hooks and UI confirmation flow).",
-      "reason": "The BuildRequest focuses on fixing sign-in state mismatch and soft sign-in modal behavior for restricted actions; it does not request adding playlist deletion features.",
-      "evidence": [
-        "frontend/src/hooks/useQueries.ts (frontend-file-summaries.txt indicates new hooks useDeleteUserPlaylist/useDeleteOfficialPlaylist)",
-        "frontend/src/components/library/LibraryPlaylistsPanel.tsx (imports/use of useDeleteUserPlaylist, useDeleteOfficialPlaylist, DeletePlaylistConfirmDialog)"
-      ]
-    }
-  ],
-  "confidence": 0.64,
+  "hallucinated_features": [],
+  "confidence": 0.62,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/SignInModal.tsx",
-    "frontend/src/components/library/LibraryPlaylistsPanel.tsx",
-    "frontend/src/components/songs/CreatePlaylistDialog.tsx",
-    "frontend/src/components/songs/PlaylistChooserDialog.tsx",
-    "frontend/src/components/songs/SongOverflowMenu.tsx",
-    "frontend/src/context/AuthContext.tsx",
-    "frontend/src/hooks/usePendingAction.ts",
+    "frontend/src/components/library/PlaylistOverflowMenu.tsx",
+    "frontend/src/hooks/usePlaylistFavorites.ts",
     "project_state.json"
   ]
 }

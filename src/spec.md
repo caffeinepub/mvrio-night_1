@@ -1,13 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the frontend authentication state mismatch so Internet Identity signed-in users are consistently treated as authenticated, preventing restricted actions from repeatedly opening the soft sign-in modal and ensuring the modal sign-in button reliably initiates login and closes/retries correctly.
+**Goal:** Fix mobile playlist Favorites so they persist per authenticated user, and make the mobile playlist Share action generate and share/copy a working deep link.
 
 **Planned changes:**
-- Update `frontend/src/context/AuthContext.tsx` so `isAuthenticated` is derived from `useInternetIdentity().identity` and stays in sync on identity changes (login/logout).
-- Fix restricted-action guards (Like, Add to Favorites, Create Playlist, Add to Playlist, offline cache, device download, messaging) to only open the soft sign-in modal when truly unauthenticated.
-- Make the soft sign-in modal “Sign In with Internet Identity” button reliably trigger the Internet Identity login flow and automatically close the modal on successful authentication.
-- Ensure `requireAuth(...)` pending restricted actions are retried once after successful login, then cleared to avoid loops and repeat prompts.
-- Standardize error handling so signed-in users encountering non-auth failures see an appropriate error (e.g., toast) rather than being routed back into the sign-in modal; keep all user-facing text in English.
+- Add/repair backend support for per-user playlist favorites keyed by the authenticated Internet Identity principal, including `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)` with proper auth handling.
+- Update the mobile `PlaylistOverflowMenu` Favorites action to call the backend, support sign-in gating (pending action `playlist-favorites`), close the menu after action, and reflect updated favorite state persistently.
+- Implement the mobile `PlaylistOverflowMenu` Share action to generate a hash/query deep link for playlists (matching the existing song deep-link pattern) and use Web Share API when available, otherwise copy to clipboard and show a toast, without redesigning the menu.
 
-**User-visible outcome:** After signing in with Internet Identity, restricted actions work without re-opening the soft sign-in modal. If signed out, restricted actions still prompt the modal; signing in from the modal works reliably, closes automatically on success, and completes the originally requested action once without getting stuck in a loop.
+**User-visible outcome:** On mobile, signed-in users can add/remove playlist favorites and see them persist after refresh/navigation, and users can share a playlist via the native share sheet (when supported) or copy a correct deep link to the clipboard.

@@ -11,22 +11,24 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Lock, LogOut } from 'lucide-react';
+import { Lock, LogOut, Loader2 } from 'lucide-react';
 
 export function AdminPasscodeModal() {
   const { isModalOpen, closeModal, enableAdminMode, isAdminModeEnabled, disableAdminMode } = useHiddenAdminMode();
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isModalOpen) {
       setPasscode('');
       setError('');
+      setIsVerifying(false);
     }
   }, [isModalOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!passcode.trim()) {
@@ -34,12 +36,20 @@ export function AdminPasscodeModal() {
       return;
     }
 
-    const success = enableAdminMode(passcode);
-    if (success) {
-      closeModal();
-    } else {
-      setError('Incorrect passcode');
-      setPasscode('');
+    setIsVerifying(true);
+    setError('');
+
+    try {
+      const result = await enableAdminMode(passcode);
+      
+      if (result.success) {
+        closeModal();
+      } else {
+        setError(result.error || 'Verification failed');
+        setPasscode('');
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -98,6 +108,7 @@ export function AdminPasscodeModal() {
                 placeholder="Enter admin passcode"
                 autoFocus
                 autoComplete="off"
+                disabled={isVerifying}
               />
               {error && (
                 <p className="text-sm text-destructive">{error}</p>
@@ -105,11 +116,23 @@ export function AdminPasscodeModal() {
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={handleCancel}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleCancel}
+                disabled={isVerifying}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                Enable Admin Mode
+              <Button type="submit" disabled={isVerifying}>
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Enable Admin Mode'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -122,6 +145,7 @@ export function AdminPasscodeModal() {
               variant="ghost"
               onClick={handleCancel}
               className="w-full"
+              disabled={isVerifying}
             >
               Close
             </Button>

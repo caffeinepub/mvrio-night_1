@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGetAllSongs, useGetFavorites } from '../hooks/useQueries';
 import { MusicPlayer } from '../components/player/MusicPlayer';
 import { LibraryTopTabs, type LibraryTab } from '../components/library/LibraryTopTabs';
@@ -9,6 +9,7 @@ import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Loader2, Heart } from 'lucide-react';
+import { toast } from 'sonner';
 import type { SongView } from '../backend';
 
 type PlaylistContext = {
@@ -17,13 +18,24 @@ type PlaylistContext = {
   songs: SongView[];
 };
 
-export function LibraryScreen() {
+type PlaylistDeepLink = {
+  name: string;
+  type: 'user' | 'official';
+};
+
+interface LibraryScreenProps {
+  initialPlaylistDeepLink?: PlaylistDeepLink | null;
+  onPlaylistDeepLinkHandled?: () => void;
+}
+
+export function LibraryScreen({ initialPlaylistDeepLink, onPlaylistDeepLinkHandled }: LibraryScreenProps) {
   const [activeTab, setActiveTab] = useState<LibraryTab>('songs');
   const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistContext | null>(null);
   const [playlistQueue, setPlaylistQueue] = useState<SongView[]>([]);
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all'>('off');
+  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
   
   const { data: songs, isLoading: songsLoading } = useGetAllSongs();
   const { data: favorites, isLoading: favoritesLoading } = useGetFavorites();
@@ -32,6 +44,17 @@ export function LibraryScreen() {
   
   const isAuthenticated = !!identity;
   const currentSong = songs?.find(s => s.id === currentSongId) || null;
+
+  // Handle playlist deep link
+  useEffect(() => {
+    if (initialPlaylistDeepLink && !deepLinkProcessed) {
+      setDeepLinkProcessed(true);
+      setActiveTab('playlists');
+      
+      // Trigger playlist opening via a callback that will be set by LibraryPlaylistsPanel
+      // We'll pass the deep link info down and let the panel handle it
+    }
+  }, [initialPlaylistDeepLink, deepLinkProcessed]);
 
   const handleNext = () => {
     // If we're in a playlist context, use playlist queue
@@ -92,6 +115,11 @@ export function LibraryScreen() {
     setPlaylistQueue(playlist.songs);
     setIsShuffled(false);
     setRepeatMode('off');
+    
+    // Mark deep link as handled if this was triggered by a deep link
+    if (initialPlaylistDeepLink && onPlaylistDeepLinkHandled) {
+      onPlaylistDeepLinkHandled();
+    }
   };
 
   const handleBackToPlaylists = () => {
@@ -231,7 +259,10 @@ export function LibraryScreen() {
             playlistQueue={playlistQueue}
           />
         ) : (
-          <LibraryPlaylistsPanel onOpenPlaylist={handleOpenPlaylist} />
+          <LibraryPlaylistsPanel
+            onOpenPlaylist={handleOpenPlaylist}
+            initialDeepLink={initialPlaylistDeepLink}
+          />
         )
       )}
 

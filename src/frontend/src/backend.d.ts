@@ -101,17 +101,21 @@ export interface backendInterface {
     getOfficialPlaylistDetails(playlistName: string): Promise<Array<SongView>>;
     getPlaylist(playlistName: string): Promise<PlaylistView>;
     getPlaylistDetails(playlistName: string): Promise<Array<SongView>>;
+    getPlaylistFavorites(): Promise<Array<string>>;
+    getPlaylistFavoritesLegacy(): Promise<Array<string>>;
     getSong(id: bigint): Promise<SongView>;
     getTotalListeningTime(): Promise<bigint>;
     getUnreadMessagesCount(passcode: string): Promise<bigint>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfileRecord | null>;
     isCallerAdmin(): Promise<boolean>;
+    isPlaylistFavorite(playlistName: string): Promise<boolean>;
     listOfficialPlaylists(): Promise<Array<PlaylistView>>;
     markAllMessagesAsSeen(senderType: string, user: Principal, passcode: string): Promise<void>;
     markLastMessageAsRead(): Promise<void>;
     markMessagesAsSeen(fileOnly: boolean): Promise<void>;
     playSong(id: bigint): Promise<void>;
+    playlistFavoritesLegacy(): Promise<Array<string> | null>;
     removeFromOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     removeFromPlaylist(playlistName: string, songId: bigint): Promise<void>;
     replyToMessage(user: Principal, content: string, passcode: string): Promise<bigint>;
@@ -123,7 +127,9 @@ export interface backendInterface {
     setHiddenAdminMode(enabled: boolean, passcode: string): Promise<void>;
     toggleFavorite(songId: bigint): Promise<boolean>;
     toggleLikeSong(id: bigint): Promise<bigint>;
-    updateAdminInfo(contactInfo: ContactInfo | null): Promise<void>;
-    updateArtistProfile(profile: ArtistProfile): Promise<void>;
+    togglePlaylistFavorite(playlistName: string): Promise<boolean>;
+    updateAdminInfo(contactInfo: ContactInfo | null, passcode: string): Promise<void>;
+    updateArtistProfile(profile: ArtistProfile, passcode: string): Promise<void>;
     updateTotalListeningTime(seconds: bigint): Promise<void>;
+    verifyAdminPasscodeForHiddenAdminMode(passcode: string): Promise<void>;
 }
