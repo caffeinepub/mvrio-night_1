@@ -4,6 +4,7 @@ import { useToggleLikeSong, useCreatePlaylist, useAddToPlaylist } from './useQue
 import { cacheAudioForOffline } from '../utils/offlineAudioCache';
 import { downloadSong } from '../utils/download';
 import { toast } from 'sonner';
+import { isAdminOnlyError, isSignInRequiredError } from '../utils/authorizationErrors';
 
 /**
  * Hook that executes pending actions after successful authentication.
@@ -73,20 +74,25 @@ export function usePendingAction() {
       // Clear pending action after successful execution
       clearPendingAction();
     } catch (error: any) {
-      // Check if error is authorization-related
-      if (
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('Only users can') ||
-        error.message?.includes('sign in')
-      ) {
+      // Check if error is admin-only (signed-in non-admin user)
+      if (isAdminOnlyError(error)) {
+        // Clear pending action - no point retrying, user is not admin
+        clearPendingAction();
+        toast.error('Admin access required');
+        return;
+      }
+
+      // Check if error is sign-in required (guest user)
+      if (isSignInRequiredError(error)) {
         // Don't clear pending action - user needs to try auth again
         toast.error('Authentication required. Please sign in again.');
-      } else {
-        // Other errors - clear pending action and show error
-        clearPendingAction();
-        toast.error('Failed to complete action');
-        console.error('Pending action execution error:', error);
+        return;
       }
+
+      // Other errors - clear pending action and show error
+      clearPendingAction();
+      toast.error('Failed to complete action');
+      console.error('Pending action execution error:', error);
     }
   }, [
     pendingAction,

@@ -43,6 +43,7 @@ export interface backendInterface {
     addToOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
     addToPlaylist(playlistName: string, songId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    checkAuthorization(): Promise<boolean>;
     clearFavorites(): Promise<void>;
     createOfficialPlaylist(name: string): Promise<void>;
     createPlaylist(name: string): Promise<void>;
@@ -59,6 +60,7 @@ export interface backendInterface {
     getSong(id: bigint): Promise<SongView>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isAdminArtist(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     playSong(id: bigint): Promise<void>;
     removeFromOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;

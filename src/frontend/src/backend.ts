@@ -136,6 +136,7 @@ export interface backendInterface {
     addToOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
     addToPlaylist(playlistName: string, songId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    checkAuthorization(): Promise<boolean>;
     clearFavorites(): Promise<void>;
     createOfficialPlaylist(name: string): Promise<void>;
     createPlaylist(name: string): Promise<void>;
@@ -152,6 +153,7 @@ export interface backendInterface {
     getSong(id: bigint): Promise<SongView>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isAdminArtist(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     playSong(id: bigint): Promise<void>;
     removeFromOfficialPlaylist(playlistName: string, songId: bigint): Promise<void>;
@@ -315,6 +317,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async checkAuthorization(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.checkAuthorization();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.checkAuthorization();
             return result;
         }
     }
@@ -540,6 +556,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getUserProfile(arg0);
             return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async isAdminArtist(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isAdminArtist();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isAdminArtist();
+            return result;
         }
     }
     async isCallerAdmin(): Promise<boolean> {

@@ -4,14 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useHomeBanner } from '../../hooks/useHomeBanner';
+import { useAdminContext } from '../../context/AdminContext';
 import { toast } from 'sonner';
 
 export function HomeChannelBanner() {
   const { displayImage, imageUrl, imageFile, setImageUrl, setImageFile, clearBanner } = useHomeBanner();
+  const { isAdmin } = useAdminContext();
   const [urlInput, setUrlInput] = useState(imageUrl);
   const [showUrlInput, setShowUrlInput] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) {
+      toast.error('Admin access required');
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -25,6 +32,11 @@ export function HomeChannelBanner() {
   };
 
   const handleUrlSubmit = () => {
+    if (!isAdmin) {
+      toast.error('Admin access required');
+      return;
+    }
+
     if (!urlInput.trim()) {
       toast.error('Please enter a valid URL');
       return;
@@ -35,6 +47,11 @@ export function HomeChannelBanner() {
   };
 
   const handleClear = () => {
+    if (!isAdmin) {
+      toast.error('Admin access required');
+      return;
+    }
+
     clearBanner();
     setUrlInput('');
     setShowUrlInput(false);
@@ -45,20 +62,21 @@ export function HomeChannelBanner() {
 
   return (
     <div className="w-full mb-8">
-      <div className="relative w-full bg-card/30 rounded-lg overflow-hidden min-h-[280px] md:min-h-[360px]">
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-background/80 to-card/50">
-          <img
-            src={displayImage}
-            alt="Channel Banner"
-            className="w-full h-full object-contain"
-          />
-        </div>
-        
-        {/* Artist Name Overlay */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-end pr-4 md:pr-8">
-          <div className="text-right max-w-[200px] md:max-w-[300px]">
+      <div className="relative w-full max-w-5xl mx-auto">
+        <div className="flex items-stretch bg-card/30 rounded-lg overflow-hidden h-[200px] md:h-[280px]">
+          {/* Left: Banner Image */}
+          <div className="w-1/2 bg-gradient-to-br from-background/80 to-card/50 flex items-center justify-center p-4">
+            <img
+              src={displayImage}
+              alt="Channel Banner"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          
+          {/* Right: Artist Name */}
+          <div className="w-1/2 flex items-center justify-center p-4 md:p-8">
             <h2 
-              className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight"
+              className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center"
               style={{ 
                 color: '#1ED760',
                 textShadow: '0 0 20px rgba(30, 215, 96, 0.5), 0 0 40px rgba(30, 215, 96, 0.3)',
@@ -70,42 +88,44 @@ export function HomeChannelBanner() {
           </div>
         </div>
 
-        {/* Controls - raised z-index to stay above overlay */}
-        <div className="absolute top-2 right-2 flex gap-2 z-10 pointer-events-auto">
-          {hasCustomBanner && (
+        {/* Controls - Only show to admin users */}
+        {isAdmin && (
+          <div className="absolute top-2 right-2 flex gap-2 z-10">
+            {hasCustomBanner && (
+              <Button
+                size="icon"
+                variant="secondary"
+                className="rounded-full"
+                onClick={handleClear}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="secondary"
               className="rounded-full"
-              onClick={handleClear}
+              onClick={() => setShowUrlInput(!showUrlInput)}
             >
-              <X className="w-4 h-4" />
+              <LinkIcon className="w-4 h-4" />
             </Button>
-          )}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="rounded-full"
-            onClick={() => setShowUrlInput(!showUrlInput)}
-          >
-            <LinkIcon className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="secondary" className="rounded-full" asChild>
-            <label className="cursor-pointer">
-              <Upload className="w-4 h-4" />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </label>
-          </Button>
-        </div>
+            <Button size="icon" variant="secondary" className="rounded-full" asChild>
+              <label className="cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </label>
+            </Button>
+          </div>
+        )}
       </div>
 
-      {showUrlInput && (
-        <div className="mt-4 p-4 bg-card/50 rounded-lg space-y-3">
+      {isAdmin && showUrlInput && (
+        <div className="mt-4 p-4 bg-card/50 rounded-lg space-y-3 max-w-5xl mx-auto">
           <div className="space-y-2">
             <Label htmlFor="banner-url">Image URL</Label>
             <Input

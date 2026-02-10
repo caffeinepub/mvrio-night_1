@@ -47,6 +47,15 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
   const audioUrl = song.audioFile?.getDirectURL?.() || '';
   const canDownload = hasUsableAudioUrl(audioUrl);
 
+  const handleMenuTriggerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
+    setOpen(true);
+  };
+
   const handleAddToFavorites = async () => {
     if (!isAuthenticated) {
       setOpen(false);
@@ -270,16 +279,15 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
           size="icon"
           variant="ghost"
           className="rounded-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen(true);
-          }}
+          onClick={handleMenuTriggerClick}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <MoreVertical className="w-4 h-4" />
         </Button>
         
         <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerContent>
+          <DrawerContent onClick={(e) => e.stopPropagation()}>
             <DrawerHeader>
               <DrawerTitle>{song.title}</DrawerTitle>
             </DrawerHeader>
@@ -320,12 +328,19 @@ export function SongOverflowMenu({ song }: SongOverflowMenuProps) {
             size="icon"
             variant="ghost"
             className="rounded-full"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleMenuTriggerClick}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <MoreVertical className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent 
+          align="end" 
+          className="w-48"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <DropdownMenuItem onSelect={handleAddToPlaylist}>
             <ListPlus className="w-4 h-4 mr-2" />
             Add to Playlist

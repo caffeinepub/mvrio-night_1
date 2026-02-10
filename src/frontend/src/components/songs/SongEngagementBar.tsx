@@ -1,6 +1,7 @@
 import { Heart, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSongEngagement } from '../../hooks/useSongEngagement';
+import { useLikedSongs } from '../../hooks/useLikedSongs';
 import type { SongView } from '../../backend';
 
 interface SongEngagementBarProps {
@@ -10,7 +11,8 @@ interface SongEngagementBarProps {
 }
 
 export function SongEngagementBar({ song, variant = 'default', showLikeButton = true }: SongEngagementBarProps) {
-  const { handleLike, isAuthenticated, isLiking } = useSongEngagement();
+  const { handleLike, isLiking } = useSongEngagement();
+  const { isLiked, isAuthenticated } = useLikedSongs();
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -21,15 +23,12 @@ export function SongEngagementBar({ song, variant = 'default', showLikeButton = 
       e.nativeEvent.stopImmediatePropagation();
     }
     
-    if (!isAuthenticated) {
-      return;
-    }
-    
     await handleLike(song.id);
   };
 
   const likesCount = Number(song.likesCount);
   const playCount = Number(song.playCount);
+  const liked = isLiked(song.id);
 
   const isCompact = variant === 'compact';
 
@@ -39,7 +38,11 @@ export function SongEngagementBar({ song, variant = 'default', showLikeButton = 
         <Button
           variant="ghost"
           size={isCompact ? 'sm' : 'default'}
-          className="gap-1.5 h-auto px-2 py-1 text-muted-foreground hover:text-primary transition-all duration-200"
+          className={`gap-1.5 h-auto px-2 py-1 transition-all duration-200 ${
+            liked 
+              ? 'text-primary hover:text-primary' 
+              : 'text-muted-foreground hover:text-primary'
+          }`}
           onClick={handleLikeClick}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -47,8 +50,10 @@ export function SongEngagementBar({ song, variant = 'default', showLikeButton = 
           style={{ pointerEvents: 'auto' }}
         >
           <Heart
-            className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} transition-transform duration-200 ${isLiking ? 'scale-125' : 'scale-100'}`}
-            fill="none"
+            className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} transition-all duration-200 ${
+              isLiking ? 'scale-125' : 'scale-100'
+            }`}
+            fill={liked ? 'currentColor' : 'none'}
           />
           <span className="font-medium">{likesCount}</span>
         </Button>

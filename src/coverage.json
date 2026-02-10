@@ -1,45 +1,118 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T04:25:36.146Z",
+  "generatedAt": "2026-02-10T05:15:48.488Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 6,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-92",
-        "summary": "Update the Home channel banner component so the banner area is larger (both wider and taller) while keeping the banner image fully visible at all times (no stretching and no cropping).",
+        "id": "REQ-100",
+        "summary": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister and expose a query method that returns whether the caller is an Admin/Artist.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-101",
+        "summary": "Enforce Admin/Artist-only permissions in the backend for all admin-only song management operations, so normal signed-in users cannot upload/add songs or delete songs.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-102",
+        "summary": "Enforce Admin/Artist-only permissions in the backend for all official playlist management operations (create/add/remove), while keeping official playlist reads accessible to everyone.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-103",
+        "summary": "Add frontend role detection and caching so the React app can determine whether the currently signed-in identity is an Admin/Artist, without breaking guest mode.",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/hooks/useIsAdmin.ts",
+          "frontend/src/context/AdminContext.tsx",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useIsAdmin.ts",
+          "frontend/src/context/AdminContext.tsx",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-104",
+        "summary": "Gate all admin-only UI entry points so Admin/Artist-only features are hidden or blocked for normal users: song upload/add, song delete, and Home banner editing controls.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/auth/AdminOnly.tsx",
+          "frontend/src/components/songs/SongEditor.tsx",
+          "frontend/src/pages/HomeScreen.tsx",
+          "frontend/src/pages/SongsScreen.tsx",
+          "frontend/src/components/songs/SongCard.tsx",
+          "frontend/src/components/songs/SongListRow.tsx",
           "frontend/src/components/home/HomeChannelBanner.tsx"
         ],
         "matchedFiles": [
+          "frontend/src/components/auth/AdminOnly.tsx",
+          "frontend/src/components/songs/SongEditor.tsx",
+          "frontend/src/pages/HomeScreen.tsx",
+          "frontend/src/pages/SongsScreen.tsx",
+          "frontend/src/components/songs/SongCard.tsx",
           "frontend/src/components/home/HomeChannelBanner.tsx"
         ]
       },
       {
-        "id": "REQ-93",
-        "summary": "Overlay the artist name text “THE MVRIO” on top of the Home channel banner inside the right-side region (the green-outlined area in the uploaded screenshots), styled using the app’s neon green theme color (#1ED760).",
+        "id": "REQ-105",
+        "summary": "Ensure frontend error handling for admin-only operations properly interprets backend authorization failures and shows a clear English message for non-admin signed-in users, while preserving the existing soft sign-in modal flow for guest-only restrictions.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/utils/authorizationErrors.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/songs/SongEditor.tsx",
+          "frontend/src/pages/HomeScreen.tsx",
+          "frontend/src/pages/SongsScreen.tsx",
+          "frontend/src/hooks/usePendingAction.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/home/HomeChannelBanner.tsx"
+          "frontend/src/utils/authorizationErrors.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/songs/SongEditor.tsx",
+          "frontend/src/pages/HomeScreen.tsx",
+          "frontend/src/pages/SongsScreen.tsx",
+          "frontend/src/hooks/usePendingAction.ts"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/auth/AdminOnly.tsx",
     "frontend/src/components/home/HomeChannelBanner.tsx",
+    "frontend/src/components/songs/SongCard.tsx",
+    "frontend/src/components/songs/SongEditor.tsx",
+    "frontend/src/context/AdminContext.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useIsAdmin.ts",
+    "frontend/src/hooks/usePendingAction.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/HomeScreen.tsx",
+    "frontend/src/pages/SongsScreen.tsx",
+    "frontend/src/utils/authorizationErrors.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,14 +1,69 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T04:25:36.141Z",
-  "summary": "HomeChannelBanner was updated to increase banner height via larger min-height values, preserve full image visibility using object-contain, and add a right-aligned neon green “THE MVRIO” text overlay while keeping banner controls above and clickable.",
-  "missing_requirements": [],
-  "hallucinated_features": [],
-  "confidence": 0.72,
+  "generatedAt": "2026-02-10T05:15:48.481Z",
+  "summary": "Frontend adds admin-role detection via a new backend query, caches it with React Query, and gates several admin-only UI controls with clear English toasts. Backend adds an isAdminArtist query and enforces admin-only on addSong (shown), but the admin allowlist is not hard-coded as requested, and enforcement for deleteSong and official playlist writes is not evidenced in the truncated diff.",
+  "missing_requirements": [
+    {
+      "id": "REQ-100",
+      "requirement": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister (not user-editable at runtime).",
+      "reason": "The backend defines `adminArtists` as an empty `Set` with a comment about persistence after migration, but the diff does not show any hard-coded Principal IDs being populated into this allowlist.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-101",
+      "requirement": "Enforce Admin/Artist-only permissions in the backend for deleteSong (non-admin authenticated users must fail).",
+      "reason": "The diff shows admin enforcement added to `addSong`, but `deleteSong` changes are not visible in the provided truncated backend excerpt, so backend enforcement for delete cannot be confirmed from the diff summary.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-102",
+      "requirement": "Enforce Admin/Artist-only permissions in the backend for all official playlist write operations (create/add/remove), while keeping reads accessible to everyone.",
+      "reason": "The diff summary/excerpts do not show any modifications to official playlist write methods (create/add/remove) that check the admin allowlist, so this cannot be verified as implemented.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-104",
+      "requirement": "Gate all admin-only UI entry points for deleting songs so non-admin users do not see them or they are disabled with feedback.",
+      "reason": "While `SongCard` supports conditional delete display via `showDelete` and screens check `isAdmin` before executing delete, the diff excerpt does not clearly show that all delete UI entry points are actually hidden/disabled for non-admins across all song list/card components (the relevant call sites are truncated).",
+      "evidence": [
+        "frontend/src/components/songs/SongCard.tsx",
+        "frontend/src/pages/SongsScreen.tsx",
+        "frontend/src/pages/HomeScreen.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Extensive global visual/theming changes (OKLCH color system, neon/star effects utilities, night mode input overrides, twinkle animations).",
+      "reason": "The BuildRequest is scoped to implementing an Admin/Artist allowlist with backend enforcement and frontend gating, and explicitly calls out theming/navigation redesign as non-goals; these styling changes are not part of the requested admin gating work.",
+      "evidence": [
+        "frontend/src/index.css (referenced in frontend-file-summaries.txt)"
+      ]
+    }
+  ],
+  "confidence": 0.62,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
+    "frontend/src/components/auth/AdminOnly.tsx",
     "frontend/src/components/home/HomeChannelBanner.tsx",
+    "frontend/src/components/songs/SongCard.tsx",
+    "frontend/src/components/songs/SongEditor.tsx",
+    "frontend/src/context/AdminContext.tsx",
+    "frontend/src/hooks/useIsAdmin.ts",
+    "frontend/src/hooks/usePendingAction.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/HomeScreen.tsx",
+    "frontend/src/pages/SongsScreen.tsx",
+    "frontend/src/utils/authorizationErrors.ts",
     "project_state.json"
   ]
 }

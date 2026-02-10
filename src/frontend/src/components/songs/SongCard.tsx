@@ -10,9 +10,10 @@ interface SongCardProps {
   isPlaying: boolean;
   onPlay: () => void;
   onDelete: () => void;
+  showDelete?: boolean;
 }
 
-export function SongCard({ song, isPlaying, onPlay, onDelete }: SongCardProps) {
+export function SongCard({ song, isPlaying, onPlay, onDelete, showDelete = false }: SongCardProps) {
   const albumArtUrl = song.albumArt?.getDirectURL?.() || '';
   const titleImageUrl = song.titleImage?.getDirectURL?.() || '';
   const displayImage = titleImageUrl || albumArtUrl;
@@ -61,17 +62,19 @@ export function SongCard({ song, isPlaying, onPlay, onDelete }: SongCardProps) {
             >
               <Play className="w-4 h-4" fill={isPlaying ? 'currentColor' : 'none'} />
             </Button>
-            <Button
-              size="icon"
-              variant="destructive"
-              className="rounded-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {showDelete && (
+              <Button
+                size="icon"
+                variant="destructive"
+                className="rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
             <div onClick={(e) => e.stopPropagation()}>
               <SongOverflowMenu song={song} />
             </div>

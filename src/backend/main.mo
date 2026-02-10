@@ -18,6 +18,9 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
+  // Admin artist principals (persistent after migration)
+  let adminArtists = Set.empty<Principal>();
+
   // User profile type
   public type UserProfile = {
     name : Text;
@@ -108,6 +111,17 @@ actor {
   let userPlaylists = Map.empty<Principal, Map.Map<Text, Playlist>>();
   let officialPlaylists = Map.empty<Text, Playlist>();
 
+  public query ({ caller }) func checkAuthorization() : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return false;
+    };
+    true;
+  };
+
+  public query ({ caller }) func isAdminArtist() : async Bool {
+    adminArtists.contains(caller);
+  };
+
   public shared ({ caller }) func addSong(
     title : Text,
     artist : Text,
@@ -116,9 +130,10 @@ actor {
     audioFile : Storage.ExternalBlob,
     lyrics : Text,
   ) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add songs");
+    if (not adminArtists.contains(caller)) {
+      Runtime.trap("Unauthorized: Only admins/artists can add songs");
     };
+
     let song : Song = {
       id = nextSongId;
       title;
@@ -196,6 +211,7 @@ actor {
   };
 
   public query ({ caller }) func getSong(id : Nat) : async SongView {
+    // No authorization check - accessible to all including guests
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (?song) { toSongView(song) };
@@ -203,29 +219,29 @@ actor {
   };
 
   public query ({ caller }) func getAllSongs() : async [SongView] {
+    // No authorization check - accessible to all including guests
     songs.values().toArray().map(toSongView).sort();
   };
 
   public query ({ caller }) func getAllSongsByTitle() : async [SongView] {
+    // No authorization check - accessible to all including guests
     songs.values().toArray().map(toSongView).sort(SongView.compareByTitle);
   };
 
   public shared ({ caller }) func deleteSong(id : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can delete songs");
+    if (not adminArtists.contains(caller)) {
+      Runtime.trap("Unauthorized: Only admins/artists can delete songs");
     };
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
-      case (?song) {
-        if (song.owner != caller) {
-          Runtime.trap("Only the owner can delete this song");
-        };
+      case (_song) {
         songs.remove(id);
       };
     };
   };
 
   public query ({ caller }) func searchSongs(keyword : Text) : async [SongView] {
+    // No authorization check - accessible to all including guests
     let filtered = songs.values().toArray().filter(
       func(song) {
         song.title.contains(#text keyword) or song.artist.contains(#text keyword);
@@ -421,9 +437,8 @@ actor {
 
   // Official playlists
   public shared ({ caller }) func createOfficialPlaylist(name : Text) : async () {
-    // Only admin/artist can create official playlists
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Only admins can create official playlists");
+    if (not adminArtists.contains(caller)) {
+      Runtime.trap("Unauthorized: Only admins/artists can create official playlists");
     };
 
     if (officialPlaylists.containsKey(name)) {
@@ -440,8 +455,8 @@ actor {
   };
 
   public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Only admins can add to official playlists");
+    if (not adminArtists.contains(caller)) {
+      Runtime.trap("Unauthorized: Only admins/artists can add to official playlists");
     };
 
     if (not songs.containsKey(songId)) {
@@ -459,8 +474,8 @@ actor {
   };
 
   public shared ({ caller }) func removeFromOfficialPlaylist(playlistName : Text, songId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Only admins can remove from official playlists");
+    if (not adminArtists.contains(caller)) {
+      Runtime.trap("Unauthorized: Only admins/artists can remove from official playlists");
     };
 
     switch (officialPlaylists.get(playlistName)) {
@@ -477,10 +492,12 @@ actor {
   };
 
   public query ({ caller }) func getOfficialPlaylist(playlistName : Text) : async ?PlaylistView {
+    // No authorization check - accessible to all including guests
     officialPlaylists.get(playlistName).map(func(playlist) { toPlaylistView(playlistName, playlist) });
   };
 
   public query ({ caller }) func getOfficialPlaylistDetails(playlistName : Text) : async [SongView] {
+    // No authorization check - accessible to all including guests
     switch (officialPlaylists.get(playlistName)) {
       case (null) { [] };
       case (?playlist) {

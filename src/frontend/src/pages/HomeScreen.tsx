@@ -6,27 +6,36 @@ import { MusicPlayer } from '../components/player/MusicPlayer';
 import { HomeChannelBanner } from '../components/home/HomeChannelBanner';
 import { HorizontalSongCard } from '../components/songs/HorizontalSongCard';
 import { HorizontalSongRow } from '../components/songs/HorizontalSongRow';
+import { useAdminContext } from '../context/AdminContext';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAuthErrorMessage } from '../utils/authorizationErrors';
 import type { SongView } from '../backend';
 
 export function HomeScreen() {
   const { data: songs, isLoading } = useGetAllSongs();
   const deleteSongMutation = useDeleteSong();
+  const { isAdmin } = useAdminContext();
   const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
 
   const currentSong = songs?.find(s => s.id === currentSongId) || null;
 
   const handleDelete = async (id: bigint) => {
+    if (!isAdmin) {
+      toast.error('Admin access required');
+      return;
+    }
+
     try {
       await deleteSongMutation.mutateAsync(id);
       if (currentSongId === id) {
         setCurrentSongId(null);
       }
       toast.success('Song deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete song');
-      console.error(error);
+    } catch (error: any) {
+      const errorMessage = getAuthErrorMessage(error);
+      toast.error(errorMessage);
+      console.error('Delete song error:', error);
     }
   };
 
@@ -112,6 +121,7 @@ export function HomeScreen() {
                   onPlay={() => setCurrentSongId(song.id)}
                   onDelete={() => handleDelete(song.id)}
                   isPlaying={currentSongId === song.id}
+                  showDelete={isAdmin}
                 />
               ))}
             </div>

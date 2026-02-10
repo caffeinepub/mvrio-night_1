@@ -4,6 +4,8 @@ import { useInternetIdentity } from './useInternetIdentity';
 import type { SongView, PlaylistView } from '../backend';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
+import { isDataUrl, dataUrlToBytes } from '../utils/dataUrl';
+import { getAuthErrorMessage } from '../utils/authorizationErrors';
 
 export function useGetAllSongs() {
   const { actor, isFetching } = useActor();
@@ -46,9 +48,40 @@ export function useAddSong() {
     }) => {
       if (!actor) throw new Error('Actor not initialized');
       
-      const albumArt = data.albumArtUrl ? ExternalBlob.fromURL(data.albumArtUrl) : ExternalBlob.fromURL('');
-      const titleImage = data.titleImageUrl ? ExternalBlob.fromURL(data.titleImageUrl) : ExternalBlob.fromURL('');
-      const audioFile = ExternalBlob.fromURL(data.audioUrl);
+      // Handle album art - convert data URLs to bytes
+      let albumArt: ExternalBlob;
+      if (data.albumArtUrl) {
+        if (isDataUrl(data.albumArtUrl)) {
+          const bytes = dataUrlToBytes(data.albumArtUrl);
+          albumArt = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        } else {
+          albumArt = ExternalBlob.fromURL(data.albumArtUrl);
+        }
+      } else {
+        albumArt = ExternalBlob.fromURL('');
+      }
+      
+      // Handle title image - convert data URLs to bytes
+      let titleImage: ExternalBlob;
+      if (data.titleImageUrl) {
+        if (isDataUrl(data.titleImageUrl)) {
+          const bytes = dataUrlToBytes(data.titleImageUrl);
+          titleImage = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        } else {
+          titleImage = ExternalBlob.fromURL(data.titleImageUrl);
+        }
+      } else {
+        titleImage = ExternalBlob.fromURL('');
+      }
+      
+      // Handle audio file - convert data URLs to bytes
+      let audioFile: ExternalBlob;
+      if (isDataUrl(data.audioUrl)) {
+        const bytes = dataUrlToBytes(data.audioUrl);
+        audioFile = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+      } else {
+        audioFile = ExternalBlob.fromURL(data.audioUrl);
+      }
       
       return actor.addSong(
         data.title,
@@ -61,6 +94,11 @@ export function useAddSong() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Add song error:', error);
     },
   });
 }
@@ -76,6 +114,11 @@ export function useDeleteSong() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Delete song error:', error);
     },
   });
 }
@@ -125,6 +168,9 @@ export function useToggleLikeSong() {
           likesCount: newLikesCount,
         };
       });
+      
+      // Invalidate favorites to keep them in sync
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
     onError: (err) => {
       toast.error('Failed to update like');

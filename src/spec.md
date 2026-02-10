@@ -1,11 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Make the Home channel banner area larger without cropping/stretching the banner image, and add a neon-green “THE MVRIO” text overlay on the right side of the banner.
+**Goal:** Add an Admin/Artist allowlist with backend-enforced permissions and frontend role-based gating so only approved principals can manage songs, official playlists, and Home banner edits, while preserving guest read-only mode.
 
 **Planned changes:**
-- Increase the Home channel banner container’s width/height so it appears noticeably larger on mobile and desktop while keeping the banner image fully visible (no cropping, no stretching).
-- Add a responsive overlay text label “THE MVRIO” positioned in the banner’s right-side region, styled in neon green (#1ED760) and kept readable.
-- Adjust banner layout/spacing so the overlay and the existing banner edit controls (upload/link/clear) do not overlap and remain clickable, with no collisions with the header, A2HS banner, or content below.
+- Add a hard-coded Admin/Artist Principal ID allowlist in the Motoko canister and a query method to check whether the caller is admin.
+- Enforce admin-only authorization in the backend for song management operations (add/upload and delete), returning/raising authorization failures for non-admin signed-in users while keeping guest read-only flows working.
+- Enforce admin-only authorization in the backend for official playlist write operations (create/add/remove) while keeping official playlist reads accessible to everyone and leaving user-owned playlist permissions unchanged.
+- Add frontend role detection (querying the backend and caching per session) to derive an `isAdmin` state that updates on sign-in/sign-out and remains `false` in guest mode.
+- Gate admin-only UI entry points (song add/upload, song delete, Home banner editing controls) so they are hidden or disabled for non-admin users, with clear English feedback.
+- Update frontend error handling so backend authorization failures for admin-only actions show an English “admin access required” style message (without triggering the guest soft sign-in modal), and prevent retry loops for these actions.
 
-**User-visible outcome:** The Home banner displays in a larger area across screen sizes with the full image always visible, and the artist name “THE MVRIO” appears on top of the banner on the right in neon green without interfering with controls.
+**User-visible outcome:** Admin/Artist users (from the allowlist) can add/delete songs, manage official playlists, and edit the Home banner; all other users can still browse/search/play in guest/read-only mode, but cannot access or trigger admin-only features and will see clear English permission errors if they try.

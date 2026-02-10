@@ -1,38 +1,120 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Resize Home banner area and add neon-green “THE MVRIO” overlay",
+  "title": "Frontend admin role detection, UI gating, and authorization error handling",
   "requirements": [
     {
-      "id": "REQ-92",
-      "summary": "Increase the Home channel banner’s visual area (wider/taller) while preserving full, uncropped, unstretched image visibility across breakpoints.",
+      "id": "REQ-103",
+      "summary": "Add frontend admin/artist role detection with caching and correct updates on identity changes (including guest mode).",
       "acceptanceCriteria": [
-        "Home screen channel banner renders with a noticeably larger visual area than before on both mobile and desktop (increase height and maintain full-width layout).",
-        "The banner image is never cropped and never stretched: it must remain fully visible within the banner area (e.g., object-contain behavior preserved).",
-        "No layout collisions are introduced with the A2HS banner, header, or the content below the banner (content remains readable and spaced correctly)."
+        "Frontend calls the backend admin-check query (from REQ-100) and derives an `isAdmin` boolean for the current session.",
+        "When the user is signed out / in guest mode, `isAdmin` is treated as `false` and the app continues to function normally in read-only mode.",
+        "Switching identities (sign in / sign out) correctly updates the derived `isAdmin` state and any dependent UI."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/home/HomeChannelBanner.tsx",
+          "path": "frontend/src/hooks/useIsAdmin.ts",
+          "operation": "create",
+          "description": "Create a React Query hook that uses the existing actor (core-infrastructure) to call the backend admin-check query and cache/derive an `isAdmin` boolean, defaulting to false when actor/identity is not available. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/context/AdminContext.tsx",
+          "operation": "create",
+          "description": "Add a lightweight AdminContext provider/consumer to expose `isAdmin` (and loading state) app-wide, powered by `useIsAdmin`, so dependent UI can reactively update on identity changes without breaking guest mode."
+        },
+        {
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Update the banner container sizing to be taller on mobile and desktop using responsive height/min-height (while keeping full-width layout). Keep the image rendered with object-contain and explicit w-full/h-full so it is never cropped or stretched, and verify spacing/margins so Home content below remains readable and does not collide with the A2HS banner or header."
+          "description": "Wire the new AdminContext provider into the existing app provider tree so all screens/components can access the derived `isAdmin` state, and ensure it updates when Internet Identity changes."
         }
       ]
     },
     {
-      "id": "REQ-93",
-      "summary": "Overlay the artist name “THE MVRIO” on the right side of the Home banner using neon green (#1ED760) without blocking banner controls and with responsive behavior.",
+      "id": "REQ-104",
+      "summary": "Gate admin-only UI entry points (song add/upload, song delete, and Home banner editing controls) based on `isAdmin`, while keeping read-only browsing visible.",
       "acceptanceCriteria": [
-        "The text “THE MVRIO” is visible on top of the banner image, positioned on the right side within the banner area (right-side box placement).",
-        "The text color uses neon green (#1ED760) and remains readable on both themes/backgrounds.",
-        "The overlay does not block or overlap the existing banner edit controls (upload/link/clear); controls remain clickable and visually accessible.",
-        "The overlay is responsive: it stays within the banner area across common mobile and desktop widths without overflowing or being cut off."
+        "If the current user is not admin, all UI entry points that open/trigger song upload/add (e.g., the `SongEditor` trigger) are not shown or are disabled with clear feedback.",
+        "If the current user is not admin, all UI entry points that delete songs (e.g., delete buttons on song cards/rows) are not shown or are disabled with clear feedback.",
+        "If the current user is not admin, Home banner editing controls in `HomeChannelBanner` (upload, URL set, clear/reset) are not shown or are disabled with clear feedback; the banner display remains visible.",
+        "If a non-admin user somehow triggers an admin-only action (e.g., stale UI state), the frontend shows an English error message (toast/dialog) such as \"Admin access required\" and does not crash.",
+        "Admin users continue to see and use the admin-only controls as before."
       ],
       "file_operations": [
         {
+          "path": "frontend/src/components/auth/AdminOnly.tsx",
+          "operation": "create",
+          "description": "Create an AdminOnly wrapper/utility component that uses AdminContext and either renders children for admins or renders a disabled/blocked affordance with clear English feedback using existing shadcn-ui building blocks (e.g., Button) and toast messaging. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/songs/SongEditor.tsx",
+          "operation": "modify",
+          "description": "Gate the \"Add Song\" trigger so it is hidden/disabled for non-admin users, and ensure any attempt to submit while non-admin shows an English \"Admin access required\" message (instead of crashing). Use the AdminOnly/AdminContext capability to support gating. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/HomeScreen.tsx",
+          "operation": "modify",
+          "description": "Use the derived `isAdmin` state to gate the SongEditor entry point and to ensure delete actions are only wired for admins (non-admins should not see delete entry points). Keep song browsing/playback unchanged."
+        },
+        {
+          "path": "frontend/src/pages/SongsScreen.tsx",
+          "operation": "modify",
+          "description": "Use the derived `isAdmin` state to gate the SongEditor entry point and to ensure delete actions are only wired for admins (non-admins should not see delete entry points). Keep song browsing/playback/sorting unchanged."
+        },
+        {
+          "path": "frontend/src/components/songs/SongCard.tsx",
+          "operation": "modify",
+          "description": "Update the song card to support hiding/disabling the delete control for non-admin users (e.g., via a prop or AdminContext) while keeping play and overflow menu available."
+        },
+        {
+          "path": "frontend/src/components/songs/SongListRow.tsx",
+          "operation": "modify",
+          "description": "Update the song list row to support hiding/disabling the delete control for non-admin users (e.g., via a prop or AdminContext) while keeping play and overflow menu available."
+        },
+        {
           "path": "frontend/src/components/home/HomeChannelBanner.tsx",
           "operation": "modify",
-          "description": "Add an absolutely-positioned, right-aligned overlay text element “THE MVRIO” inside the banner (right-side region). Style it with neon green (#1ED760) and readability enhancements (e.g., text-shadow and/or subtle translucent backdrop). Ensure overlay uses pointer-events-none and a lower z-index than the edit controls, and reposition/raise the controls container z-index so upload/link/clear remain visually accessible and clickable. Make overlay responsive (font sizes and max-width constraints) so it stays within the banner area without overflow or clipping."
+          "description": "Gate banner editing controls (upload, URL set, clear/reset) behind `isAdmin` while always rendering the banner display for everyone. Ensure non-admin users see no editing entry points or see disabled controls with clear English feedback."
+        }
+      ]
+    },
+    {
+      "id": "REQ-105",
+      "summary": "Improve frontend authorization error handling for admin-only operations to show clear English messages for signed-in non-admins and avoid triggering guest sign-in flows or retry loops.",
+      "acceptanceCriteria": [
+        "When a signed-in non-admin attempts an admin-only action and the backend returns an authorization error, the UI displays an English message indicating admin permission is required (and does not open the sign-in modal).",
+        "When a guest attempts a sign-in-required (non-admin) restricted action (like creating a personal playlist, liking, favorites, downloads), the existing soft sign-in modal behavior remains unchanged.",
+        "No infinite retry loops occur via pending-action retry for admin-only actions when the user is signed in but not admin."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/utils/authorizationErrors.ts",
+          "operation": "create",
+          "description": "Add shared helpers to classify backend authorization failures (e.g., trap messages containing \"Unauthorized\") and map them to user-facing English messages, including a distinct \"Admin access required\" path for admin-only actions."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Update admin-only mutations (addSong/deleteSong) to interpret authorization failures using the shared helper and surface a consistent English \"Admin access required\" message for signed-in non-admin users; do not route these errors into the soft sign-in modal behavior."
+        },
+        {
+          "path": "frontend/src/components/songs/SongEditor.tsx",
+          "operation": "modify",
+          "description": "Adjust submit error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message when backend authorization fails."
+        },
+        {
+          "path": "frontend/src/pages/HomeScreen.tsx",
+          "operation": "modify",
+          "description": "Adjust delete error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message and the UI does not crash if a stale delete action is triggered."
+        },
+        {
+          "path": "frontend/src/pages/SongsScreen.tsx",
+          "operation": "modify",
+          "description": "Adjust delete error handling to use the shared authorization error mapping so signed-in non-admin users receive a clear English \"Admin access required\" message and the UI does not crash if a stale delete action is triggered."
+        },
+        {
+          "path": "frontend/src/hooks/usePendingAction.ts",
+          "operation": "modify",
+          "description": "Ensure pending-action retry behavior remains scoped to sign-in-required user actions only, and that admin-only authorization failures are not treated as authentication-required (preventing retry loops for signed-in non-admin users)."
         }
       ]
     }

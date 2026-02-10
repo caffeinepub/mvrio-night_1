@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 39,
-  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system: guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. Support Google OAuth and passwordless Email Magic Link (Magic.link SDK loginWithMagicLink using import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY). After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
+  "projectStateVersion": 43,
+  "summary": "Build an ultra-premium music PWA called “MVRIO Night” (short name “MVRIO”) using the standard Caffeine stack (React + TypeScript + Tailwind frontend, Motoko backend), featuring a night-sky/starfield theme with neon green highlights, Spotify-style bottom tab navigation (Home/Songs/Library/Search), song upload/URL management + player, sidebar navigation, custom song requests/contact/support links, day/night theme toggle, and an always-show Add-to-Home-Screen install banner (Close hides for session only). Add a first-launch-only welcome popup offering “Continue as Guest” and “Sign In”, with guest access allowed without login and the popup never showing again after first dismissal via a localStorage flag. Implement a full authentication system: guest mode is read-only (browse songs, play songs, view lyrics); restricted actions (Like songs, Create playlists, Add songs to playlists, Download songs) require sign-in and, when triggered by a guest, must open a soft sign-in modal without navigation. Support Google OAuth and passwordless Email Magic Link (Magic.link SDK loginWithMagicLink using import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY). After successful login, return to the exact prior screen + scroll position and automatically retry any pending blocked action. Add an Admin/Artist role system enforced in both backend and frontend using a hard-coded allowlist of admin Principal IDs in the canister: admins can manage songs, official playlists, app settings/layout/banners; all other authenticated users are normal users. Update the UI layout: Home gets a full-width channel-style banner (upload or URL) placed below A2HS and header, plus responsive horizontal ‘New Songs’ and ‘Top Songs’ rows; Songs gets a ‘Top’ label/filter and a sort dropdown (Latest/Most Liked/Most Heard); Library gets top tabs for Songs and Playlists. Keep existing colors, theming logic, bottom navigation behavior, and animations unchanged.",
   "architectural_notes": [
     "Use standard Caffeine stack: React + TypeScript + Tailwind (frontend) and Motoko (backend).",
     "UI rule: if component background is neon green (#1ED760), force text/icons to black (#000000); otherwise use white on dark backgrounds; ensure contrast checks.",
@@ -19,7 +19,8 @@
     "BottomTabBar inactive tab ICONS are not turning pure white (#FFFFFF) in Night mode (labels are correct); issue occurs on both mobile and desktop.",
     "Build failed due to internal complexity/tooling limits when attempting to implement advanced song interactions + playlist system + favorites + deep links + download/share + official playlists in one pass; may require splitting into smaller builds.",
     "Deployment step failed with generic “Deployment error” after code generation; likely due to deploy-service hiccup or platform/internal deployment limits rather than app logic.",
-    "Like button is not working; it must toggle like/unlike on repeated taps."
+    "Like button is not working; it must toggle like/unlike on repeated taps.",
+    "Add Song flow: after successful uploads, clicking “Add Song” fails with message “failed to upload” (final submit/save step failing)."
   ],
   "isFixRequest": false,
   "existing_features": [
@@ -671,6 +672,78 @@
         "REQ-93"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-home-channel-banner-layout-so-that-on-both-desktop-and-mobile-it-uses-a-consistent-left-right-split-layout-the-banner-image-must-render-in-a-left-region-and-the-artist-name-text-the-mvrio-must-render-in-a-right-region-the-intended-green-box-area-preserve-the-existing-no-crop-no-stretch-behavior-for-the-banner-image-image-must-remain-fully-visible-using-a-contain-style-fit",
+      "title": "Update the Home channel banner layout so that on BOTH desktop and mobile it uses a consistent left-right split layout: the banner image must render in a left region and the artist name text \"THE MVRIO\" must render in a right region (the intended green-box area). Preserve the existing 'no crop / no stretch' behavior for the banner image (image must remain fully visible using a contain-style fit).",
+      "reqIds": [
+        "REQ-94"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-reduce-the-home-channel-banner-component-size-on-desktop-by-reducing-both-its-visual-width-and-height-it-currently-appears-too-large-keep-the-banner-image-that-is-currently-configured-do-not-change-the-banner-image-asset-selection-logic-and-keep-the-left-right-layout-from-req-94-on-desktop-as-well",
+      "title": "Reduce the Home channel banner component size on desktop by reducing BOTH its visual width and height (it currently appears too large). Keep the banner image that is currently configured (do not change the banner image asset selection logic) and keep the left-right layout from REQ-94 on desktop as well.",
+      "reqIds": [
+        "REQ-95"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-add-song-flow-so-that-when-the-user-selects-uploads-successfully-audio-and-or-images-and-then-clicks-the-add-song-submit-button-the-song-is-created-successfully-and-the-ui-no-longer-ends-with-the-generic-failure-state-currently-shown-as-failed-to-add-song-user-reported-as-failed-to-uplead-diagnose-and-fix-the-final-submission-step-so-it-reliably-persists-the-new-song-in-the-canister-including-when-audio-and-images-were-selected-via-the-file-upload-tabs",
+      "title": "Fix the Add Song flow so that when the user selects uploads successfully (audio and/or images) and then clicks the \"Add Song\" submit button, the song is created successfully and the UI no longer ends with the generic failure state (currently shown as \"Failed to add song\" / user reported as \"failed to uplead\"). Diagnose and fix the final submission step so it reliably persists the new song in the canister, including when audio and images were selected via the file-upload tabs.",
+      "reqIds": [
+        "REQ-96"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-an-animated-like-toggle-button-behavior-everywhere-the-like-heart-control-appears-so-that-it-feels-like-a-real-toggle-tapping-once-likes-tapping-again-unlikes-with-a-clear-animation-on-state-change-the-toggle-must-remain-in-sync-with-the-backend-likecount-updates-and-must-not-break-the-existing-auth-restriction-flow-guests-should-still-be-prompted-to-sign-in-via-the-existing-soft-sign-in-modal-flow",
+      "title": "Implement an animated Like toggle button behavior everywhere the Like (heart) control appears so that it feels like a real toggle: tapping once likes, tapping again unlikes, with a clear animation on state change. The toggle must remain in sync with the backend likeCount updates and must not break the existing auth restriction flow (guests should still be prompted to sign in via the existing soft sign-in modal flow).",
+      "reqIds": [
+        "REQ-97"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-three-dot-overflow-menu-button-is-present-and-functional-on-the-right-side-of-every-song-item-wherever-songs-appear-in-the-ui-cards-list-rows-horizontal-cards-rows-library-song-list-and-player-context-where-applicable-interacting-with-the-menu-button-must-not-trigger-playback-of-the-song-item",
+      "title": "Ensure the three-dot (⋮) overflow menu button is present and functional on the right side of every song item wherever songs appear in the UI (cards, list rows, horizontal cards/rows, library song list, and player context where applicable). Interacting with the menu button must not trigger playback of the song item.",
+      "reqIds": [
+        "REQ-98"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-per-user-favorites-songs-view-so-each-signed-in-user-can-see-only-their-own-favorited-songs-the-ui-must-fetch-the-signed-in-user-s-favorites-from-the-backend-favorites-system-and-display-the-matching-song-items-in-a-dedicated-section-in-the-library-songs-tab-or-an-equivalent-clearly-labeled-area-without-making-favorites-global-shared-between-users",
+      "title": "Add a per-user Favorites songs view so each signed-in user can see ONLY their own favorited songs. The UI must fetch the signed-in user's favorites from the backend favorites system and display the matching Song items in a dedicated section in the Library → Songs tab (or an equivalent clearly labeled area), without making favorites global/shared between users.",
+      "reqIds": [
+        "REQ-99"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-frontend-role-detection-and-caching-so-the-react-app-can-determine-whether-the-currently-signed-in-identity-is-an-admin-artist-without-breaking-guest-mode",
+      "title": "Add frontend role detection and caching so the React app can determine whether the currently signed-in identity is an Admin/Artist, without breaking guest mode.",
+      "reqIds": [
+        "REQ-103"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-gate-all-admin-only-ui-entry-points-so-admin-artist-only-features-are-hidden-or-blocked-for-normal-users-song-upload-add-song-delete-and-home-banner-editing-controls",
+      "title": "Gate all admin-only UI entry points so Admin/Artist-only features are hidden or blocked for normal users: song upload/add, song delete, and Home banner editing controls.",
+      "reqIds": [
+        "REQ-104"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-frontend-error-handling-for-admin-only-operations-properly-interprets-backend-authorization-failures-and-shows-a-clear-english-message-for-non-admin-signed-in-users-while-preserving-the-existing-soft-sign-in-modal-flow-for-guest-only-restrictions",
+      "title": "Ensure frontend error handling for admin-only operations properly interprets backend authorization failures and shows a clear English message for non-admin signed-in users, while preserving the existing soft sign-in modal flow for guest-only restrictions.",
+      "reqIds": [
+        "REQ-105"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -970,6 +1043,66 @@
       "id": "AR-66",
       "summary": "Home channel banner update: enlarge banner image area (wider + taller) while keeping the original image fully visible (no stretching, no cropping) and overlay artist name “THE MVRIO” in neon green inside the right-side (green-outlined) area on top of the banner",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-67",
+      "summary": "Home channel banner responsiveness: reduce banner image size on desktop (both width+height) because it looks too large, while keeping the specified banner image (red-box) and preserving no-crop/no-stretch behavior",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-68",
+      "summary": "Banner layout requirement update: enforce the same left-right layout on BOTH desktop and mobile (banner image on the left, artist name “THE MVRIO” on the right in the green-box region)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-69",
+      "summary": "Fix Add Song failure: uploads succeed but clicking “Add Song” ends with “failed to upload”; diagnose and fix final save/submit step so songs are actually created successfully",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-70",
+      "summary": "Like button UX: make the like/unlike toggle include an animation while keeping correct toggle behavior and backend sync",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-71",
+      "summary": "Favorites per-user: ensure each signed-in user has their own Favorites list and the UI can show that specific user’s favorited songs (not global/shared)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-72",
+      "summary": "Implement Admin/Artist role system with hard-coded admin Principal allowlist in Motoko canister; enforce backend authorization and frontend gating across all admin-only features (song upload/edit/delete, official playlists, app settings/layout/banner changes). Non-admin authenticated users default to normal role.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-73",
+      "summary": "Implement a hard-coded allowlist of Admin/Artist Principal IDs in the Motoko canister and expose a query method that returns whether the caller is an Admin/Artist.",
+      "reqIds": [
+        "REQ-100"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-74",
+      "summary": "Enforce Admin/Artist-only permissions in the backend for all admin-only song management operations, so normal signed-in users cannot upload/add songs or delete songs.",
+      "reqIds": [
+        "REQ-101"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-75",
+      "summary": "Enforce Admin/Artist-only permissions in the backend for all official playlist management operations (create/add/remove), while keeping official playlist reads accessible to everyone.",
+      "reqIds": [
+        "REQ-102"
+      ],
       "status": "pending"
     }
   ],

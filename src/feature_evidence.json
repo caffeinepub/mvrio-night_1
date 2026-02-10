@@ -2,10 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-the-home-channel-banner-component-so-the-banner-area-is-larger-both-wider-and-taller-while-keeping-the-banner-image-fully-visible-at-all-times-no-stretching-and-no-cropping",
-      "featureTitle": "Update the Home channel banner component so the banner area is larger (both wider and taller) while keeping the banner image fully visible at all times (no stretching and no cropping).",
+      "featureId": "feature-add-frontend-role-detection-and-caching-so-the-react-app-can-determine-whether-the-currently-signed-in-identity-is-an-admin-artist-without-breaking-guest-mode",
+      "featureTitle": "Add frontend role detection and caching so the React app can determine whether the currently signed-in identity is an Admin/Artist, without breaking guest mode.",
       "files": [
-        "frontend/src/components/home/HomeChannelBanner.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/context/AdminContext.tsx",
+        "frontend/src/hooks/useIsAdmin.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -17,15 +19,20 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-92"
+        "REQ-103"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-overlay-the-artist-name-text-the-mvrio-on-top-of-the-home-channel-banner-inside-the-right-side-region-the-green-outlined-area-in-the-uploaded-screenshots-styled-using-the-app-s-neon-green-theme-color-1ed760",
-      "featureTitle": "Overlay the artist name text “THE MVRIO” on top of the Home channel banner inside the right-side region (the green-outlined area in the uploaded screenshots), styled using the app’s neon green theme color (#1ED760).",
+      "featureId": "feature-gate-all-admin-only-ui-entry-points-so-admin-artist-only-features-are-hidden-or-blocked-for-normal-users-song-upload-add-song-delete-and-home-banner-editing-controls",
+      "featureTitle": "Gate all admin-only UI entry points so Admin/Artist-only features are hidden or blocked for normal users: song upload/add, song delete, and Home banner editing controls.",
       "files": [
-        "frontend/src/components/home/HomeChannelBanner.tsx"
+        "frontend/src/components/auth/AdminOnly.tsx",
+        "frontend/src/components/home/HomeChannelBanner.tsx",
+        "frontend/src/components/songs/SongCard.tsx",
+        "frontend/src/components/songs/SongEditor.tsx",
+        "frontend/src/pages/HomeScreen.tsx",
+        "frontend/src/pages/SongsScreen.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -37,7 +44,32 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-93"
+        "REQ-104"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-frontend-error-handling-for-admin-only-operations-properly-interprets-backend-authorization-failures-and-shows-a-clear-english-message-for-non-admin-signed-in-users-while-preserving-the-existing-soft-sign-in-modal-flow-for-guest-only-restrictions",
+      "featureTitle": "Ensure frontend error handling for admin-only operations properly interprets backend authorization failures and shows a clear English message for non-admin signed-in users, while preserving the existing soft sign-in modal flow for guest-only restrictions.",
+      "files": [
+        "frontend/src/components/songs/SongEditor.tsx",
+        "frontend/src/hooks/usePendingAction.ts",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/HomeScreen.tsx",
+        "frontend/src/pages/SongsScreen.tsx",
+        "frontend/src/utils/authorizationErrors.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-105"
       ],
       "confidence": "high"
     }

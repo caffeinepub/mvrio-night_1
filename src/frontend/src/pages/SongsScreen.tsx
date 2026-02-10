@@ -4,8 +4,10 @@ import { SongEditor } from '../components/songs/SongEditor';
 import { MusicPlayer } from '../components/player/MusicPlayer';
 import { SongsSortBar, type SortOption } from '../components/songs/SongsSortBar';
 import { SongListRow } from '../components/songs/SongListRow';
+import { useAdminContext } from '../context/AdminContext';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAuthErrorMessage } from '../utils/authorizationErrors';
 import type { SongView } from '../backend';
 
 interface SongsScreenProps {
@@ -16,6 +18,7 @@ interface SongsScreenProps {
 export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenProps = {}) {
   const { data: songs, isLoading } = useGetAllSongs();
   const deleteSongMutation = useDeleteSong();
+  const { isAdmin } = useAdminContext();
   const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('latest');
 
@@ -45,15 +48,21 @@ export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenPro
   const currentSong = sortedSongs?.find(s => s.id === currentSongId) || null;
 
   const handleDelete = async (id: bigint) => {
+    if (!isAdmin) {
+      toast.error('Admin access required');
+      return;
+    }
+
     try {
       await deleteSongMutation.mutateAsync(id);
       if (currentSongId === id) {
         setCurrentSongId(null);
       }
       toast.success('Song deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete song');
-      console.error(error);
+    } catch (error: any) {
+      const errorMessage = getAuthErrorMessage(error);
+      toast.error(errorMessage);
+      console.error('Delete song error:', error);
     }
   };
 
@@ -106,7 +115,7 @@ export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenPro
                 key={song.id.toString()}
                 song={song}
                 onPlay={() => setCurrentSongId(song.id)}
-                onDelete={() => handleDelete(song.id)}
+                onDelete={isAdmin ? () => handleDelete(song.id) : undefined}
                 isPlaying={currentSongId === song.id}
               />
             ))}

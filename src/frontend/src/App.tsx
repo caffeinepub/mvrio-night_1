@@ -13,6 +13,7 @@ import { ContactScreen } from './pages/ContactScreen';
 import { ThemeProvider } from './hooks/useTheme';
 import { SettingsProvider } from './hooks/useSettings';
 import { AuthProvider } from './context/AuthContext';
+import { AdminProvider } from './context/AdminContext';
 import { Toaster } from '@/components/ui/sonner';
 import { parseSongIdFromUrl, clearSongParamFromUrl } from './utils/deepLinks';
 import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
@@ -97,7 +98,9 @@ function App() {
     <ThemeProvider>
       <SettingsProvider>
         <AuthProvider currentScreen={currentScreen} onNavigate={setCurrentScreen}>
-          <AppContent />
+          <AdminProvider>
+            <AppContent />
+          </AdminProvider>
         </AuthProvider>
       </SettingsProvider>
     </ThemeProvider>

@@ -1,6 +1,7 @@
-import { Play, Music } from 'lucide-react';
+import { Play, Music, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SongEngagementBar } from './SongEngagementBar';
+import { SongOverflowMenu } from './SongOverflowMenu';
 import type { SongView } from '../../backend';
 
 interface HorizontalSongCardProps {
@@ -40,6 +41,13 @@ export function HorizontalSongCard({ song, isPlaying, onPlay }: HorizontalSongCa
           >
             <Play className="w-5 h-5" fill={isPlaying ? 'currentColor' : 'none'} />
           </Button>
+        </div>
+        
+        <div 
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <SongOverflowMenu song={song} />
         </div>
       </div>
       
