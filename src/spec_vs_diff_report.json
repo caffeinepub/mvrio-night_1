@@ -1,34 +1,39 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T18:38:16.273Z",
-  "summary": "Frontend changes add a dedicated playlist favorites hook and update the mobile PlaylistOverflowMenu to close the menu, require auth for favorites, and implement Share via Web Share API with clipboard/toast fallback. Backend shows a new per-principal playlistFavorites data structure, but the required backend endpoints/authorization/persistence behavior are not evidenced in the provided truncated diff.",
+  "generatedAt": "2026-02-11T05:12:05.428Z",
+  "summary": "AppHeader now references `/assets/generated/header-music-note.dim_128x128.png` for the header logo while keeping the same `w-10 h-10` wrapper and `img` sizing classes. However, the required PNG asset file itself is not shown as added under `frontend/public/assets/generated/`. Additionally, unrelated project metadata/summary files were modified that were not requested.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)` with proper authz (any authenticated user; unauth rejected), per-user isolation, and persistence.",
-      "reason": "The backend diff excerpt shows a new `playlistFavorites = Map.empty<Principal, Set.Set<Text>>()`, but does not show the required public methods `getPlaylistFavorites` / `togglePlaylistFavorite`, their authorization checks for authenticated users, their return value semantics (`wasRemoved`), or any persistence/stable storage handling. With the backend file truncated, these cannot be confirmed as implemented.",
-      "evidence": [
-        "backend/main.mo (truncated excerpt shows only data structure; no endpoints/persistence shown)"
-      ]
-    },
-    {
       "id": "REQ-2",
-      "requirement": "If the user is signed out, tapping Favorites triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
-      "reason": "The menu triggers `requireAuth({ type: 'playlist-favorites', playlistName })`, but no evidence is shown that the pending action is resumed after sign-in to complete the toggle. That behavior would likely live in AuthContext or a pending-action handler, which is not part of the diff summary.",
+      "requirement": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>`.",
+      "reason": "The header references the new asset path, but the diff shows no added files (and specifically no PNG added under `frontend/public/assets/generated/`), so the image may be missing at build/runtime.",
       "evidence": [
-        "frontend/src/components/library/PlaylistOverflowMenu.tsx (calls requireAuth with type 'playlist-favorites')",
-        "frontend/src/hooks/usePlaylistFavorites.ts (onError calls requireAuth on sign-in required)"
+        "File diff summary: \"Added: 0\" / \"ADDED FILES: none\"",
+        "frontend/src/components/branding/AppHeader.tsx (src=\"/assets/generated/header-music-note.dim_128x128.png\")"
       ]
     }
   ],
-  "hallucinated_features": [],
-  "confidence": 0.62,
+  "hallucinated_features": [
+    {
+      "description": "Modified `frontend-file-summaries.txt` (project-wide summary content) even though the request was only to swap the header icon source.",
+      "reason": "The BuildRequest did not ask to update any summary/metadata files; only `AppHeader.tsx` and adding a static asset were required.",
+      "evidence": [
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "description": "Modified `project_state.json` to add/track new feature requests (AR-1..AR-4).",
+      "reason": "The BuildRequest did not request changes to project tracking/state files; the change is unrelated to swapping the header icon.",
+      "evidence": [
+        "project_state.json"
+      ]
+    }
+  ],
+  "confidence": 0.74,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/library/PlaylistOverflowMenu.tsx",
-    "frontend/src/hooks/usePlaylistFavorites.ts",
+    "frontend/src/components/branding/AppHeader.tsx",
     "project_state.json"
   ]
 }

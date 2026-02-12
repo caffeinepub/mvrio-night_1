@@ -2,11 +2,30 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-mobile-playlist-favorites-ui-so-tapping-add-to-favorites-remove-from-favorites-in-the-mobile-playlist-overflow-menu-successfully-saves-per-user-favorites-via-the-backend-and-updates-ui-state",
-      "featureTitle": "Fix the mobile playlist Favorites UI so tapping “Add to Favorites” / “Remove from Favorites” in the mobile playlist overflow menu successfully saves per-user favorites via the backend and updates UI state.",
+      "featureId": "feature-replace-the-current-header-logo-image-in-frontend-src-components-branding-appheader-tsx-with-a-neon-green-music-note-icon-that-has-a-white-outline-while-keeping-the-header-s-existing-sizing-alignment-spacing-and-layout-unchanged-do-not-change-wrapper-classes-like-w-10-h-10-padding-flex-layout-or-gaps",
+      "featureTitle": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
       "files": [
-        "frontend/src/components/library/PlaylistOverflowMenu.tsx",
-        "frontend/src/hooks/usePlaylistFavorites.ts"
+        "frontend/src/components/branding/AppHeader.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-the-new-music-note-icon-image-as-a-static-asset-under-frontend-public-assets-generated-and-reference-it-directly-from-the-header-img-src-do-not-route-image-loading-through-the-backend",
+      "featureTitle": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
+      "files": [
+        "frontend/src/components/branding/AppHeader.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -19,26 +38,6 @@
       ],
       "testIds": [
         "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-the-mobile-playlist-share-action-so-it-generates-a-playlist-deep-link-using-the-same-hash-query-deep-link-pattern-used-for-songs-playlist-instead-of-song-and-allows-users-to-share-via-native-share-sheet-when-supported-otherwise-copies-to-clipboard-without-redesigning-the-menu",
-      "featureTitle": "Fix the mobile playlist Share action so it generates a playlist deep link using the same hash/query deep-link pattern used for songs (playlist instead of song) and allows users to share via native share sheet when supported, otherwise copies to clipboard, without redesigning the menu.",
-      "files": [
-        "frontend/src/components/library/PlaylistOverflowMenu.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
       ],
       "confidence": "high"
     }

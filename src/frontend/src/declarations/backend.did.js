@@ -32,14 +32,20 @@ export const ContactInfo = IDL.Record({
   'youtube' : IDL.Text,
   'phone' : IDL.Text,
 });
+export const Attachment = IDL.Record({
+  'blob' : ExternalBlob,
+  'mimeType' : IDL.Text,
+  'fileName' : IDL.Text,
+});
 export const Message = IDL.Record({
   'id' : IDL.Nat,
   'content' : IDL.Text,
-  'audioAttachment' : IDL.Opt(ExternalBlob),
-  'pdfAttachment' : IDL.Opt(ExternalBlob),
+  'audioAttachment' : IDL.Opt(Attachment),
+  'pdfAttachment' : IDL.Opt(Attachment),
   'isRead' : IDL.Bool,
   'sender' : IDL.Text,
-  'imageAttachment' : IDL.Opt(ExternalBlob),
+  'imageAttachment' : IDL.Opt(Attachment),
+  'fileAttachment' : IDL.Opt(Attachment),
   'timestamp' : IDL.Int,
   'isAdmin' : IDL.Bool,
   'recipientSeen' : IDL.Bool,
@@ -208,6 +214,12 @@ export const idlService = IDL.Service({
       [],
     ),
   'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+  'reorderOfficialPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Vec(IDL.Nat), IDL.Text],
+      [],
+      [],
+    ),
+  'reorderPlaylist' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat)], [], []),
   'replyToMessage' : IDL.Func(
       [IDL.Principal, IDL.Text, IDL.Text],
       [IDL.Nat],
@@ -217,9 +229,10 @@ export const idlService = IDL.Service({
       [
         IDL.Principal,
         IDL.Text,
-        IDL.Opt(ExternalBlob),
-        IDL.Opt(ExternalBlob),
-        IDL.Opt(ExternalBlob),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
         IDL.Text,
       ],
       [IDL.Nat],
@@ -231,9 +244,10 @@ export const idlService = IDL.Service({
   'sendMessageWithAttachments' : IDL.Func(
       [
         IDL.Text,
-        IDL.Opt(ExternalBlob),
-        IDL.Opt(ExternalBlob),
-        IDL.Opt(ExternalBlob),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
+        IDL.Opt(Attachment),
       ],
       [IDL.Nat],
       [],
@@ -275,14 +289,20 @@ export const idlFactory = ({ IDL }) => {
     'youtube' : IDL.Text,
     'phone' : IDL.Text,
   });
+  const Attachment = IDL.Record({
+    'blob' : ExternalBlob,
+    'mimeType' : IDL.Text,
+    'fileName' : IDL.Text,
+  });
   const Message = IDL.Record({
     'id' : IDL.Nat,
     'content' : IDL.Text,
-    'audioAttachment' : IDL.Opt(ExternalBlob),
-    'pdfAttachment' : IDL.Opt(ExternalBlob),
+    'audioAttachment' : IDL.Opt(Attachment),
+    'pdfAttachment' : IDL.Opt(Attachment),
     'isRead' : IDL.Bool,
     'sender' : IDL.Text,
-    'imageAttachment' : IDL.Opt(ExternalBlob),
+    'imageAttachment' : IDL.Opt(Attachment),
+    'fileAttachment' : IDL.Opt(Attachment),
     'timestamp' : IDL.Int,
     'isAdmin' : IDL.Bool,
     'recipientSeen' : IDL.Bool,
@@ -451,6 +471,12 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'removeFromPlaylist' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+    'reorderOfficialPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Vec(IDL.Nat), IDL.Text],
+        [],
+        [],
+      ),
+    'reorderPlaylist' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat)], [], []),
     'replyToMessage' : IDL.Func(
         [IDL.Principal, IDL.Text, IDL.Text],
         [IDL.Nat],
@@ -460,9 +486,10 @@ export const idlFactory = ({ IDL }) => {
         [
           IDL.Principal,
           IDL.Text,
-          IDL.Opt(ExternalBlob),
-          IDL.Opt(ExternalBlob),
-          IDL.Opt(ExternalBlob),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
           IDL.Text,
         ],
         [IDL.Nat],
@@ -474,9 +501,10 @@ export const idlFactory = ({ IDL }) => {
     'sendMessageWithAttachments' : IDL.Func(
         [
           IDL.Text,
-          IDL.Opt(ExternalBlob),
-          IDL.Opt(ExternalBlob),
-          IDL.Opt(ExternalBlob),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
+          IDL.Opt(Attachment),
         ],
         [IDL.Nat],
         [],

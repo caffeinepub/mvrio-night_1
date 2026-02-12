@@ -1,12 +1,17 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, FileText, Music as MusicIcon, Image as ImageIcon } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { MarioAvatar } from './MarioAvatar';
 import { useHiddenAdminMode } from '../../context/HiddenAdminModeContext';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
-import type { Message, ContactInfo } from '../../backend';
-import { ReactNode } from 'react';
+import type { Message, ContactInfo, Attachment } from '../../backend';
+import { ReactNode, useState } from 'react';
+import { InlineAudioPlayer } from './InlineAudioPlayer';
+import { PdfAttachmentViewer } from './PdfAttachmentViewer';
+import { OtherFileAttachmentTile } from './OtherFileAttachmentTile';
+import { ImageAttachmentViewerOverlay } from './ImageAttachmentViewerOverlay';
+import { getAttachmentType, getAttachmentFileName } from '../../utils/messagingAttachments';
 
 interface MessageThreadProps {
   messages: Message[];
@@ -25,6 +30,7 @@ export function MessageThread({
 }: MessageThreadProps) {
   const { isAdminModeEnabled } = useHiddenAdminMode();
   const { identity } = useInternetIdentity();
+  const [fullscreenImage, setFullscreenImage] = useState<{ url: string; fileName: string } | null>(null);
 
   const handleDeleteClick = (messageId: bigint, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,59 +68,59 @@ export function MessageThread({
   const renderAttachment = (message: Message): ReactNode => {
     const attachments: ReactNode[] = [];
 
+    // Image attachments - render inline with click to fullscreen
     if (message.imageAttachment) {
-      const imageUrl = message.imageAttachment.getDirectURL();
+      const imageUrl = message.imageAttachment.blob.getDirectURL();
+      const fileName = getAttachmentFileName(message.imageAttachment);
       attachments.push(
         <div key="image" className="mt-2">
           <img 
             src={imageUrl} 
-            alt="Attachment" 
-            className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            alt={fileName}
+            className="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
-              window.open(imageUrl, '_blank');
+              setFullscreenImage({ url: imageUrl, fileName });
             }}
           />
         </div>
       );
     }
 
+    // Audio attachments - inline player
     if (message.audioAttachment) {
-      const audioUrl = message.audioAttachment.getDirectURL();
+      const audioUrl = message.audioAttachment.blob.getDirectURL();
+      const fileName = getAttachmentFileName(message.audioAttachment);
       attachments.push(
         <div key="audio" className="mt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(audioUrl, '_blank');
-            }}
-          >
-            <MusicIcon className="w-4 h-4" />
-            Play Audio
-          </Button>
+          <InlineAudioPlayer audioUrl={audioUrl} fileName={fileName} />
         </div>
       );
     }
 
+    // PDF attachments - inline viewer with download button
     if (message.pdfAttachment) {
-      const pdfUrl = message.pdfAttachment.getDirectURL();
+      const pdfUrl = message.pdfAttachment.blob.getDirectURL();
+      const fileName = getAttachmentFileName(message.pdfAttachment);
       attachments.push(
         <div key="pdf" className="mt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(pdfUrl, '_blank');
-            }}
-          >
-            <FileText className="w-4 h-4" />
-            Open PDF
-          </Button>
+          <PdfAttachmentViewer pdfUrl={pdfUrl} fileName={fileName} />
+        </div>
+      );
+    }
+
+    // Other file attachments - download tile
+    if (message.fileAttachment) {
+      const fileUrl = message.fileAttachment.blob.getDirectURL();
+      const fileName = getAttachmentFileName(message.fileAttachment);
+      const mimeType = message.fileAttachment.mimeType;
+      attachments.push(
+        <div key="file" className="mt-2">
+          <OtherFileAttachmentTile 
+            fileUrl={fileUrl} 
+            fileName={fileName} 
+            mimeType={mimeType}
+          />
         </div>
       );
     }
@@ -145,65 +151,75 @@ export function MessageThread({
   }
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[400px] p-4">
-          <div className="space-y-4">
-            {messages.map((message: Message) => {
-              const isFromMario = message.isAdmin;
-              const showDelete = canDeleteMessage(message);
-              const senderLabel = getSenderLabel(message);
-              const showSeen = shouldShowSeen(message);
+    <>
+      <Card>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[400px] p-4">
+            <div className="space-y-4">
+              {messages.map((message: Message) => {
+                const isFromMario = message.isAdmin;
+                const showDelete = canDeleteMessage(message);
+                const senderLabel = getSenderLabel(message);
+                const showSeen = shouldShowSeen(message);
 
-              return (
-                <div
-                  key={message.id.toString()}
-                  className={`flex gap-3 ${isFromMario ? 'flex-row' : 'flex-row-reverse'} relative group`}
-                >
-                  {isFromMario ? (
-                    <MarioAvatar size="sm" />
-                  ) : (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-xs font-semibold">
-                        {senderLabel.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className={`flex-1 ${isFromMario ? 'text-left' : 'text-right'}`}>
-                    <div className={`inline-block max-w-[80%] rounded-lg px-4 py-2 relative ${
-                      isFromMario 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted'
-                    }`}>
-                      <p className="text-xs font-semibold mb-1">
-                        {senderLabel}
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                      {renderAttachment(message)}
-                      
-                      {showSeen && (
-                        <p className="text-xs opacity-70 mt-1">Seen</p>
-                      )}
-                      
-                      {showDelete && onDeleteMessage && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => handleDeleteClick(message.id, e)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
+                return (
+                  <div
+                    key={message.id.toString()}
+                    className={`flex gap-3 ${isFromMario ? 'flex-row' : 'flex-row-reverse'} relative group`}
+                  >
+                    {isFromMario ? (
+                      <MarioAvatar size="sm" />
+                    ) : (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-xs font-semibold">
+                          {senderLabel.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className={`flex-1 ${isFromMario ? 'text-left' : 'text-right'}`}>
+                      <div className={`inline-block max-w-[80%] rounded-lg px-4 py-2 relative ${
+                        isFromMario 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted'
+                      }`}>
+                        <p className="text-xs font-semibold mb-1">
+                          {senderLabel}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                        {renderAttachment(message)}
+                        
+                        {showSeen && (
+                          <p className="text-xs opacity-70 mt-1">Seen</p>
+                        )}
+                        
+                        {showDelete && onDeleteMessage && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteClick(message.id, e)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {fullscreenImage && (
+        <ImageAttachmentViewerOverlay
+          imageUrl={fullscreenImage.url}
+          fileName={fullscreenImage.fileName}
+          onClose={() => setFullscreenImage(null)}
+        />
+      )}
+    </>
   );
 }

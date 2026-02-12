@@ -1,4 +1,4 @@
-import { Play, Trash2, Music } from 'lucide-react';
+import { Play, Trash2, Music, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SongEngagementBar } from './SongEngagementBar';
 import { SongOverflowMenu } from './SongOverflowMenu';
@@ -9,18 +9,65 @@ interface SongListRowProps {
   isPlaying: boolean;
   onPlay: () => void;
   onDelete?: () => void;
+  draggable?: boolean;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  isDragOver?: boolean;
 }
 
-export function SongListRow({ song, isPlaying, onPlay, onDelete }: SongListRowProps) {
+export function SongListRow({ 
+  song, 
+  isPlaying, 
+  onPlay, 
+  onDelete,
+  draggable = false,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  isDragging = false,
+  isDragOver = false,
+}: SongListRowProps) {
   const titleImageUrl = song.titleImage?.getDirectURL?.() || '';
   const albumArtUrl = song.albumArt?.getDirectURL?.() || '';
   const displayImage = titleImageUrl || albumArtUrl;
 
+  const handleDragHandleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <div 
-      className="flex items-center gap-4 p-4 rounded-lg hover:bg-card/50 transition-colors group cursor-pointer"
+      className={`flex items-center gap-4 p-4 rounded-lg hover:bg-card/50 transition-colors group cursor-pointer ${
+        isDragging ? 'opacity-50' : ''
+      } ${isDragOver ? 'border-2 border-primary' : ''}`}
       onClick={onPlay}
+      draggable={false}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
     >
+      {/* Drag Handle */}
+      {draggable && (
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            onDragStart?.();
+          }}
+          onDragEnd={onDragEnd}
+          onMouseDown={handleDragHandleMouseDown}
+          className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+      )}
+
       <div className="w-14 h-14 rounded overflow-hidden bg-muted shrink-0">
         {displayImage ? (
           <img

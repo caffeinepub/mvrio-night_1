@@ -8,13 +8,14 @@ import Nat "mo:core/Nat";
 import Iter "mo:core/Iter";
 import Set "mo:core/Set";
 import Storage "blob-storage/Storage";
+import Principal "mo:core/Principal";
 import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
+import AccessControl "authorization/access-control";
+import Time "mo:core/Time";
 import Int "mo:core/Int";
 
-import Time "mo:core/Time";
-import Principal "mo:core/Principal";
-import AccessControl "authorization/access-control";
+
 
 actor {
   // Initialize the access control system
@@ -121,7 +122,8 @@ actor {
 
   type Playlist = {
     name : Text;
-    songs : Set.Set<Nat>;
+    songs : List.List<Nat>;
+    songSet : Set.Set<Nat>;
   };
 
   type PlaylistView = {
@@ -160,6 +162,10 @@ actor {
     lyrics : Text,
     passcode : Text,
   ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add songs");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -257,6 +263,10 @@ actor {
   };
 
   public shared ({ caller }) func deleteSong(id : Nat, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete songs");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -279,7 +289,6 @@ actor {
     filtered.map(toSongView);
   };
 
-  // Favorites (Persistent)
   public shared ({ caller }) func toggleFavorite(songId : Nat) : async Bool {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can favorite songs");
@@ -326,7 +335,6 @@ actor {
     favorites.remove(caller);
   };
 
-  // Playlists (Persistent)
   public shared ({ caller }) func createPlaylist(name : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create playlists");
@@ -349,7 +357,8 @@ actor {
       name,
       {
         name;
-        songs = Set.empty<Nat>();
+        songs = List.empty<Nat>();
+        songSet = Set.empty<Nat>();
       },
     );
   };
@@ -371,7 +380,11 @@ actor {
         switch (playlistMap.get(playlistName)) {
           case (null) { Runtime.trap("Playlist not found") };
           case (?playlist) {
+            if (playlist.songSet.contains(songId)) {
+              return; // Song already in playlist, ignore
+            };
             playlist.songs.add(songId);
+            playlist.songSet.add(songId);
           };
         };
       };
@@ -391,10 +404,54 @@ actor {
         switch (playlistMap.get(playlistName)) {
           case (null) { Runtime.trap("Playlist not found") };
           case (?playlist) {
-            if (not playlist.songs.contains(songId)) {
+            if (not playlist.songSet.contains(songId)) {
               Runtime.trap("Song not found in playlist");
             };
-            playlist.songs.remove(songId);
+            let newSongs = List.empty<Nat>();
+            playlist.songs.forEach(
+              func(sId) {
+                if (sId != songId) {
+                  newSongs.add(sId);
+                };
+              }
+            );
+            playlist.songs.clear();
+            playlist.songs.addAll(newSongs.values());
+            playlist.songSet.remove(songId);
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func reorderPlaylist(playlistName : Text, newOrder : [Nat]) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can reorder playlists");
+    };
+
+    switch (userPlaylists.get(caller)) {
+      case (null) { Runtime.trap("Playlist not found") };
+      case (?playlistMap) {
+        switch (playlistMap.get(playlistName)) {
+          case (null) { Runtime.trap("Playlist not found") };
+          case (?playlist) {
+            // Validate all song IDs exist in the existing playlist
+            for (songId in newOrder.values()) {
+              if (not playlist.songSet.contains(songId)) {
+                Runtime.trap("Invalid song ID in reorder array: " # songId.toText());
+              };
+            };
+
+            // Validate no duplicates and same count
+            if (newOrder.size() != playlist.songSet.size()) {
+              Runtime.trap("Reorder array must contain all songs exactly once");
+            };
+
+            // Create a new song list in the specified order
+            playlist.songs.clear();
+            for (songId in newOrder.values()) {
+              playlist.songs.add(songId);
+            };
           };
         };
       };
@@ -464,8 +521,11 @@ actor {
     };
   };
 
-  // Official playlists
   public shared ({ caller }) func createOfficialPlaylist(name : Text, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can create official playlists");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -478,12 +538,17 @@ actor {
       name,
       {
         name;
-        songs = Set.empty<Nat>();
+        songs = List.empty<Nat>();
+        songSet = Set.empty<Nat>();
       },
     );
   };
 
   public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can modify official playlists");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -497,12 +562,20 @@ actor {
         Runtime.trap("Playlist not found");
       };
       case (?playlist) {
+        if (playlist.songSet.contains(songId)) {
+          return; // Song already in playlist, ignore
+        };
         playlist.songs.add(songId);
+        playlist.songSet.add(songId);
       };
     };
   };
 
   public shared ({ caller }) func removeFromOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can modify official playlists");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -512,10 +585,53 @@ actor {
         Runtime.trap("Playlist not found");
       };
       case (?playlist) {
-        if (not playlist.songs.contains(songId)) {
+        if (not playlist.songSet.contains(songId)) {
           Runtime.trap("Song not found in playlist");
         };
-        playlist.songs.remove(songId);
+        let newSongs = List.empty<Nat>();
+        playlist.songs.forEach(
+          func(sId) {
+            if (sId != songId) {
+              newSongs.add(sId);
+            };
+          }
+        );
+        playlist.songs.clear();
+        playlist.songs.addAll(newSongs.values());
+        playlist.songSet.remove(songId);
+      };
+    };
+  };
+
+  public shared ({ caller }) func reorderOfficialPlaylist(playlistName : Text, newOrder : [Nat], passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can reorder official playlists");
+    };
+
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    switch (officialPlaylists.get(playlistName)) {
+      case (null) { Runtime.trap("Playlist not found") };
+      case (?playlist) {
+        // Validate all song IDs exist in the existing playlist
+        for (songId in newOrder.values()) {
+          if (not playlist.songSet.contains(songId)) {
+            Runtime.trap("Invalid song ID in reorder array: " # songId.toText());
+          };
+        };
+
+        // Validate no duplicates and same count
+        if (newOrder.size() != playlist.songSet.size()) {
+          Runtime.trap("Reorder array must contain all songs exactly once");
+        };
+
+        // Create a new song list in the specified order
+        playlist.songs.clear();
+        for (songId in newOrder.values()) {
+          playlist.songs.add(songId);
+        };
       };
     };
   };
@@ -541,6 +657,10 @@ actor {
       };
       case (?code) {
         // Admin deleting official playlist
+        if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+          Runtime.trap("Unauthorized: Only admins can delete official playlists");
+        };
+
         if (not verifyAdminPasscode(code)) {
           Runtime.trap("Invalid admin passcode");
         };
@@ -634,7 +754,6 @@ actor {
     };
   };
 
-  // Legacy favorite functions
   public query ({ caller }) func playlistFavoritesLegacy() : async ?[Text] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       return null;
@@ -677,17 +796,25 @@ actor {
   };
 
   public shared ({ caller }) func updateArtistProfile(profile : ArtistProfile, passcode : Text) : async () {
-    // Verify passcode is not empty
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update artist profile");
+    };
+
     if (passcode.size() == 0) {
       Runtime.trap("Invalid passcode: Passcode required by admin UI");
     };
 
-    // Verify passcode correct
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
 
     artistProfile := profile;
+  };
+
+  public type Attachment = {
+    blob : Storage.ExternalBlob;
+    fileName : Text;
+    mimeType : Text;
   };
 
   public type Message = {
@@ -697,9 +824,10 @@ actor {
     timestamp : Int;
     isAdmin : Bool;
     isRead : Bool;
-    audioAttachment : ?Storage.ExternalBlob;
-    imageAttachment : ?Storage.ExternalBlob;
-    pdfAttachment : ?Storage.ExternalBlob;
+    audioAttachment : ?Attachment;
+    imageAttachment : ?Attachment;
+    pdfAttachment : ?Attachment;
+    fileAttachment : ?Attachment;
     recipientSeen : Bool;
   };
 
@@ -740,6 +868,7 @@ actor {
       audioAttachment = null;
       imageAttachment = null;
       pdfAttachment = null;
+      fileAttachment = null;
       recipientSeen = false;
     };
 
@@ -752,9 +881,10 @@ actor {
 
   public shared ({ caller }) func sendMessageWithAttachments(
     content : Text,
-    audioAttachment : ?Storage.ExternalBlob,
-    imageAttachment : ?Storage.ExternalBlob,
-    pdfAttachment : ?Storage.ExternalBlob,
+    audioAttachment : ?Attachment,
+    imageAttachment : ?Attachment,
+    pdfAttachment : ?Attachment,
+    fileAttachment : ?Attachment,
   ) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only signed-in users can send messages");
@@ -770,6 +900,7 @@ actor {
       audioAttachment;
       imageAttachment;
       pdfAttachment;
+      fileAttachment;
       recipientSeen = false;
     };
 
@@ -812,6 +943,7 @@ actor {
       audioAttachment = null;
       imageAttachment = null;
       pdfAttachment = null;
+      fileAttachment = null;
       recipientSeen = false;
     };
 
@@ -846,6 +978,10 @@ actor {
     content : Text,
     passcode : Text,
   ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can reply to messages");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -860,6 +996,7 @@ actor {
       audioAttachment = null;
       imageAttachment = null;
       pdfAttachment = null;
+      fileAttachment = null;
       recipientSeen = false;
     };
 
@@ -879,11 +1016,16 @@ actor {
   public shared ({ caller }) func replyWithAttachments(
     user : Principal,
     content : Text,
-    audioAttachment : ?Storage.ExternalBlob,
-    imageAttachment : ?Storage.ExternalBlob,
-    pdfAttachment : ?Storage.ExternalBlob,
+    audioAttachment : ?Attachment,
+    imageAttachment : ?Attachment,
+    pdfAttachment : ?Attachment,
+    fileAttachment : ?Attachment,
     passcode : Text,
   ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can reply to messages");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -898,6 +1040,7 @@ actor {
       audioAttachment;
       imageAttachment;
       pdfAttachment;
+      fileAttachment;
       recipientSeen = false;
     };
 
@@ -930,6 +1073,10 @@ actor {
   };
 
   public query ({ caller }) func getAllMessages(user : Principal, passcode : Text) : async ?MessagesView {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can access all messages");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -977,6 +1124,10 @@ actor {
   };
 
   public shared ({ caller }) func deleteUserMessage(user : Principal, messageId : Nat, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete user messages");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -1023,6 +1174,7 @@ actor {
           audioAttachment = currentMessage.audioAttachment;
           imageAttachment = currentMessage.imageAttachment;
           pdfAttachment = currentMessage.pdfAttachment;
+          fileAttachment = currentMessage.fileAttachment;
           recipientSeen = currentMessage.recipientSeen;
         };
 
@@ -1061,6 +1213,10 @@ actor {
   };
 
   public shared ({ caller }) func markAllMessagesAsSeen(senderType : Text, user : Principal, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can mark all messages as seen");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -1087,6 +1243,10 @@ actor {
   };
 
   public shared ({ caller }) func getUnreadMessagesCount(passcode : Text) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can get unread messages count");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
@@ -1094,40 +1254,63 @@ actor {
     conversations.size();
   };
 
-  // Admin-only functions
-
   public shared ({ caller }) func updateAdminInfo(contactInfo : ?ContactInfo, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update admin info");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     adminContactInfo := contactInfo;
   };
 
   public shared ({ caller }) func setHiddenAdminMode(enabled : Bool, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set hidden admin mode");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     hiddenAdminModeEnabled := enabled;
   };
 
   public query ({ caller }) func getHiddenAdminModeStatus(passcode : Text) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can get hidden admin mode status");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     hiddenAdminModeEnabled;
   };
 
   public query ({ caller }) func getAllConversations(passcode : Text) : async [Principal] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can get all conversations");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     conversations.keys().toArray();
   };
 
   public query ({ caller }) func getAllConversationsByUserIdPasscode(passcode : Text) : async [Principal] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can get all conversations");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     conversations.keys().toArray();
   };
 
@@ -1139,9 +1322,14 @@ actor {
   };
 
   public shared ({ caller }) func adminDeleteConversation(conversationType : ?Text, conversationId : Text, passcode : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete conversations");
+    };
+
     if (not verifyAdminPasscode(passcode)) {
       Runtime.trap("Invalid admin passcode");
     };
+
     if (not hiddenAdminModeEnabled) {
       Runtime.trap("Unauthorized: Hidden Admin Mode must be enabled to delete conversations");
     };

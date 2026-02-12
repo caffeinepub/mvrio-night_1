@@ -19,7 +19,6 @@ import {
   useGetOfficialPlaylists,
   useCreateOfficialPlaylist,
   useDeletePlaylist,
-  useDeleteOfficialPlaylist,
 } from '@/hooks/useQueries';
 import { isSignInRequiredError } from '@/utils/authorizationErrors';
 import { toast } from 'sonner';
@@ -58,8 +57,7 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist, initialDeepLink }: Libra
   const { data: officialPlaylists, isLoading: officialPlaylistsLoading } = useGetOfficialPlaylists();
   const createPlaylistMutation = useCreatePlaylist();
   const createOfficialPlaylistMutation = useCreateOfficialPlaylist();
-  const deleteUserPlaylistMutation = useDeletePlaylist();
-  const deleteOfficialPlaylistMutation = useDeleteOfficialPlaylist();
+  const deletePlaylistMutation = useDeletePlaylist();
 
   // Handle deep link
   useEffect(() => {
@@ -152,11 +150,14 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist, initialDeepLink }: Libra
     if (!deleteTarget) return;
 
     try {
+      await deletePlaylistMutation.mutateAsync({
+        playlistName: deleteTarget.name,
+        isOfficial: deleteTarget.type === 'official',
+      });
+      
       if (deleteTarget.type === 'official') {
-        await deleteOfficialPlaylistMutation.mutateAsync(deleteTarget.name);
         toast.success('Official playlist deleted');
       } else {
-        await deleteUserPlaylistMutation.mutateAsync(deleteTarget.name);
         toast.success('Playlist deleted');
       }
       setDeleteTarget(null);
@@ -350,7 +351,7 @@ export function LibraryPlaylistsPanel({ onOpenPlaylist, initialDeepLink }: Libra
         onConfirm={handleConfirmDelete}
         playlistName={deleteTarget?.name || ''}
         playlistType={deleteTarget?.type || 'user'}
-        isPending={deleteUserPlaylistMutation.isPending || deleteOfficialPlaylistMutation.isPending}
+        isPending={deletePlaylistMutation.isPending}
       />
     </div>
   );

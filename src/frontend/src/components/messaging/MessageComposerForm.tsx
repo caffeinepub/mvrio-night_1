@@ -12,6 +12,7 @@ interface MessageComposerFormProps {
     audioAttachment?: File;
     imageAttachment?: File;
     pdfAttachment?: File;
+    fileAttachment?: File;
   }) => Promise<void>;
   isSending: boolean;
   isAdminReply?: boolean;
@@ -30,6 +31,7 @@ export function MessageComposerForm({ onSend, isSending, isAdminReply = false, p
     audioAttachment?: File;
     imageAttachment?: File;
     pdfAttachment?: File;
+    fileAttachment?: File;
   }>({});
 
   // Prefill content on mount or when it changes

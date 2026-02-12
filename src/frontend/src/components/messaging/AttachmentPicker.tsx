@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Paperclip, X, FileText, Music as MusicIcon, Image as ImageIcon } from 'lucide-react';
-import { validateAttachment } from '../../utils/messagingAttachments';
+import { Paperclip, X, FileText, Music as MusicIcon, Image as ImageIcon, File } from 'lucide-react';
+import { validateAttachment, categorizeFile } from '../../utils/messagingAttachments';
 import { toast } from 'sonner';
 
 interface AttachmentPickerProps {
@@ -9,6 +9,7 @@ interface AttachmentPickerProps {
     audioAttachment?: File;
     imageAttachment?: File;
     pdfAttachment?: File;
+    fileAttachment?: File;
   }) => void;
   disabled?: boolean;
 }
@@ -17,60 +18,58 @@ export function AttachmentPicker({ onAttachmentsChange, disabled }: AttachmentPi
   const [audioAttachment, setAudioAttachment] = useState<File | undefined>();
   const [imageAttachment, setImageAttachment] = useState<File | undefined>();
   const [pdfAttachment, setPdfAttachment] = useState<File | undefined>();
+  const [fileAttachment, setFileAttachment] = useState<File | undefined>();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Determine file type
-    let fileType: 'image' | 'audio' | 'pdf';
-    if (file.type.startsWith('image/')) {
-      fileType = 'image';
-    } else if (file.type.startsWith('audio/')) {
-      fileType = 'audio';
-    } else if (file.type === 'application/pdf') {
-      fileType = 'pdf';
-    } else {
-      toast.error('Unsupported file type. Please select an image, MP3, or PDF file.');
-      e.target.value = '';
-      return;
-    }
+    // Categorize the file
+    const category = categorizeFile(file);
 
-    const validation = validateAttachment(file, fileType);
+    // Validate the file
+    const validation = validateAttachment(file, category);
     if (!validation.valid) {
       toast.error(validation.error || 'Invalid file');
       e.target.value = '';
       return;
     }
 
-    if (fileType === 'image') {
+    // Set the appropriate attachment based on category
+    if (category === 'image') {
       setImageAttachment(file);
-      onAttachmentsChange({ audioAttachment, imageAttachment: file, pdfAttachment });
-    } else if (fileType === 'audio') {
+      onAttachmentsChange({ audioAttachment, imageAttachment: file, pdfAttachment, fileAttachment });
+    } else if (category === 'audio') {
       setAudioAttachment(file);
-      onAttachmentsChange({ audioAttachment: file, imageAttachment, pdfAttachment });
-    } else if (fileType === 'pdf') {
+      onAttachmentsChange({ audioAttachment: file, imageAttachment, pdfAttachment, fileAttachment });
+    } else if (category === 'pdf') {
       setPdfAttachment(file);
-      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: file });
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: file, fileAttachment });
+    } else {
+      setFileAttachment(file);
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment, fileAttachment: file });
     }
 
     e.target.value = '';
   };
 
-  const handleRemove = (type: 'audio' | 'image' | 'pdf') => {
+  const handleRemove = (type: 'audio' | 'image' | 'pdf' | 'file') => {
     if (type === 'audio') {
       setAudioAttachment(undefined);
-      onAttachmentsChange({ audioAttachment: undefined, imageAttachment, pdfAttachment });
+      onAttachmentsChange({ audioAttachment: undefined, imageAttachment, pdfAttachment, fileAttachment });
     } else if (type === 'image') {
       setImageAttachment(undefined);
-      onAttachmentsChange({ audioAttachment, imageAttachment: undefined, pdfAttachment });
+      onAttachmentsChange({ audioAttachment, imageAttachment: undefined, pdfAttachment, fileAttachment });
     } else if (type === 'pdf') {
       setPdfAttachment(undefined);
-      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: undefined });
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment: undefined, fileAttachment });
+    } else if (type === 'file') {
+      setFileAttachment(undefined);
+      onAttachmentsChange({ audioAttachment, imageAttachment, pdfAttachment, fileAttachment: undefined });
     }
   };
 
-  const hasAttachments = !!(audioAttachment || imageAttachment || pdfAttachment);
+  const hasAttachments = !!(audioAttachment || imageAttachment || pdfAttachment || fileAttachment);
 
   return (
     <div className="space-y-2">
@@ -88,7 +87,7 @@ export function AttachmentPicker({ onAttachmentsChange, disabled }: AttachmentPi
         <input
           id="attachment-input"
           type="file"
-          accept="image/*,audio/mpeg,application/pdf"
+          accept="*/*"
           onChange={handleFileSelect}
           className="hidden"
           disabled={disabled}
@@ -139,6 +138,22 @@ export function AttachmentPicker({ onAttachmentsChange, disabled }: AttachmentPi
                 size="icon"
                 className="h-6 w-6"
                 onClick={() => handleRemove('pdf')}
+                disabled={disabled}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
+          {fileAttachment && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+              <File className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm flex-1 truncate">{fileAttachment.name}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => handleRemove('file')}
                 disabled={disabled}
               >
                 <X className="w-3 h-3" />

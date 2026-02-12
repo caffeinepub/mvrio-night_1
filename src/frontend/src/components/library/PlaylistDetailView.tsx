@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Play, Shuffle, Repeat, Loader2, Music } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Repeat, Loader2, Music, Plus } from 'lucide-react';
 import { SongListRow } from '../songs/SongListRow';
-import { useGetPlaylistDetails, useGetOfficialPlaylistDetails } from '@/hooks/useQueries';
+import { AddSongsToPlaylistModal } from './AddSongsToPlaylistModal';
+import { useGetPlaylistDetails, useGetOfficialPlaylistDetails, useRemoveFromPlaylist, useRemoveFromOfficialPlaylist, useReorderPlaylist, useReorderOfficialPlaylist } from '@/hooks/useQueries';
+import { useHiddenAdminMode } from '@/context/HiddenAdminModeContext';
 import type { SongView } from '@/backend';
+import { toast } from 'sonner';
 
 type PlaylistContext = {
   type: 'user' | 'official';
@@ -37,6 +40,10 @@ export function PlaylistDetailView({
   playlistQueue,
 }: PlaylistDetailViewProps) {
   const [songs, setSongs] = useState<SongView[]>([]);
+  const [isAddSongsModalOpen, setIsAddSongsModalOpen] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const { isAdminModeEnabled } = useHiddenAdminMode();
   
   // Fetch user playlist details
   const { 
@@ -50,6 +57,14 @@ export function PlaylistDetailView({
     isLoading: officialPlaylistLoading 
   } = useGetOfficialPlaylistDetails(playlist.type === 'official' ? playlist.name : null);
 
+  // Remove mutations
+  const removeFromUserPlaylist = useRemoveFromPlaylist();
+  const removeFromOfficialPlaylist = useRemoveFromOfficialPlaylist();
+
+  // Reorder mutations
+  const reorderUserPlaylist = useReorderPlaylist();
+  const reorderOfficialPlaylist = useReorderOfficialPlaylist();
+
   useEffect(() => {
     if (playlist.type === 'user' && userPlaylistSongs) {
       setSongs(userPlaylistSongs);
@@ -61,6 +76,9 @@ export function PlaylistDetailView({
   const isLoading = playlist.type === 'user' ? userPlaylistLoading : officialPlaylistLoading;
   const displaySongs = playlistQueue.length > 0 ? playlistQueue : songs;
 
+  // Check if editing is allowed
+  const canEdit = playlist.type === 'user' || (playlist.type === 'official' && isAdminModeEnabled);
+
   const handlePlayAll = () => {
     if (songs.length > 0) {
       onPlay(songs);
@@ -69,6 +87,105 @@ export function PlaylistDetailView({
 
   const handleShuffleClick = () => {
     onShuffleToggle(songs);
+  };
+
+  const handleAddSongsClick = () => {
+    if (playlist.type === 'official' && !isAdminModeEnabled) {
+      toast.error('Admin permission required.');
+      return;
+    }
+    setIsAddSongsModalOpen(true);
+  };
+
+  const handleRemoveSong = async (songId: bigint) => {
+    if (!canEdit) {
+      toast.error('Admin permission required.');
+      return;
+    }
+
+    try {
+      if (playlist.type === 'user') {
+        await removeFromUserPlaylist.mutateAsync({
+          playlistName: playlist.name,
+          songId,
+        });
+      } else {
+        await removeFromOfficialPlaylist.mutateAsync({
+          playlistName: playlist.name,
+          songId,
+        });
+      }
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
+  };
+
+  const handleDragStart = (index: number) => {
+    if (!canEdit) {
+      return;
+    }
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (!canEdit || draggedIndex === null) {
+      return;
+    }
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (!canEdit || draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Create new order
+    const newSongs = [...displaySongs];
+    const [draggedSong] = newSongs.splice(draggedIndex, 1);
+    newSongs.splice(dropIndex, 0, draggedSong);
+
+    // Update local state immediately for smooth UX
+    setSongs(newSongs);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    // Persist to backend
+    const newOrder = newSongs.map(song => song.id);
+    
+    try {
+      if (playlist.type === 'user') {
+        await reorderUserPlaylist.mutateAsync({
+          playlistName: playlist.name,
+          newOrder,
+        });
+      } else {
+        await reorderOfficialPlaylist.mutateAsync({
+          playlistName: playlist.name,
+          newOrder,
+        });
+      }
+    } catch (error) {
+      // Revert on error
+      if (playlist.type === 'user' && userPlaylistSongs) {
+        setSongs(userPlaylistSongs);
+      } else if (playlist.type === 'official' && officialPlaylistSongs) {
+        setSongs(officialPlaylistSongs);
+      }
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   if (isLoading) {
@@ -112,7 +229,7 @@ export function PlaylistDetailView({
         </div>
 
         {/* Playback Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             size="lg"
             onClick={handlePlayAll}
@@ -142,18 +259,37 @@ export function PlaylistDetailView({
           >
             <Repeat className="w-5 h-5" />
           </Button>
+
+          {/* Add Songs Button */}
+          <Button
+            variant="outline"
+            onClick={handleAddSongsClick}
+            className="gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Songs
+          </Button>
         </div>
       </div>
 
       {/* Songs List */}
       {displaySongs.length > 0 ? (
         <div className="space-y-2">
-          {displaySongs.map((song) => (
+          {displaySongs.map((song, index) => (
             <SongListRow
               key={song.id.toString()}
               song={song}
               isPlaying={currentSongId === song.id}
               onPlay={() => onSongSelect(song.id)}
+              onDelete={canEdit ? () => handleRemoveSong(song.id) : undefined}
+              draggable={canEdit}
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              isDragging={draggedIndex === index}
+              isDragOver={dragOverIndex === index}
             />
           ))}
         </div>
@@ -161,11 +297,18 @@ export function PlaylistDetailView({
         <div className="text-center py-12 text-muted-foreground">
           <Music className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p>No songs in this playlist yet</p>
-          {playlist.type === 'user' && (
-            <p className="text-sm mt-1">Add songs from the overflow menu</p>
-          )}
+          <p className="text-sm mt-1">Click "Add Songs" to get started</p>
         </div>
       )}
+
+      {/* Add Songs Modal */}
+      <AddSongsToPlaylistModal
+        open={isAddSongsModalOpen}
+        onOpenChange={setIsAddSongsModalOpen}
+        playlistName={playlist.name}
+        playlistType={playlist.type}
+        currentSongIds={songs.map(s => s.id)}
+      />
     </div>
   );
 }

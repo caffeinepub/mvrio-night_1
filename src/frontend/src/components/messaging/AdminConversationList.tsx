@@ -1,11 +1,12 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, MessageSquare } from 'lucide-react';
-import { useGetAllConversations, useGetUserProfile } from '../../hooks/useMessaging';
+import { useGetAllConversations } from '../../hooks/useMessaging';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Principal } from '@icp-sdk/core/principal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DeleteConversationConfirmDialog } from './DeleteConversationConfirmDialog';
+import { useActor } from '../../hooks/useActor';
 
 interface AdminConversationListProps {
   onSelectUser: (user: Principal) => void;
@@ -75,9 +76,25 @@ interface ConversationCardProps {
 }
 
 function ConversationCard({ userPrincipal, onSelect, onDelete }: ConversationCardProps) {
-  const userProfileQuery = useGetUserProfile(userPrincipal);
+  const { actor } = useActor();
+  const [displayName, setDisplayName] = useState('User');
   
-  const displayName = userProfileQuery.data?.userName || 'User';
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!actor) return;
+      try {
+        const profile = await actor.getUserProfile(userPrincipal);
+        if (profile?.userName) {
+          setDisplayName(profile.userName);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [actor, userPrincipal]);
+  
   const principalText = userPrincipal.toString();
   const shortPrincipal = `${principalText.slice(0, 8)}...${principalText.slice(-6)}`;
 

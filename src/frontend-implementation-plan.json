@@ -1,43 +1,56 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Mobile playlist favorites per-user persistence UI + working mobile playlist share deep links",
+  "title": "Swap AppHeader logo to generated neon-green music note icon (no layout/functionality changes)",
   "requirements": [
     {
-      "id": "REQ-2",
-      "summary": "Make mobile PlaylistOverflowMenu Favorites toggle use authenticated per-user backend favorites with pending sign-in action support and correct UI updates.",
+      "id": "REQ-1",
+      "summary": "Swap the AppHeader logo image to a neon-green music note (white outline) while keeping all existing header layout/sizing classes unchanged.",
       "acceptanceCriteria": [
-        "On mobile, tapping the Favorites action in `PlaylistOverflowMenu` toggles favorite state without requiring admin mode.",
-        "If the user is signed out, tapping the Favorites action triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
-        "After toggling, the menu closes and the favorite state reflects the new value (including after navigating away and back)."
+        "The header icon renders as a neon-green music note with a white outline.",
+        "The icon occupies the same space as before (same container size, same alignment, same spacing).",
+        "No other header elements (title/subtitle/messages button/menu button) visually shift due to this change."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/usePlaylistFavorites.ts",
+          "path": "frontend/src/components/branding/AppHeader.tsx",
           "operation": "modify",
-          "description": "Tighten playlist favorites auth gating for mobile flows: ensure `useGetPlaylistFavorites()` only runs for authenticated (non-anonymous) users to avoid unauthorized reads, and keep mutation error handling aligned with pending action type `playlist-favorites` so sign-in can resume the toggle correctly."
+          "description": "Update only the header <img> src to point to the new static asset (frontend/public/assets/generated/header-music-note.dim_128x128.png) while keeping the existing wrapper and image classes (e.g., w-10 h-10, flex layout, gaps, padding) and all click handlers/props untouched."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Add the new music-note PNG under frontend/public/assets/generated and reference it directly from AppHeader without backend involvement.",
+      "acceptanceCriteria": [
+        "A new PNG icon file exists at `frontend/public/assets/generated/` and is used by `AppHeader`.",
+        "The header icon loads reliably (no broken image placeholder)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/public/assets/generated/header-music-note.dim_128x128.png",
+          "operation": "create",
+          "description": "Add the generated PNG asset (transparent background; neon-green music note with white outline) at this exact path/filename so AppHeader can reference it directly via <img src=...> (no backend routing)."
         },
         {
-          "path": "frontend/src/components/library/PlaylistOverflowMenu.tsx",
+          "path": "frontend/src/components/branding/AppHeader.tsx",
           "operation": "modify",
-          "description": "Update the mobile overflow Favorites click handling to mirror the song overflow pattern: if not authenticated, close the drawer and call `requireAuth({ type: 'playlist-favorites', playlistName })` without attempting a backend call; if authenticated, call the existing `usePlaylistFavorites(playlistName)` toggle and ensure the menu closes and UI reflects the updated favorite state."
+          "description": "Ensure the <img> src references /assets/generated/header-music-note.dim_128x128.png directly (static public asset) and does not change any other header structure or styling."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Make mobile PlaylistOverflowMenu Share action generate a hash/query playlist deep link and share via Web Share API when supported, otherwise copy to clipboard with toasts, without redesigning the menu.",
+      "summary": "Ensure no header navigation behavior or functionality changes occur as part of the icon swap.",
       "acceptanceCriteria": [
-        "On mobile, tapping “Share” in `PlaylistOverflowMenu` attempts to open the native share sheet using the Web Share API when available.",
-        "If the Web Share API is unavailable or share fails (non-cancel), the deep link is copied to clipboard and a success/failure toast is shown.",
-        "The deep link is hash-based and query-param driven, matching the app’s existing song deep-link style (e.g. `#/?playlist=<name>&playlistType=<user|official>`).",
-        "No visual redesign of the existing overflow menu beyond changes strictly required to make the Share action function correctly."
+        "All header buttons (menu toggle if present, messages button) behave exactly as before.",
+        "No routes, screen navigation, or click handlers are changed as part of this update."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/library/PlaylistOverflowMenu.tsx",
-          "operation": "modify",
-          "description": "Harden the existing Share action for mobile user-gesture reliability: build the deep link via `buildPlaylistDeepLink(playlistName, playlistType)` (hash + query params), attempt `shareViaWebShare` when supported, and on non-cancel failure (or unsupported) fall back to `copyToClipboard` with success/failure toasts; keep the existing menu UI and only adjust logic/close behavior as needed for functionality."
+          "path": "frontend/src/components/branding/AppHeader.icon-swap.note.md",
+          "operation": "create",
+          "description": "Add a short implementation note documenting that this change must remain a src-only icon swap in AppHeader (no changes to navigation, routes, or click handlers), to prevent accidental functional regressions in future edits."
         }
       ]
     }

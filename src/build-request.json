@@ -1,81 +1,87 @@
 {
   "kind": "build_request",
-  "title": "Fix mobile playlist Favorites persistence per user + make mobile playlist Share action work",
-  "priority": "high",
+  "title": "Restore header icon to neon-green music note (white outline) without changing header layout",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints used by the frontend: `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)`.",
-      "target": "backend",
+      "text": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-1",
+          "msg-2"
         ],
         "quotes": [
-          "Add to Favorites is failing because the playlist favorites backend is missing or broken. Fix it so playlist favorites are saved per user."
+          "yeah add that music icon as the header icon (neon green with white outline )",
+          "build it now"
         ]
       },
       "acceptanceCriteria": [
-        "Calling `getPlaylistFavorites()` as an authenticated user returns only that caller’s favorited playlist names.",
-        "Calling `togglePlaylistFavorite(playlistName)` as an authenticated user adds/removes that playlist name for that caller and returns a boolean consistent with the frontend’s expectation (`wasRemoved`).",
-        "Calls are authorized for any authenticated user (not admin-only); unauthenticated callers are rejected with an authorization error.",
-        "Playlist favorites persist across subsequent reads for the same user (i.e., after page refresh/re-login)."
+        "The header icon renders as a neon-green music note with a white outline.",
+        "The icon occupies the same space as before (same container size, same alignment, same spacing).",
+        "No other header elements (title/subtitle/messages button/menu button) visually shift due to this change."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Fix the mobile playlist Favorites UI so tapping “Add to Favorites” / “Remove from Favorites” in the mobile playlist overflow menu successfully saves per-user favorites via the backend and updates UI state.",
+      "text": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "fix it now , only in the mobile"
+          "yeah add that music icon as the header icon (neon green with white outline )"
         ]
       },
       "acceptanceCriteria": [
-        "On mobile, tapping the Favorites action in `PlaylistOverflowMenu` toggles favorite state without requiring admin mode.",
-        "If the user is signed out, tapping the Favorites action triggers the existing sign-in flow (pending action type `playlist-favorites`) and completes the toggle after successful sign-in.",
-        "After toggling, the menu closes and the favorite state reflects the new value (including after navigating away and back)."
+        "A new PNG icon file exists at `frontend/public/assets/generated/` and is used by `AppHeader`.",
+        "The header icon loads reliably (no broken image placeholder)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Fix the mobile playlist Share action so it generates a playlist deep link using the same hash/query deep-link pattern used for songs (playlist instead of song) and allows users to share via native share sheet when supported, otherwise copies to clipboard, without redesigning the menu.",
+      "text": "Do not modify navigation behavior or any other header functionality; only change the header icon image source to the new music-note icon.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-0"
         ],
         "quotes": [
-          "Share button is broken because no share logic is implemented. Generate a playlist deep link and allow users to copy or share it. IN MOBILE , fix it now",
-          "Yes, the playlist deep-link must use the exact same hash/query deep-link pattern already used for songs, just pointing to a playlist instead of a song.",
-          "Update the existing ⋮ menu UI only if needed to make the Share action actually work",
-          "Do NOT redesign the menu unless required for functionality"
+          "Do NOT modify navigation or functionality."
         ]
       },
       "acceptanceCriteria": [
-        "On mobile, tapping “Share” in `PlaylistOverflowMenu` attempts to open the native share sheet using the Web Share API when available.",
-        "If the Web Share API is unavailable or share fails (non-cancel), the deep link is copied to clipboard and a success/failure toast is shown.",
-        "The deep link is hash-based and query-param driven, matching the app’s existing song deep-link style (e.g. `#/?playlist=<name>&playlistType=<user|official>`).",
-        "No visual redesign of the existing overflow menu beyond changes strictly required to make the Share action function correctly."
+        "All header buttons (menu toggle if present, messages button) behave exactly as before.",
+        "No routes, screen navigation, or click handlers are changed as part of this update."
       ]
     }
   ],
   "constraints": [
-    "Apply fixes specifically to mobile behavior (do not introduce desktop-only changes beyond what is necessary to keep shared code working).",
-    "Do not redesign the playlist overflow menu UI; only adjust for functionality.",
-    "Do not edit files under frontend immutable paths (e.g., `frontend/src/hooks/useInternetIdentity.ts(x)`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, `frontend/src/components/ui`).",
-    "User-facing text must be English."
+    "Do not change any other header layout beyond swapping the icon image source.",
+    "Do not modify `frontend/src/hooks/useInternetIdentity.ts` / `frontend/src/hooks/useActor.ts` / `frontend/src/main.tsx` or anything in `frontend/src/components/ui` (immutable paths).",
+    "Do not change PWA manifest icons or favicon unless explicitly required for the header icon swap."
   ],
   "nonGoals": [
-    "Adding new social integrations beyond Web Share API and clipboard copying.",
-    "Changing playlist deep-link format away from the existing hash/query pattern.",
-    "Implementing sharing for songs (already exists) or adding new share destinations/UI beyond the existing Share action."
+    "Fixing the previously uploaded custom app icon display issue globally (outside of removing it from the header).",
+    "Changing app name, header text, or overall branding theme.",
+    "Adding new navigation items or altering sidebar behavior."
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "Neon-green music note icon with white outline on transparent background (header-music-note.dim_128x128.png)"
+    ],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

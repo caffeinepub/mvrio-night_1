@@ -1,5 +1,5 @@
 /**
- * Utilities for downloading song audio files
+ * Utilities for downloading files
  */
 
 /**
@@ -74,4 +74,15 @@ export async function downloadSong(audioUrl: string, songTitle: string): Promise
   
   const filename = generateFilename(songTitle);
   await downloadFile(audioUrl, filename);
+}
+
+/**
+ * Downloads a messaging attachment with the provided filename
+ */
+export async function downloadAttachment(url: string, fileName: string): Promise<void> {
+  if (!url) {
+    throw new Error('No URL available');
+  }
+  
+  await downloadFile(url, fileName);
 }

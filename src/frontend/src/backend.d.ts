@@ -37,14 +37,20 @@ export interface MessagesView {
 export interface Message {
     id: bigint;
     content: string;
-    audioAttachment?: ExternalBlob;
-    pdfAttachment?: ExternalBlob;
+    audioAttachment?: Attachment;
+    pdfAttachment?: Attachment;
     isRead: boolean;
     sender: string;
-    imageAttachment?: ExternalBlob;
+    imageAttachment?: Attachment;
+    fileAttachment?: Attachment;
     timestamp: bigint;
     isAdmin: boolean;
     recipientSeen: boolean;
+}
+export interface Attachment {
+    blob: ExternalBlob;
+    mimeType: string;
+    fileName: string;
 }
 export interface UserProfileRecord {
     totalListeningTime: bigint;
@@ -118,12 +124,14 @@ export interface backendInterface {
     playlistFavoritesLegacy(): Promise<Array<string> | null>;
     removeFromOfficialPlaylist(playlistName: string, songId: bigint, passcode: string): Promise<void>;
     removeFromPlaylist(playlistName: string, songId: bigint): Promise<void>;
+    reorderOfficialPlaylist(playlistName: string, newOrder: Array<bigint>, passcode: string): Promise<void>;
+    reorderPlaylist(playlistName: string, newOrder: Array<bigint>): Promise<void>;
     replyToMessage(user: Principal, content: string, passcode: string): Promise<bigint>;
-    replyWithAttachments(user: Principal, content: string, audioAttachment: ExternalBlob | null, imageAttachment: ExternalBlob | null, pdfAttachment: ExternalBlob | null, passcode: string): Promise<bigint>;
+    replyWithAttachments(user: Principal, content: string, audioAttachment: Attachment | null, imageAttachment: Attachment | null, pdfAttachment: Attachment | null, fileAttachment: Attachment | null, passcode: string): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfileRecord): Promise<void>;
     searchSongs(keyword: string): Promise<Array<SongView>>;
     sendMessage(content: string): Promise<bigint>;
-    sendMessageWithAttachments(content: string, audioAttachment: ExternalBlob | null, imageAttachment: ExternalBlob | null, pdfAttachment: ExternalBlob | null): Promise<bigint>;
+    sendMessageWithAttachments(content: string, audioAttachment: Attachment | null, imageAttachment: Attachment | null, pdfAttachment: Attachment | null, fileAttachment: Attachment | null): Promise<bigint>;
     setHiddenAdminMode(enabled: boolean, passcode: string): Promise<void>;
     toggleFavorite(songId: bigint): Promise<boolean>;
     toggleLikeSong(id: bigint): Promise<bigint>;

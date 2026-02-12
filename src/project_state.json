@@ -1,29 +1,27 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Fix mobile issues: playlist favorites backend missing/broken (save per user) and playlist sharing missing (generate playlist deep link using existing song hash/query pattern; enable copy/share from ⋮ menu without redesign).",
-  "architectural_notes": [
-    "Playlist deep links must reuse the existing song deep-link hash/query pattern, targeting playlists instead of songs."
-  ],
+  "summary": "New project",
+  "architectural_notes": [],
   "known_issues": [
-    "Add to Favorites fails because playlist favorites backend is missing or broken (needs per-user persistence).",
-    "Playlist Share button is broken because no share/deep-link logic is implemented (mobile)."
+    "Uploaded custom app icon in header is not showing/displaying correctly (reason unspecified); user wants to revert to a default-style music icon."
   ],
   "isFixRequest": true,
+  "imageRequirements": "## Required Images\n- Neon-green music note icon with white outline on transparent background (header-music-note.dim_128x128.png)",
   "existing_features": [
     {
-      "id": "feature-fix-the-mobile-playlist-favorites-ui-so-tapping-add-to-favorites-remove-from-favorites-in-the-mobile-playlist-overflow-menu-successfully-saves-per-user-favorites-via-the-backend-and-updates-ui-state",
-      "title": "Fix the mobile playlist Favorites UI so tapping “Add to Favorites” / “Remove from Favorites” in the mobile playlist overflow menu successfully saves per-user favorites via the backend and updates UI state.",
+      "id": "feature-replace-the-current-header-logo-image-in-frontend-src-components-branding-appheader-tsx-with-a-neon-green-music-note-icon-that-has-a-white-outline-while-keeping-the-header-s-existing-sizing-alignment-spacing-and-layout-unchanged-do-not-change-wrapper-classes-like-w-10-h-10-padding-flex-layout-or-gaps",
+      "title": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
       "reqIds": [
-        "REQ-2"
+        "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-fix-the-mobile-playlist-share-action-so-it-generates-a-playlist-deep-link-using-the-same-hash-query-deep-link-pattern-used-for-songs-playlist-instead-of-song-and-allows-users-to-share-via-native-share-sheet-when-supported-otherwise-copies-to-clipboard-without-redesigning-the-menu",
-      "title": "Fix the mobile playlist Share action so it generates a playlist deep link using the same hash/query deep-link pattern used for songs (playlist instead of song) and allows users to share via native share sheet when supported, otherwise copies to clipboard, without redesigning the menu.",
+      "id": "feature-add-the-new-music-note-icon-image-as-a-static-asset-under-frontend-public-assets-generated-and-reference-it-directly-from-the-header-img-src-do-not-route-image-loading-through-the-backend",
+      "title": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
       "reqIds": [
-        "REQ-3"
+        "REQ-2"
       ],
       "version": 1
     }
@@ -31,26 +29,20 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Fix playlist Favorites so favorited playlists are persisted per user (not admin-only); currently backend missing/broken (mobile scope).",
+      "summary": "Replace current header app icon with a neon-green music note icon with a white outline, keeping size/alignment/spacing and all header layout/navigation unchanged",
       "reqIds": [],
       "status": "pending"
     },
     {
-      "id": "AR-2",
-      "summary": "Implement mobile playlist Share: generate playlist deep link using same existing song hash/query pattern; enable copy/share and make existing ⋮ menu Share action work without redesign.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Implement backend support for playlist favorites saved per authenticated user (Internet Identity principal), including endpoints used by the frontend: `getPlaylistFavorites()` and `togglePlaylistFavorite(playlistName: Text)`.",
+      "id": "AR-4",
+      "summary": "Do not modify navigation behavior or any other header functionality; only change the header icon image source to the new music-note icon.",
       "reqIds": [
-        "REQ-1"
+        "REQ-3"
       ],
       "status": "pending"
     }
   ],
-  "projectName": "Fix mobile playlist Favorites persistence per user + make mobile playlist Share action work",
+  "projectName": "Restore header icon to neon-green music note (white outline) without changing header layout",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

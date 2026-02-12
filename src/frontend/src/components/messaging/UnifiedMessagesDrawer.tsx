@@ -10,11 +10,10 @@ import {
   useSendMessageWithAttachments, 
   useMarkMessagesAsSeen,
   useDeleteMessage,
-  useGetConversation,
+  useGetConversationMessages,
   useReplyWithAttachments,
   useDeleteUserMessage,
-  useMarkAdminMessagesAsSeen,
-  useGetUserProfile
+  useMarkAllMessagesAsSeen
 } from '../../hooks/useMessaging';
 import { useHiddenAdminMode } from '../../context/HiddenAdminModeContext';
 import { useGetCallerUserProfile } from '../../hooks/useUserProfile';
@@ -22,6 +21,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Principal } from '@icp-sdk/core/principal';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useActor } from '../../hooks/useActor';
+import type { MessagesView } from '../../backend';
 
 interface UnifiedMessagesDrawerProps {
   open: boolean;
@@ -31,7 +32,11 @@ interface UnifiedMessagesDrawerProps {
 
 export function UnifiedMessagesDrawer({ open, onOpenChange, prefillContent }: UnifiedMessagesDrawerProps) {
   const { isAdminModeEnabled } = useHiddenAdminMode();
+  const { actor } = useActor();
   const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
+  const [adminConversationData, setAdminConversationData] = useState<MessagesView | null>(null);
+  const [selectedUserDisplayName, setSelectedUserDisplayName] = useState('User');
+  const [isLoadingAdminData, setIsLoadingAdminData] = useState(false);
 
   // User mode queries
   const userMessagesQuery = useGetMessages();
@@ -40,25 +45,52 @@ export function UnifiedMessagesDrawer({ open, onOpenChange, prefillContent }: Un
   const deleteUserMessageMutation = useDeleteMessage();
   const callerProfileQuery = useGetCallerUserProfile();
 
-  // Admin mode queries
-  const adminConversationQuery = useGetConversation(selectedUser);
-  const selectedUserProfileQuery = useGetUserProfile(selectedUser);
+  // Admin mode mutations
+  const getConversationMutation = useGetConversationMessages();
   const replyMutation = useReplyWithAttachments();
   const deleteAdminMessageMutation = useDeleteUserMessage();
-  const markAdminMessagesSeenMutation = useMarkAdminMessagesAsSeen();
+  const markAdminMessagesSeenMutation = useMarkAllMessagesAsSeen();
+
+  // Fetch admin conversation data when user is selected
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      if (!selectedUser || !actor) return;
+      
+      setIsLoadingAdminData(true);
+      try {
+        // Fetch conversation messages
+        const conversationData = await getConversationMutation.mutateAsync(selectedUser);
+        setAdminConversationData(conversationData);
+        
+        // Fetch user profile for display name
+        const userProfile = await actor.getUserProfile(selectedUser);
+        if (userProfile?.userName) {
+          setSelectedUserDisplayName(userProfile.userName);
+        } else {
+          setSelectedUserDisplayName('User');
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+      } finally {
+        setIsLoadingAdminData(false);
+      }
+    };
+    
+    fetchAdminData();
+  }, [selectedUser, actor]);
 
   // Determine which data to use
   const isAdminView = isAdminModeEnabled && selectedUser !== null;
   const messages = isAdminView 
-    ? (adminConversationQuery.data?.messages || [])
+    ? (adminConversationData?.messages || [])
     : (userMessagesQuery.data?.messages || []);
   const contactInfo = isAdminView 
-    ? adminConversationQuery.data?.contactInfo
+    ? adminConversationData?.contactInfo
     : userMessagesQuery.data?.contactInfo;
 
   // Get user display name
   const userDisplayName = isAdminView
-    ? selectedUserProfileQuery.data?.userName || 'User'
+    ? selectedUserDisplayName
     : callerProfileQuery.data?.userName || 'User';
 
   // Mark messages as seen when drawer opens
@@ -78,6 +110,7 @@ export function UnifiedMessagesDrawer({ open, onOpenChange, prefillContent }: Un
     audioAttachment?: File;
     imageAttachment?: File;
     pdfAttachment?: File;
+    fileAttachment?: File;
   }) => {
     if (isAdminView && selectedUser) {
       await replyMutation.mutateAsync({
@@ -86,20 +119,28 @@ export function UnifiedMessagesDrawer({ open, onOpenChange, prefillContent }: Un
         audioAttachment: attachments?.audioAttachment,
         imageAttachment: attachments?.imageAttachment,
         pdfAttachment: attachments?.pdfAttachment,
+        fileAttachment: attachments?.fileAttachment,
       });
+      // Refresh conversation data after reply
+      const updatedData = await getConversationMutation.mutateAsync(selectedUser);
+      setAdminConversationData(updatedData);
     } else {
       await sendMessageMutation.mutateAsync({
         content,
         audioAttachment: attachments?.audioAttachment,
         imageAttachment: attachments?.imageAttachment,
         pdfAttachment: attachments?.pdfAttachment,
+        fileAttachment: attachments?.fileAttachment,
       });
     }
   };
 
-  const handleDeleteMessage = (messageId: bigint) => {
+  const handleDeleteMessage = async (messageId: bigint) => {
     if (isAdminView && selectedUser) {
-      deleteAdminMessageMutation.mutate({ user: selectedUser, messageId });
+      await deleteAdminMessageMutation.mutateAsync({ user: selectedUser, messageId });
+      // Refresh conversation data after delete
+      const updatedData = await getConversationMutation.mutateAsync(selectedUser);
+      setAdminConversationData(updatedData);
     } else {
       deleteUserMessageMutation.mutate(messageId);
     }
@@ -107,10 +148,12 @@ export function UnifiedMessagesDrawer({ open, onOpenChange, prefillContent }: Un
 
   const handleBackToList = () => {
     setSelectedUser(null);
+    setAdminConversationData(null);
+    setSelectedUserDisplayName('User');
   };
 
   const isLoading = isAdminView 
-    ? adminConversationQuery.isLoading || selectedUserProfileQuery.isLoading
+    ? isLoadingAdminData
     : userMessagesQuery.isLoading || callerProfileQuery.isLoading;
 
   const isSending = isAdminView 

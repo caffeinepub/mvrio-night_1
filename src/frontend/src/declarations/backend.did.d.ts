@@ -16,6 +16,11 @@ export interface ArtistProfile {
   'buyMeACoffee' : string,
   'youtube' : string,
 }
+export interface Attachment {
+  'blob' : ExternalBlob,
+  'mimeType' : string,
+  'fileName' : string,
+}
 export interface ContactInfo {
   'instagram' : string,
   'name' : string,
@@ -27,11 +32,12 @@ export type ExternalBlob = Uint8Array;
 export interface Message {
   'id' : bigint,
   'content' : string,
-  'audioAttachment' : [] | [ExternalBlob],
-  'pdfAttachment' : [] | [ExternalBlob],
+  'audioAttachment' : [] | [Attachment],
+  'pdfAttachment' : [] | [Attachment],
   'isRead' : boolean,
   'sender' : string,
-  'imageAttachment' : [] | [ExternalBlob],
+  'imageAttachment' : [] | [Attachment],
+  'fileAttachment' : [] | [Attachment],
   'timestamp' : bigint,
   'isAdmin' : boolean,
   'recipientSeen' : boolean,
@@ -149,14 +155,20 @@ export interface _SERVICE {
     undefined
   >,
   'removeFromPlaylist' : ActorMethod<[string, bigint], undefined>,
+  'reorderOfficialPlaylist' : ActorMethod<
+    [string, Array<bigint>, string],
+    undefined
+  >,
+  'reorderPlaylist' : ActorMethod<[string, Array<bigint>], undefined>,
   'replyToMessage' : ActorMethod<[Principal, string, string], bigint>,
   'replyWithAttachments' : ActorMethod<
     [
       Principal,
       string,
-      [] | [ExternalBlob],
-      [] | [ExternalBlob],
-      [] | [ExternalBlob],
+      [] | [Attachment],
+      [] | [Attachment],
+      [] | [Attachment],
+      [] | [Attachment],
       string,
     ],
     bigint
@@ -165,7 +177,13 @@ export interface _SERVICE {
   'searchSongs' : ActorMethod<[string], Array<SongView>>,
   'sendMessage' : ActorMethod<[string], bigint>,
   'sendMessageWithAttachments' : ActorMethod<
-    [string, [] | [ExternalBlob], [] | [ExternalBlob], [] | [ExternalBlob]],
+    [
+      string,
+      [] | [Attachment],
+      [] | [Attachment],
+      [] | [Attachment],
+      [] | [Attachment],
+    ],
     bigint
   >,
   'setHiddenAdminMode' : ActorMethod<[boolean, string], undefined>,

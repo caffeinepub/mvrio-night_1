@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { useHiddenAdminMode } from '../context/HiddenAdminModeContext';
-import type { MessagesView, Message, ContactInfo, UserProfileRecord } from '../backend';
+import type { MessagesView, Message, ContactInfo, UserProfileRecord, Attachment } from '../backend';
 import { Principal } from '@icp-sdk/core/principal';
 import { toast } from 'sonner';
 import { getAuthErrorMessage, isSignInRequiredError } from '../utils/authorizationErrors';
@@ -33,35 +33,65 @@ export function useSendMessageWithAttachments() {
       content, 
       audioAttachment, 
       imageAttachment, 
-      pdfAttachment 
+      pdfAttachment,
+      fileAttachment
     }: { 
       content: string;
       audioAttachment?: File;
       imageAttachment?: File;
       pdfAttachment?: File;
+      fileAttachment?: File;
     }) => {
       if (!actor) throw new Error('Actor not initialized');
 
-      let audioBlob: ExternalBlob | null = null;
-      let imageBlob: ExternalBlob | null = null;
-      let pdfBlob: ExternalBlob | null = null;
+      let audioAttachmentObj: Attachment | null = null;
+      let imageAttachmentObj: Attachment | null = null;
+      let pdfAttachmentObj: Attachment | null = null;
+      let fileAttachmentObj: Attachment | null = null;
 
       if (audioAttachment) {
         const bytes = await fileToBytes(audioAttachment);
-        audioBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        audioAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: audioAttachment.name,
+          mimeType: audioAttachment.type || 'audio/mpeg',
+        };
       }
 
       if (imageAttachment) {
         const bytes = await fileToBytes(imageAttachment);
-        imageBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        imageAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: imageAttachment.name,
+          mimeType: imageAttachment.type || 'image/jpeg',
+        };
       }
 
       if (pdfAttachment) {
         const bytes = await fileToBytes(pdfAttachment);
-        pdfBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        pdfAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: pdfAttachment.name,
+          mimeType: pdfAttachment.type || 'application/pdf',
+        };
       }
 
-      return actor.sendMessageWithAttachments(content, audioBlob, imageBlob, pdfBlob);
+      if (fileAttachment) {
+        const bytes = await fileToBytes(fileAttachment);
+        fileAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: fileAttachment.name,
+          mimeType: fileAttachment.type || 'application/octet-stream',
+        };
+      }
+
+      return actor.sendMessageWithAttachments(
+        content, 
+        audioAttachmentObj, 
+        imageAttachmentObj, 
+        pdfAttachmentObj,
+        fileAttachmentObj
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', 'user'] });
@@ -131,59 +161,18 @@ export function useGetAdminUnreadCount() {
       
       try {
         const conversations = await actor.getAllConversations(passcode);
-        let unreadCount = 0;
-        
-        // Check each conversation for unread user messages
-        for (const userPrincipal of conversations) {
-          const messagesView = await actor.getAllMessages(userPrincipal, passcode);
-          if (messagesView && messagesView.messages) {
-            const hasUnreadUserMessages = messagesView.messages.some(
-              msg => !msg.isAdmin && !msg.recipientSeen
-            );
-            if (hasUnreadUserMessages) {
-              unreadCount++;
-            }
-          }
-        }
-        
-        return unreadCount;
+        return conversations.length;
       } catch (error) {
-        console.error('Error fetching admin unread count:', error);
+        console.error('Failed to fetch unread count:', error);
         return 0;
       }
     },
-    enabled: !!actor && !isFetching && isAdminModeEnabled && !!getPasscode(),
-    refetchInterval: 10000, // Refetch every 10 seconds when admin mode is active
+    enabled: !!actor && !isFetching && isAdminModeEnabled,
+    refetchInterval: 30000, // Refetch every 30 seconds when admin mode is enabled
   });
 }
 
-// Compute unread state for user inbox icon
-export function useHasUnreadMessages() {
-  const { isAdminModeEnabled } = useHiddenAdminMode();
-  const userMessagesQuery = useGetMessages();
-  const adminUnreadCountQuery = useGetAdminUnreadCount();
-  const { identity } = useInternetIdentity();
-
-  if (isAdminModeEnabled) {
-    // Admin mode: check if there are any conversations with unread user messages
-    const unreadCount = adminUnreadCountQuery.data || 0;
-    return {
-      hasUnread: unreadCount > 0,
-      isLoading: adminUnreadCountQuery.isLoading,
-    };
-  } else {
-    // User mode: check for unread admin messages
-    const messages = userMessagesQuery.data?.messages || [];
-    const hasUnread = messages.some(msg => msg.isAdmin && !msg.recipientSeen);
-    
-    return {
-      hasUnread,
-      isLoading: userMessagesQuery.isLoading,
-    };
-  }
-}
-
-// Admin messaging hooks
+// Admin conversation hooks
 export function useGetAllConversations() {
   const { actor, isFetching } = useActor();
   const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
@@ -193,98 +182,109 @@ export function useGetAllConversations() {
     queryFn: async () => {
       if (!actor) return [];
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
+      if (!passcode) return [];
+      
       return actor.getAllConversations(passcode);
     },
-    enabled: !!actor && !isFetching && isAdminModeEnabled && !!getPasscode(),
+    enabled: !!actor && !isFetching && isAdminModeEnabled,
   });
 }
 
-export function useGetConversation(user: Principal | null) {
-  const { actor, isFetching } = useActor();
-  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+export function useGetConversationMessages() {
+  const { actor } = useActor();
+  const { getPasscode } = useHiddenAdminMode();
 
-  return useQuery<MessagesView | null>({
-    queryKey: ['conversation', user?.toString()],
-    queryFn: async () => {
-      if (!actor || !user) return null;
+  return useMutation({
+    mutationFn: async (user: Principal) => {
+      if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
+      if (!passcode) throw new Error('Passcode not available');
+      
       return actor.getAllMessages(user, passcode);
     },
-    enabled: !!actor && !isFetching && isAdminModeEnabled && !!user && !!getPasscode(),
-  });
-}
-
-// Fetch user profile for a given principal
-export function useGetUserProfile(user: Principal | null) {
-  const { actor, isFetching } = useActor();
-  const { isAdminModeEnabled } = useHiddenAdminMode();
-
-  return useQuery<UserProfileRecord | null>({
-    queryKey: ['userProfile', user?.toString()],
-    queryFn: async () => {
-      if (!actor || !user) return null;
-      try {
-        return await actor.getUserProfile(user);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-    },
-    enabled: !!actor && !isFetching && isAdminModeEnabled && !!user,
   });
 }
 
 export function useReplyWithAttachments() {
   const { actor } = useActor();
-  const queryClient = useQueryClient();
   const { getPasscode } = useHiddenAdminMode();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ 
       user, 
-      content,
-      audioAttachment,
-      imageAttachment,
-      pdfAttachment
+      content, 
+      audioAttachment, 
+      imageAttachment, 
+      pdfAttachment,
+      fileAttachment
     }: { 
-      user: Principal; 
+      user: Principal;
       content: string;
       audioAttachment?: File;
       imageAttachment?: File;
       pdfAttachment?: File;
+      fileAttachment?: File;
     }) => {
       if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
+      if (!passcode) throw new Error('Passcode not available');
 
-      let audioBlob: ExternalBlob | null = null;
-      let imageBlob: ExternalBlob | null = null;
-      let pdfBlob: ExternalBlob | null = null;
+      let audioAttachmentObj: Attachment | null = null;
+      let imageAttachmentObj: Attachment | null = null;
+      let pdfAttachmentObj: Attachment | null = null;
+      let fileAttachmentObj: Attachment | null = null;
 
       if (audioAttachment) {
         const bytes = await fileToBytes(audioAttachment);
-        audioBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        audioAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: audioAttachment.name,
+          mimeType: audioAttachment.type || 'audio/mpeg',
+        };
       }
 
       if (imageAttachment) {
         const bytes = await fileToBytes(imageAttachment);
-        imageBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        imageAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: imageAttachment.name,
+          mimeType: imageAttachment.type || 'image/jpeg',
+        };
       }
 
       if (pdfAttachment) {
         const bytes = await fileToBytes(pdfAttachment);
-        pdfBlob = ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>);
+        pdfAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: pdfAttachment.name,
+          mimeType: pdfAttachment.type || 'application/pdf',
+        };
       }
 
-      return actor.replyWithAttachments(user, content, audioBlob, imageBlob, pdfBlob, passcode);
+      if (fileAttachment) {
+        const bytes = await fileToBytes(fileAttachment);
+        fileAttachmentObj = {
+          blob: ExternalBlob.fromBytes(bytes as Uint8Array<ArrayBuffer>),
+          fileName: fileAttachment.name,
+          mimeType: fileAttachment.type || 'application/octet-stream',
+        };
+      }
+
+      return actor.replyWithAttachments(
+        user, 
+        content, 
+        audioAttachmentObj, 
+        imageAttachmentObj, 
+        pdfAttachmentObj,
+        fileAttachmentObj,
+        passcode
+      );
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
-      toast.success('Reply sent');
+      toast.success('Reply sent successfully');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -296,18 +296,19 @@ export function useReplyWithAttachments() {
 
 export function useDeleteUserMessage() {
   const { actor } = useActor();
-  const queryClient = useQueryClient();
   const { getPasscode } = useHiddenAdminMode();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ user, messageId }: { user: Principal; messageId: bigint }) => {
       if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
+      if (!passcode) throw new Error('Passcode not available');
+      
       return actor.deleteUserMessage(user, messageId, passcode);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
       toast.success('Message deleted');
     },
@@ -319,20 +320,20 @@ export function useDeleteUserMessage() {
   });
 }
 
-export function useMarkAdminMessagesAsSeen() {
+export function useMarkAllMessagesAsSeen() {
   const { actor } = useActor();
-  const queryClient = useQueryClient();
   const { getPasscode } = useHiddenAdminMode();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ user }: { user: Principal }) => {
       if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
-      return actor.markAllMessagesAsSeen('user', user, passcode);
+      if (!passcode) throw new Error('Passcode not available');
+      
+      return actor.markAllMessagesAsSeen('admin', user, passcode);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.user.toString()] });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount', 'admin'] });
     },
@@ -344,14 +345,15 @@ export function useMarkAdminMessagesAsSeen() {
 
 export function useDeleteConversation() {
   const { actor } = useActor();
-  const queryClient = useQueryClient();
   const { getPasscode } = useHiddenAdminMode();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (conversationId: string) => {
       if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) throw new Error('Admin passcode not available');
+      if (!passcode) throw new Error('Passcode not available');
+      
       return actor.adminDeleteConversation(null, conversationId, passcode);
     },
     onSuccess: () => {
@@ -363,6 +365,18 @@ export function useDeleteConversation() {
       const message = getAuthErrorMessage(error);
       toast.error(message);
       console.error('Delete conversation error:', error);
+    },
+  });
+}
+
+// User profile fetching for admin view
+export function useGetUserProfile() {
+  const { actor } = useActor();
+
+  return useMutation({
+    mutationFn: async (user: Principal) => {
+      if (!actor) throw new Error('Actor not initialized');
+      return actor.getUserProfile(user);
     },
   });
 }
