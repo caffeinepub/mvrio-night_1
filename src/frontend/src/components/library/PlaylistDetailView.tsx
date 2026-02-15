@@ -1,137 +1,98 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Play, Shuffle, Repeat, Loader2, Music, Plus } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Repeat, Loader2, Music, Plus, Edit } from 'lucide-react';
 import { SongListRow } from '../songs/SongListRow';
 import { AddSongsToPlaylistModal } from './AddSongsToPlaylistModal';
-import { useGetPlaylistDetails, useGetOfficialPlaylistDetails, useRemoveFromPlaylist, useRemoveFromOfficialPlaylist, useReorderPlaylist, useReorderOfficialPlaylist } from '@/hooks/useQueries';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useGetPlaylistDetails, useGetOfficialPlaylistDetails, useGetPlaylist, useGetOfficialPlaylist, useRemoveFromPlaylist, useRemoveFromOfficialPlaylist, useReorderPlaylist, useReorderOfficialPlaylist, useUpdatePlaylist, useUpdateOfficialPlaylist } from '@/hooks/useQueries';
 import { useHiddenAdminMode } from '@/context/HiddenAdminModeContext';
 import type { SongView } from '@/backend';
 import { toast } from 'sonner';
-
-type PlaylistContext = {
-  type: 'user' | 'official';
-  name: string;
-  songs: SongView[];
-};
+import { PlaylistEditorCard, PlaylistEditorData } from './PlaylistEditorCard';
 
 interface PlaylistDetailViewProps {
-  playlist: PlaylistContext;
+  playlistName: string;
+  playlistType: 'user' | 'official';
   onBack: () => void;
-  onPlay: (songs: SongView[]) => void;
-  onSongSelect: (songId: bigint) => void;
+  onPlaySong: (song: SongView, queue: SongView[], shuffle: boolean, repeat: boolean) => void;
   currentSongId: bigint | null;
-  isShuffled: boolean;
-  onShuffleToggle: (songs: SongView[]) => void;
-  repeatMode: 'off' | 'all';
-  onRepeatToggle: () => void;
-  playlistQueue: SongView[];
+  isPlaying: boolean;
+  onPlaylistRenamed?: (oldName: string, newName: string) => void;
 }
 
 export function PlaylistDetailView({
-  playlist,
+  playlistName,
+  playlistType,
   onBack,
-  onPlay,
-  onSongSelect,
+  onPlaySong,
   currentSongId,
-  isShuffled,
-  onShuffleToggle,
-  repeatMode,
-  onRepeatToggle,
-  playlistQueue,
+  isPlaying,
+  onPlaylistRenamed,
 }: PlaylistDetailViewProps) {
-  const [songs, setSongs] = useState<SongView[]>([]);
   const [isAddSongsModalOpen, setIsAddSongsModalOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
   const { isAdminModeEnabled } = useHiddenAdminMode();
   
-  // Fetch user playlist details
-  const { 
-    data: userPlaylistSongs, 
-    isLoading: userPlaylistLoading 
-  } = useGetPlaylistDetails(playlist.type === 'user' ? playlist.name : null);
+  const isOfficial = playlistType === 'official';
   
-  // Fetch official playlist details
-  const { 
-    data: officialPlaylistSongs, 
-    isLoading: officialPlaylistLoading 
-  } = useGetOfficialPlaylistDetails(playlist.type === 'official' ? playlist.name : null);
-
-  // Remove mutations
-  const removeFromUserPlaylist = useRemoveFromPlaylist();
-  const removeFromOfficialPlaylist = useRemoveFromOfficialPlaylist();
-
-  // Reorder mutations
-  const reorderUserPlaylist = useReorderPlaylist();
-  const reorderOfficialPlaylist = useReorderOfficialPlaylist();
-
-  useEffect(() => {
-    if (playlist.type === 'user' && userPlaylistSongs) {
-      setSongs(userPlaylistSongs);
-    } else if (playlist.type === 'official' && officialPlaylistSongs) {
-      setSongs(officialPlaylistSongs);
-    }
-  }, [playlist.type, userPlaylistSongs, officialPlaylistSongs]);
-
-  const isLoading = playlist.type === 'user' ? userPlaylistLoading : officialPlaylistLoading;
-  const displaySongs = playlistQueue.length > 0 ? playlistQueue : songs;
-
-  // Check if editing is allowed
-  const canEdit = playlist.type === 'user' || (playlist.type === 'official' && isAdminModeEnabled);
-
-  const handlePlayAll = () => {
-    if (songs.length > 0) {
-      onPlay(songs);
-    }
-  };
-
-  const handleShuffleClick = () => {
-    onShuffleToggle(songs);
-  };
-
-  const handleAddSongsClick = () => {
-    if (playlist.type === 'official' && !isAdminModeEnabled) {
-      toast.error('Admin permission required.');
-      return;
-    }
-    setIsAddSongsModalOpen(true);
-  };
+  const { data: userPlaylistDetails, isLoading: userLoading } = useGetPlaylistDetails(
+    !isOfficial ? playlistName : null
+  );
+  const { data: officialPlaylistDetails, isLoading: officialLoading } = useGetOfficialPlaylistDetails(
+    isOfficial ? playlistName : null
+  );
+  const { data: userPlaylist } = useGetPlaylist(!isOfficial ? playlistName : null);
+  const { data: officialPlaylist } = useGetOfficialPlaylist(isOfficial ? playlistName : null);
+  
+  const removeFromPlaylistMutation = useRemoveFromPlaylist();
+  const removeFromOfficialPlaylistMutation = useRemoveFromOfficialPlaylist();
+  const reorderPlaylistMutation = useReorderPlaylist();
+  const reorderOfficialPlaylistMutation = useReorderOfficialPlaylist();
+  const updatePlaylistMutation = useUpdatePlaylist();
+  const updateOfficialPlaylistMutation = useUpdateOfficialPlaylist();
+  
+  const songs = isOfficial ? officialPlaylistDetails : userPlaylistDetails;
+  const isLoading = isOfficial ? officialLoading : userLoading;
+  const playlistData = isOfficial ? officialPlaylist : userPlaylist;
+  
+  // Permission check: user playlists always editable, official only when admin mode is ON
+  const canEdit = !isOfficial || isAdminModeEnabled;
 
   const handleRemoveSong = async (songId: bigint) => {
-    if (!canEdit) {
-      toast.error('Admin permission required.');
-      return;
-    }
-
     try {
-      if (playlist.type === 'user') {
-        await removeFromUserPlaylist.mutateAsync({
-          playlistName: playlist.name,
+      if (isOfficial) {
+        await removeFromOfficialPlaylistMutation.mutateAsync({
+          playlistName,
           songId,
         });
       } else {
-        await removeFromOfficialPlaylist.mutateAsync({
-          playlistName: playlist.name,
+        await removeFromPlaylistMutation.mutateAsync({
+          playlistName,
           songId,
         });
       }
-    } catch (error) {
-      // Error handling is done in the mutation
+      toast.success('Song removed from playlist');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to remove song');
     }
   };
 
   const handleDragStart = (index: number) => {
-    if (!canEdit) {
-      return;
-    }
     setDraggedIndex(index);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (!canEdit || draggedIndex === null) {
-      return;
-    }
     setDragOverIndex(index);
   };
 
@@ -142,173 +103,254 @@ export function PlaylistDetailView({
   const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     
-    if (!canEdit || draggedIndex === null || draggedIndex === dropIndex) {
+    if (draggedIndex === null || !songs) return;
+    
+    if (draggedIndex === dropIndex) {
       setDraggedIndex(null);
       setDragOverIndex(null);
       return;
     }
 
-    // Create new order
-    const newSongs = [...displaySongs];
-    const [draggedSong] = newSongs.splice(draggedIndex, 1);
-    newSongs.splice(dropIndex, 0, draggedSong);
-
-    // Update local state immediately for smooth UX
-    setSongs(newSongs);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-
-    // Persist to backend
-    const newOrder = newSongs.map(song => song.id);
+    const newOrder = [...songs];
+    const [draggedSong] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, draggedSong);
+    
+    const newOrderIds = newOrder.map(song => song.id);
     
     try {
-      if (playlist.type === 'user') {
-        await reorderUserPlaylist.mutateAsync({
-          playlistName: playlist.name,
-          newOrder,
+      if (isOfficial) {
+        await reorderOfficialPlaylistMutation.mutateAsync({
+          playlistName,
+          newOrder: newOrderIds,
         });
       } else {
-        await reorderOfficialPlaylist.mutateAsync({
-          playlistName: playlist.name,
-          newOrder,
+        await reorderPlaylistMutation.mutateAsync({
+          playlistName,
+          newOrder: newOrderIds,
         });
       }
-    } catch (error) {
-      // Revert on error
-      if (playlist.type === 'user' && userPlaylistSongs) {
-        setSongs(userPlaylistSongs);
-      } else if (playlist.type === 'official' && officialPlaylistSongs) {
-        setSongs(officialPlaylistSongs);
+      toast.success('Playlist reordered');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to reorder playlist');
+    }
+    
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handlePlayAll = () => {
+    if (!songs || songs.length === 0) return;
+    onPlaySong(songs[0], songs, shuffle, repeat);
+  };
+
+  const handleUpdatePlaylist = async (data: PlaylistEditorData) => {
+    try {
+      if (isOfficial) {
+        await updateOfficialPlaylistMutation.mutateAsync({
+          oldName: playlistName,
+          newName: data.name,
+          description: data.description,
+          titleImage: data.titleImage,
+        });
+      } else {
+        await updatePlaylistMutation.mutateAsync({
+          oldName: playlistName,
+          newName: data.name,
+          description: data.description,
+          titleImage: data.titleImage,
+        });
       }
+      
+      toast.success('Playlist updated');
+      setIsEditDialogOpen(false);
+      
+      // Notify parent if name changed
+      if (data.name !== playlistName && onPlaylistRenamed) {
+        onPlaylistRenamed(playlistName, data.name);
+      }
+    } catch (error: any) {
+      // Check for rename conflict
+      if (error.message && error.message.includes('already exists')) {
+        toast.error('A playlist with that name already exists');
+      } else {
+        toast.error(error.message || 'Failed to update playlist');
+      }
+      throw error;
     }
   };
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
+  // Prepare initial data for editing
+  const [currentPlaylistData, setCurrentPlaylistData] = useState<PlaylistEditorData | null>(null);
+  
+  useEffect(() => {
+    if (isEditDialogOpen && playlistData) {
+      setCurrentPlaylistData({
+        name: playlistData.name,
+        description: playlistData.description || '',
+        titleImage: playlistData.titleImage || null,
+      });
+    }
+  }, [isEditDialogOpen, playlistData]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Playlists
-        </Button>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  const titleImageUrl = playlistData?.titleImage?.getDirectURL?.() || '';
+
   return (
     <div className="space-y-6">
-      {/* Header with Back button */}
-      <Button
-        variant="ghost"
-        onClick={onBack}
-        className="gap-2"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Playlists
-      </Button>
-
-      {/* Playlist Info and Controls */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold neon-glow">{playlist.name}</h1>
-          <p className="text-muted-foreground mt-1">
-            {songs.length} {songs.length === 1 ? 'song' : 'songs'}
-            {playlist.type === 'official' && ' • Official Playlist'}
+      {/* Header with title image */}
+      <div className="flex items-start gap-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="rounded-full shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        
+        {titleImageUrl && (
+          <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted shrink-0">
+            <img
+              src={titleImageUrl}
+              alt={playlistName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold">{playlistName}</h1>
+          {playlistData?.description && (
+            <p className="text-sm text-muted-foreground mt-1">{playlistData.description}</p>
+          )}
+          <p className="text-sm text-muted-foreground mt-2">
+            {songs?.length || 0} {songs?.length === 1 ? 'song' : 'songs'}
           </p>
         </div>
-
-        {/* Playback Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="lg"
-            onClick={handlePlayAll}
-            disabled={songs.length === 0}
-            className="gap-2 neon-glow"
-          >
-            <Play className="w-5 h-5" fill="currentColor" />
-            Play
-          </Button>
-          
-          <Button
-            size="icon"
-            variant={isShuffled ? 'default' : 'outline'}
-            onClick={handleShuffleClick}
-            disabled={songs.length === 0}
-            className={isShuffled ? 'neon-glow' : ''}
-          >
-            <Shuffle className="w-5 h-5" />
-          </Button>
-          
-          <Button
-            size="icon"
-            variant={repeatMode === 'all' ? 'default' : 'outline'}
-            onClick={onRepeatToggle}
-            disabled={songs.length === 0}
-            className={repeatMode === 'all' ? 'neon-glow' : ''}
-          >
-            <Repeat className="w-5 h-5" />
-          </Button>
-
-          {/* Add Songs Button */}
+        
+        {canEdit && (
           <Button
             variant="outline"
-            onClick={handleAddSongsClick}
-            className="gap-2"
+            size="sm"
+            onClick={() => setIsEditDialogOpen(true)}
+            className="gap-2 shrink-0"
           >
-            <Plus className="w-5 h-5" />
-            Add Songs
+            <Edit className="w-4 h-4" />
+            Edit
           </Button>
-        </div>
+        )}
       </div>
 
-      {/* Songs List */}
-      {displaySongs.length > 0 ? (
+      {/* Controls */}
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={handlePlayAll}
+          disabled={!songs || songs.length === 0}
+          className="gap-2"
+        >
+          <Play className="w-4 h-4" />
+          Play All
+        </Button>
+        <Button
+          variant={shuffle ? 'default' : 'outline'}
+          size="icon"
+          onClick={() => setShuffle(!shuffle)}
+        >
+          <Shuffle className="w-4 w-4" />
+        </Button>
+        <Button
+          variant={repeat ? 'default' : 'outline'}
+          size="icon"
+          onClick={() => setRepeat(!repeat)}
+        >
+          <Repeat className="w-4 h-4" />
+        </Button>
+        {canEdit && (
+          <Button
+            variant="outline"
+            onClick={() => setIsAddSongsModalOpen(true)}
+            className="gap-2 ml-auto"
+          >
+            <Plus className="w-4 h-4" />
+            Add Songs
+          </Button>
+        )}
+      </div>
+
+      {/* Song List */}
+      {songs && songs.length > 0 ? (
         <div className="space-y-2">
-          {displaySongs.map((song, index) => (
+          {songs.map((song, index) => (
             <SongListRow
               key={song.id.toString()}
               song={song}
-              isPlaying={currentSongId === song.id}
-              onPlay={() => onSongSelect(song.id)}
+              isPlaying={currentSongId === song.id && isPlaying}
+              onPlay={() => onPlaySong(song, songs, shuffle, repeat)}
               onDelete={canEdit ? () => handleRemoveSong(song.id) : undefined}
               draggable={canEdit}
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
+              onDragStart={canEdit ? () => handleDragStart(index) : undefined}
+              onDragOver={canEdit ? (e) => handleDragOver(e, index) : undefined}
+              onDragLeave={canEdit ? handleDragLeave : undefined}
+              onDrop={canEdit ? (e) => handleDrop(e, index) : undefined}
               isDragging={draggedIndex === index}
               isDragOver={dragOverIndex === index}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <Music className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p>No songs in this playlist yet</p>
-          <p className="text-sm mt-1">Click "Add Songs" to get started</p>
+        <div className="text-center py-12">
+          <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">No songs in this playlist yet</p>
+          {canEdit && (
+            <Button
+              variant="outline"
+              onClick={() => setIsAddSongsModalOpen(true)}
+              className="mt-4 gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Songs
+            </Button>
+          )}
         </div>
       )}
 
       {/* Add Songs Modal */}
-      <AddSongsToPlaylistModal
-        open={isAddSongsModalOpen}
-        onOpenChange={setIsAddSongsModalOpen}
-        playlistName={playlist.name}
-        playlistType={playlist.type}
-        currentSongIds={songs.map(s => s.id)}
-      />
+      {canEdit && (
+        <AddSongsToPlaylistModal
+          open={isAddSongsModalOpen}
+          onOpenChange={setIsAddSongsModalOpen}
+          playlistName={playlistName}
+          playlistType={playlistType}
+          currentSongIds={songs?.map(s => s.id) || []}
+        />
+      )}
+
+      {/* Edit Playlist Dialog */}
+      {canEdit && currentPlaylistData && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Playlist</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <PlaylistEditorCard
+                mode="edit"
+                initialData={currentPlaylistData}
+                onSave={handleUpdatePlaylist}
+                onCancel={() => setIsEditDialogOpen(false)}
+                isSaving={updatePlaylistMutation.isPending || updateOfficialPlaylistMutation.isPending}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

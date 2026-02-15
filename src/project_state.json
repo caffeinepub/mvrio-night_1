@@ -1,27 +1,50 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [],
-  "known_issues": [
-    "Uploaded custom app icon in header is not showing/displaying correctly (reason unspecified); user wants to revert to a default-style music icon."
+  "summary": "Build an installable Progressive Web App (PWA) version of the app for both desktop and mobile, including full-screen app-like behavior and an install prompt.",
+  "architectural_notes": [
+    "PWA approach: use web app manifest + service worker; installation handled via browser (no APK generation)."
   ],
-  "isFixRequest": true,
-  "imageRequirements": "## Required Images\n- Neon-green music note icon with white outline on transparent background (header-music-note.dim_128x128.png)",
+  "known_issues": [],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-replace-the-current-header-logo-image-in-frontend-src-components-branding-appheader-tsx-with-a-neon-green-music-note-icon-that-has-a-white-outline-while-keeping-the-header-s-existing-sizing-alignment-spacing-and-layout-unchanged-do-not-change-wrapper-classes-like-w-10-h-10-padding-flex-layout-or-gaps",
-      "title": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
+      "id": "feature-ensure-the-service-worker-is-registered-in-the-running-app-so-the-browser-can-recognize-the-app-as-installable-pwa-registration-must-occur-once-on-app-startup-without-editing-any-files-in-frontend-src-main-tsx-or-other-immutable-paths",
+      "title": "Ensure the service worker is registered in the running app so the browser can recognize the app as installable (PWA). Registration must occur once on app startup without editing any files in frontend/src/main.tsx or other immutable paths.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-the-new-music-note-icon-image-as-a-static-asset-under-frontend-public-assets-generated-and-reference-it-directly-from-the-header-img-src-do-not-route-image-loading-through-the-backend",
-      "title": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
+      "id": "feature-update-the-pwa-manifest-to-satisfy-installability-requirements-for-modern-desktop-mobile-browsers-keeping-existing-app-name-branding-intact-ensure-the-manifest-includes-correct-start-url-scope-standalone-display-theme-background-colors-and-valid-icon-entries-that-resolve-at-runtime",
+      "title": "Update the PWA manifest to satisfy installability requirements for modern desktop/mobile browsers, keeping existing app name/branding intact. Ensure the manifest includes correct start_url/scope, standalone display, theme/background colors, and valid icon entries that resolve at runtime.",
       "reqIds": [
         "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-ios-friendly-pwa-meta-link-tags-in-the-root-html-to-improve-install-and-full-screen-behavior-on-iphone-ipad-add-to-home-screen-flow-without-changing-the-core-app-ui",
+      "title": "Add iOS-friendly PWA meta/link tags in the root HTML to improve install and full-screen behavior on iPhone/iPad (Add to Home Screen flow), without changing the core app UI.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-and-harden-the-custom-install-ux-so-users-can-install-from-both-desktop-and-mobile-when-eligible-and-receive-clear-guidance-when-not-eligible-use-the-existing-a2hsbanner-and-sidebar-install-app-entry-points-and-ensure-they-behave-consistently-once-the-app-becomes-installable",
+      "title": "Fix and harden the custom install UX so users can install from both desktop and mobile when eligible, and receive clear guidance when not eligible. Use the existing A2HSBanner and Sidebar “Install App” entry points and ensure they behave consistently once the app becomes installable.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-the-service-worker-caching-behavior-for-the-app-shell-so-the-pwa-remains-functional-when-offline-for-previously-visited-pages-assets-while-preserving-the-existing-special-handling-that-avoids-auto-caching-audio-files-audio-caching-remains-explicit-via-the-existing-offline-cache-utilities",
+      "title": "Improve the service worker caching behavior for the app shell so the PWA remains functional when offline for previously visited pages/assets, while preserving the existing special handling that avoids auto-caching audio files (audio caching remains explicit via the existing offline cache utilities).",
+      "reqIds": [
+        "REQ-5"
       ],
       "version": 1
     }
@@ -29,20 +52,13 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Replace current header app icon with a neon-green music note icon with a white outline, keeping size/alignment/spacing and all header layout/navigation unchanged",
+      "summary": "Make the app an installable PWA on both desktop and mobile (manifest + service worker), with full-screen app-like display and an install prompt",
       "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Do not modify navigation behavior or any other header functionality; only change the header icon image source to the new music-note icon.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
-  "projectName": "Restore header icon to neon-green music note (white outline) without changing header layout",
+  "gameProjectType": "none",
+  "projectName": "Make the app fully installable as a PWA on desktop and mobile (install prompt + full-screen behavior)",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

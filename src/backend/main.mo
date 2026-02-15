@@ -1,5 +1,6 @@
 import Array "mo:core/Array";
 import Map "mo:core/Map";
+import Blob "mo:core/Blob";
 import Text "mo:core/Text";
 import List "mo:core/List";
 import Order "mo:core/Order";
@@ -9,10 +10,10 @@ import Iter "mo:core/Iter";
 import Set "mo:core/Set";
 import Storage "blob-storage/Storage";
 import Principal "mo:core/Principal";
+import Time "mo:core/Time";
 import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Time "mo:core/Time";
 import Int "mo:core/Int";
 
 
@@ -122,12 +123,16 @@ actor {
 
   type Playlist = {
     name : Text;
+    description : Text;
+    titleImage : ?Storage.ExternalBlob;
     songs : List.List<Nat>;
     songSet : Set.Set<Nat>;
   };
 
   type PlaylistView = {
     name : Text;
+    description : Text;
+    titleImage : ?Storage.ExternalBlob;
     songIds : [Nat];
   };
 
@@ -135,6 +140,41 @@ actor {
   let favorites = Map.empty<Principal, Set.Set<Nat>>();
   let userPlaylists = Map.empty<Principal, Map.Map<Text, Playlist>>();
   let officialPlaylists = Map.empty<Text, Playlist>();
+
+  // Universal Home Channel Banner Image
+  var universalHomeBanner : ?Storage.ExternalBlob = null;
+
+  // Default to "Aesthetic Moments from My Week (1)" image (existing asset path)
+  let defaultBannerPath : Text = "Aesthetic Moments from My Week (1)";
+
+  public query ({ caller }) func getUniversalHomeBanner() : async ?Storage.ExternalBlob {
+    universalHomeBanner;
+  };
+
+  public shared ({ caller }) func setUniversalHomeBanner(blob : Storage.ExternalBlob) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set the universal banner");
+    };
+    universalHomeBanner := ?blob;
+  };
+
+  public shared ({ caller }) func setUniversalHomeBannerFromURL(_url : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set the universal banner from URL");
+    };
+    universalHomeBanner := null;
+  };
+
+  public shared ({ caller }) func clearUniversalHomeBanner() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear the universal banner");
+    };
+    universalHomeBanner := null;
+  };
+
+  public query ({ caller }) func getDefaultBannerPath() : async Text {
+    defaultBannerPath;
+  };
 
   public query ({ caller }) func checkAuthorization() : async Bool {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
@@ -189,7 +229,6 @@ actor {
   };
 
   public shared ({ caller }) func playSong(id : Nat) : async () {
-    // No authorization required - guests can play songs
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (?song) {
@@ -245,7 +284,6 @@ actor {
   };
 
   public query ({ caller }) func getSong(id : Nat) : async SongView {
-    // No authorization required - guests can view songs
     switch (songs.get(id)) {
       case (null) { Runtime.trap("Song not found") };
       case (?song) { toSongView(song) };
@@ -253,12 +291,10 @@ actor {
   };
 
   public query ({ caller }) func getAllSongs() : async [SongView] {
-    // No authorization required - guests can view songs
     songs.values().toArray().map(toSongView).sort();
   };
 
   public query ({ caller }) func getAllSongsByTitle() : async [SongView] {
-    // No authorization required - guests can view songs
     songs.values().toArray().map(toSongView).sort(SongView.compareByTitle);
   };
 
@@ -280,7 +316,6 @@ actor {
   };
 
   public query ({ caller }) func searchSongs(keyword : Text) : async [SongView] {
-    // No authorization required - guests can search songs
     let filtered = songs.values().toArray().filter(
       func(song) {
         song.title.contains(#text keyword) or song.artist.contains(#text keyword);
@@ -335,7 +370,11 @@ actor {
     favorites.remove(caller);
   };
 
-  public shared ({ caller }) func createPlaylist(name : Text) : async () {
+  public shared ({ caller }) func createPlaylist(
+    name : Text,
+    description : Text,
+    titleImage : ?Storage.ExternalBlob,
+  ) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create playlists");
     };
@@ -357,10 +396,94 @@ actor {
       name,
       {
         name;
+        description;
+        titleImage;
         songs = List.empty<Nat>();
         songSet = Set.empty<Nat>();
       },
     );
+  };
+
+  public shared ({ caller }) func updatePlaylist(
+    oldName : Text,
+    newName : Text,
+    description : Text,
+    titleImage : ?Storage.ExternalBlob,
+  ) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update their playlists");
+    };
+
+    switch (userPlaylists.get(caller)) {
+      case (null) {
+        Runtime.trap("Playlist not found");
+      };
+      case (?playlistMap) {
+        switch (playlistMap.get(oldName)) {
+          case (null) { Runtime.trap("Playlist not found") };
+          case (?playlist) {
+            if (oldName != newName and playlistMap.containsKey(newName)) {
+              Runtime.trap("A playlist with the new name already exists");
+            };
+
+            let updatedPlaylist = {
+              name = newName;
+              description;
+              titleImage;
+              songs = playlist.songs;
+              songSet = playlist.songSet;
+            };
+
+            if (oldName != newName) {
+              playlistMap.remove(oldName);
+            };
+
+            playlistMap.add(newName, updatedPlaylist);
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func editPlaylist(
+    playlistName : Text,
+    newName : Text,
+    newDescription : Text,
+    newTitleImage : ?Storage.ExternalBlob,
+  ) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can edit their playlists");
+    };
+
+    switch (userPlaylists.get(caller)) {
+      case (null) {
+        Runtime.trap("Playlist not found");
+      };
+      case (?playlistMap) {
+        switch (playlistMap.get(playlistName)) {
+          case (null) { Runtime.trap("Playlist not found") };
+          case (?playlist) {
+            if (playlistName != newName and playlistMap.containsKey(newName)) {
+              Runtime.trap("A playlist with the new name already exists");
+            };
+
+            let updatedPlaylist = {
+              name = newName;
+              description = newDescription;
+              titleImage = newTitleImage;
+              songs = playlist.songs;
+              songSet = playlist.songSet;
+            };
+
+            if (playlistName != newName) {
+              playlistMap.remove(playlistName);
+            };
+
+            playlistMap.add(newName, updatedPlaylist);
+          };
+        };
+      };
+    };
   };
 
   public shared ({ caller }) func addToPlaylist(playlistName : Text, songId : Nat) : async () {
@@ -381,7 +504,7 @@ actor {
           case (null) { Runtime.trap("Playlist not found") };
           case (?playlist) {
             if (playlist.songSet.contains(songId)) {
-              return; // Song already in playlist, ignore
+              return;
             };
             playlist.songs.add(songId);
             playlist.songSet.add(songId);
@@ -435,19 +558,16 @@ actor {
         switch (playlistMap.get(playlistName)) {
           case (null) { Runtime.trap("Playlist not found") };
           case (?playlist) {
-            // Validate all song IDs exist in the existing playlist
             for (songId in newOrder.values()) {
               if (not playlist.songSet.contains(songId)) {
                 Runtime.trap("Invalid song ID in reorder array: " # songId.toText());
               };
             };
 
-            // Validate no duplicates and same count
             if (newOrder.size() != playlist.songSet.size()) {
               Runtime.trap("Reorder array must contain all songs exactly once");
             };
 
-            // Create a new song list in the specified order
             playlist.songs.clear();
             for (songId in newOrder.values()) {
               playlist.songs.add(songId);
@@ -461,6 +581,8 @@ actor {
   func toPlaylistView(name : Text, playlist : Playlist) : PlaylistView {
     {
       name;
+      description = playlist.description;
+      titleImage = playlist.titleImage;
       songIds = playlist.songs.toArray();
     };
   };
@@ -521,7 +643,12 @@ actor {
     };
   };
 
-  public shared ({ caller }) func createOfficialPlaylist(name : Text, passcode : Text) : async () {
+  public shared ({ caller }) func createOfficialPlaylist(
+    name : Text,
+    description : Text,
+    titleImage : ?Storage.ExternalBlob,
+    passcode : Text,
+  ) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can create official playlists");
     };
@@ -538,10 +665,90 @@ actor {
       name,
       {
         name;
+        description;
+        titleImage;
         songs = List.empty<Nat>();
         songSet = Set.empty<Nat>();
       },
     );
+  };
+
+  public shared ({ caller }) func updateOfficialPlaylist(
+    oldName : Text,
+    newName : Text,
+    description : Text,
+    titleImage : ?Storage.ExternalBlob,
+    passcode : Text,
+  ) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update official playlists");
+    };
+
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    switch (officialPlaylists.get(oldName)) {
+      case (null) { Runtime.trap("Official playlist not found") };
+      case (?playlist) {
+        if (oldName != newName and officialPlaylists.containsKey(newName)) {
+          Runtime.trap("An official playlist with the new name already exists");
+        };
+
+        let updatedPlaylist = {
+          name = newName;
+          description;
+          titleImage;
+          songs = playlist.songs;
+          songSet = playlist.songSet;
+        };
+
+        if (oldName != newName) {
+          officialPlaylists.remove(oldName);
+        };
+
+        officialPlaylists.add(newName, updatedPlaylist);
+      };
+    };
+  };
+
+  public shared ({ caller }) func editOfficialPlaylist(
+    playlistName : Text,
+    newName : Text,
+    newDescription : Text,
+    newTitleImage : ?Storage.ExternalBlob,
+    passcode : Text,
+  ) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can edit official playlists");
+    };
+
+    if (not verifyAdminPasscode(passcode)) {
+      Runtime.trap("Invalid admin passcode");
+    };
+
+    switch (officialPlaylists.get(playlistName)) {
+      case (null) { Runtime.trap("Playlist not found") };
+      case (?playlist) {
+        if (playlistName != newName and officialPlaylists.containsKey(newName)) {
+          Runtime.trap("An official playlist with the new name already exists");
+        };
+
+        let updatedPlaylist = {
+          name = newName;
+          description = newDescription;
+          titleImage = newTitleImage;
+          songs = playlist.songs;
+          songSet = playlist.songSet;
+        };
+
+        if (playlistName != newName) {
+          officialPlaylists.remove(playlistName);
+        };
+
+        officialPlaylists.add(newName, updatedPlaylist);
+      };
+    };
   };
 
   public shared ({ caller }) func addToOfficialPlaylist(playlistName : Text, songId : Nat, passcode : Text) : async () {
@@ -563,7 +770,7 @@ actor {
       };
       case (?playlist) {
         if (playlist.songSet.contains(songId)) {
-          return; // Song already in playlist, ignore
+          return;
         };
         playlist.songs.add(songId);
         playlist.songSet.add(songId);
@@ -615,19 +822,16 @@ actor {
     switch (officialPlaylists.get(playlistName)) {
       case (null) { Runtime.trap("Playlist not found") };
       case (?playlist) {
-        // Validate all song IDs exist in the existing playlist
         for (songId in newOrder.values()) {
           if (not playlist.songSet.contains(songId)) {
             Runtime.trap("Invalid song ID in reorder array: " # songId.toText());
           };
         };
 
-        // Validate no duplicates and same count
         if (newOrder.size() != playlist.songSet.size()) {
           Runtime.trap("Reorder array must contain all songs exactly once");
         };
 
-        // Create a new song list in the specified order
         playlist.songs.clear();
         for (songId in newOrder.values()) {
           playlist.songs.add(songId);
@@ -639,7 +843,6 @@ actor {
   public shared ({ caller }) func deletePlaylist(playlistName : Text, passcode : ?Text) : async () {
     switch (passcode) {
       case (null) {
-        // User deleting their own playlist
         if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
           Runtime.trap("Unauthorized: Only users can delete their playlists");
         };
@@ -656,7 +859,6 @@ actor {
         };
       };
       case (?code) {
-        // Admin deleting official playlist
         if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
           Runtime.trap("Unauthorized: Only admins can delete official playlists");
         };
@@ -674,12 +876,10 @@ actor {
   };
 
   public query ({ caller }) func getOfficialPlaylist(playlistName : Text) : async ?PlaylistView {
-    // No authorization required - guests can view official playlists
     officialPlaylists.get(playlistName).map(func(playlist) { toPlaylistView(playlistName, playlist) });
   };
 
   public query ({ caller }) func getOfficialPlaylistDetails(playlistName : Text) : async [SongView] {
-    // No authorization required - guests can view official playlists
     switch (officialPlaylists.get(playlistName)) {
       case (null) { [] };
       case (?playlist) {
@@ -698,7 +898,6 @@ actor {
   };
 
   public query ({ caller }) func listOfficialPlaylists() : async [PlaylistView] {
-    // No authorization required - guests can view official playlists
     officialPlaylists.toArray().map(
       func((name, playlist)) { toPlaylistView(name, playlist) }
     );
@@ -791,7 +990,6 @@ actor {
   };
 
   public query ({ caller }) func getArtistProfile() : async ArtistProfile {
-    // No authorization required - guests can view artist profile
     artistProfile;
   };
 
@@ -1140,9 +1338,7 @@ actor {
     switch (conversations.get(user)) {
       case (null) { Runtime.trap("No conversation found for user") };
       case (?messages) {
-        let filteredMessages = messages.filter(func(msg : Message) : Bool {
-          msg.id != messageId;
-        });
+        let filteredMessages = messages.filter(func(msg) { msg.id != messageId });
 
         if (filteredMessages.size() == messages.size()) {
           Runtime.trap("Message not found");

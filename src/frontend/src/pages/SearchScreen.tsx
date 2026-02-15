@@ -1,31 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchSongs } from '../hooks/useQueries';
-import { SongCard } from '../components/songs/SongCard';
-import { MusicPlayer } from '../components/player/MusicPlayer';
+import { SongListRow } from '../components/songs/SongListRow';
+import { usePlayer } from '../context/PlayerContext';
 import { Input } from '@/components/ui/input';
 import { Search, Loader2 } from 'lucide-react';
-import type { SongView } from '../backend';
 
 export function SearchScreen() {
   const [keyword, setKeyword] = useState('');
-  const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
   const { data: songs, isLoading } = useSearchSongs(keyword);
-
-  const currentSong = songs?.find(s => s.id === currentSongId) || null;
-
-  const handleNext = () => {
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    setCurrentSongId(songs[nextIndex].id);
-  };
-
-  const handlePrevious = () => {
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const prevIndex = currentIndex <= 0 ? songs.length - 1 : currentIndex - 1;
-    setCurrentSongId(songs[prevIndex].id);
-  };
+  const { currentSong, isPlaying, play } = usePlayer();
 
   return (
     <div className="space-y-8">
@@ -43,14 +26,6 @@ export function SearchScreen() {
         </div>
       </div>
 
-      {currentSong && (
-        <MusicPlayer
-          song={currentSong}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-        />
-      )}
-
       {isLoading && keyword ? (
         <div className="flex items-center justify-center min-h-[200px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -60,14 +35,13 @@ export function SearchScreen() {
           <h2 className="text-xl font-semibold mb-4">
             {songs.length} {songs.length === 1 ? 'result' : 'results'} found
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="space-y-2">
             {songs.map((song) => (
-              <SongCard
+              <SongListRow
                 key={song.id.toString()}
                 song={song}
-                onPlay={() => setCurrentSongId(song.id)}
-                onDelete={() => {}}
-                isPlaying={currentSongId === song.id}
+                isPlaying={currentSong?.id === song.id && isPlaying}
+                onPlay={() => play(song, songs)}
               />
             ))}
           </div>

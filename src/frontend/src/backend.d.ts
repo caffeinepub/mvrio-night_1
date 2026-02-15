@@ -28,7 +28,9 @@ export interface SongView {
 }
 export interface PlaylistView {
     name: string;
+    description: string;
     songIds: Array<bigint>;
+    titleImage?: ExternalBlob;
 }
 export interface MessagesView {
     contactInfo?: ContactInfo;
@@ -86,12 +88,15 @@ export interface backendInterface {
     checkAuthorization(): Promise<boolean>;
     clearFavorites(): Promise<void>;
     clearMessages(): Promise<void>;
-    createOfficialPlaylist(name: string, passcode: string): Promise<void>;
-    createPlaylist(name: string): Promise<void>;
+    clearUniversalHomeBanner(): Promise<void>;
+    createOfficialPlaylist(name: string, description: string, titleImage: ExternalBlob | null, passcode: string): Promise<void>;
+    createPlaylist(name: string, description: string, titleImage: ExternalBlob | null): Promise<void>;
     deleteMessage(messageId: bigint): Promise<void>;
     deletePlaylist(playlistName: string, passcode: string | null): Promise<void>;
     deleteSong(id: bigint, passcode: string): Promise<void>;
     deleteUserMessage(user: Principal, messageId: bigint, passcode: string): Promise<void>;
+    editOfficialPlaylist(playlistName: string, newName: string, newDescription: string, newTitleImage: ExternalBlob | null, passcode: string): Promise<void>;
+    editPlaylist(playlistName: string, newName: string, newDescription: string, newTitleImage: ExternalBlob | null): Promise<void>;
     getAllConversations(passcode: string): Promise<Array<Principal>>;
     getAllConversationsByUserIdPasscode(passcode: string): Promise<Array<Principal>>;
     getAllMessages(user: Principal, passcode: string): Promise<MessagesView | null>;
@@ -100,6 +105,7 @@ export interface backendInterface {
     getArtistProfile(): Promise<ArtistProfile>;
     getCallerUserProfile(): Promise<UserProfileRecord | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getDefaultBannerPath(): Promise<string>;
     getFavorites(): Promise<Array<bigint>>;
     getHiddenAdminModeStatus(passcode: string): Promise<boolean>;
     getMessages(): Promise<MessagesView | null>;
@@ -111,6 +117,7 @@ export interface backendInterface {
     getPlaylistFavoritesLegacy(): Promise<Array<string>>;
     getSong(id: bigint): Promise<SongView>;
     getTotalListeningTime(): Promise<bigint>;
+    getUniversalHomeBanner(): Promise<ExternalBlob | null>;
     getUnreadMessagesCount(passcode: string): Promise<bigint>;
     getUserPlaylists(): Promise<Array<PlaylistView>>;
     getUserProfile(user: Principal): Promise<UserProfileRecord | null>;
@@ -133,11 +140,15 @@ export interface backendInterface {
     sendMessage(content: string): Promise<bigint>;
     sendMessageWithAttachments(content: string, audioAttachment: Attachment | null, imageAttachment: Attachment | null, pdfAttachment: Attachment | null, fileAttachment: Attachment | null): Promise<bigint>;
     setHiddenAdminMode(enabled: boolean, passcode: string): Promise<void>;
+    setUniversalHomeBanner(blob: ExternalBlob): Promise<void>;
+    setUniversalHomeBannerFromURL(_url: string): Promise<void>;
     toggleFavorite(songId: bigint): Promise<boolean>;
     toggleLikeSong(id: bigint): Promise<bigint>;
     togglePlaylistFavorite(playlistName: string): Promise<boolean>;
     updateAdminInfo(contactInfo: ContactInfo | null, passcode: string): Promise<void>;
     updateArtistProfile(profile: ArtistProfile, passcode: string): Promise<void>;
+    updateOfficialPlaylist(oldName: string, newName: string, description: string, titleImage: ExternalBlob | null, passcode: string): Promise<void>;
+    updatePlaylist(oldName: string, newName: string, description: string, titleImage: ExternalBlob | null): Promise<void>;
     updateTotalListeningTime(seconds: bigint): Promise<void>;
     verifyAdminPasscodeForHiddenAdminMode(passcode: string): Promise<void>;
 }

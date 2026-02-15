@@ -324,7 +324,7 @@ export function useGetPlaylistDetails(playlistName: string | null) {
   const { identity } = useInternetIdentity();
 
   return useQuery<SongView[]>({
-    queryKey: ['playlist', 'details', playlistName],
+    queryKey: ['playlist', playlistName, 'details'],
     queryFn: async () => {
       if (!actor || !playlistName) return [];
       return actor.getPlaylistDetails(playlistName);
@@ -338,18 +338,39 @@ export function useCreatePlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (data: { name: string; description: string; titleImage: ExternalBlob | null }) => {
       if (!actor) throw new Error('Actor not initialized');
-      return actor.createPlaylist(name);
+      return actor.createPlaylist(data.name, data.description, data.titleImage);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
-      toast.success('Playlist created');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
       toast.error(message);
       console.error('Create playlist error:', error);
+    },
+  });
+}
+
+export function useUpdatePlaylist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { oldName: string; newName: string; description: string; titleImage: ExternalBlob | null }) => {
+      if (!actor) throw new Error('Actor not initialized');
+      return actor.updatePlaylist(data.oldName, data.newName, data.description, data.titleImage);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', variables.oldName] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', variables.newName] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Update playlist error:', error);
     },
   });
 }
@@ -364,10 +385,8 @@ export function useAddToPlaylist() {
       return actor.addToPlaylist(playlistName, songId);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', playlistName] });
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'details', playlistName] });
-      toast.success('Added to playlist');
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -387,10 +406,8 @@ export function useRemoveFromPlaylist() {
       return actor.removeFromPlaylist(playlistName, songId);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', playlistName] });
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'details', playlistName] });
-      toast.success('Removed from playlist');
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -410,7 +427,7 @@ export function useReorderPlaylist() {
       return actor.reorderPlaylist(playlistName, newOrder);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'details', playlistName] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', playlistName] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -448,7 +465,6 @@ export function useDeletePlaylist() {
       } else {
         queryClient.invalidateQueries({ queryKey: ['playlists', 'user'] });
       }
-      toast.success('Playlist deleted');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -489,7 +505,7 @@ export function useGetOfficialPlaylistDetails(playlistName: string | null) {
   const { actor, isFetching } = useActor();
 
   return useQuery<SongView[]>({
-    queryKey: ['playlist', 'official', 'details', playlistName],
+    queryKey: ['playlist', 'official', playlistName, 'details'],
     queryFn: async () => {
       if (!actor || !playlistName) return [];
       return actor.getOfficialPlaylistDetails(playlistName);
@@ -504,7 +520,7 @@ export function useCreateOfficialPlaylist() {
   const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
 
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (data: { name: string; description: string; titleImage: ExternalBlob | null }) => {
       if (!actor) throw new Error('Actor not initialized');
       
       if (!isAdminModeEnabled) {
@@ -516,16 +532,48 @@ export function useCreateOfficialPlaylist() {
         throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
       }
       
-      return actor.createOfficialPlaylist(name, passcode);
+      return actor.createOfficialPlaylist(data.name, data.description, data.titleImage, passcode);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
-      toast.success('Official playlist created');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
       toast.error(message);
       console.error('Create official playlist error:', error);
+    },
+  });
+}
+
+export function useUpdateOfficialPlaylist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+
+  return useMutation({
+    mutationFn: async (data: { oldName: string; newName: string; description: string; titleImage: ExternalBlob | null }) => {
+      if (!actor) throw new Error('Actor not initialized');
+      
+      if (!isAdminModeEnabled) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+
+      const passcode = getPasscode();
+      if (!passcode) {
+        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
+      }
+      
+      return actor.updateOfficialPlaylist(data.oldName, data.newName, data.description, data.titleImage, passcode);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', variables.oldName] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', variables.newName] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Update official playlist error:', error);
     },
   });
 }
@@ -551,9 +599,8 @@ export function useAddToOfficialPlaylist() {
       return actor.addToOfficialPlaylist(playlistName, songId, passcode);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', 'official', playlistName] });
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', 'details', playlistName] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -584,10 +631,8 @@ export function useRemoveFromOfficialPlaylist() {
       return actor.removeFromOfficialPlaylist(playlistName, songId, passcode);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', 'official', playlistName] });
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', 'details', playlistName] });
-      toast.success('Removed from playlist');
+      queryClient.invalidateQueries({ queryKey: ['playlists', 'official'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -618,7 +663,7 @@ export function useReorderOfficialPlaylist() {
       return actor.reorderOfficialPlaylist(playlistName, newOrder, passcode);
     },
     onSuccess: (_, { playlistName }) => {
-      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', 'details', playlistName] });
+      queryClient.invalidateQueries({ queryKey: ['playlist', 'official', playlistName] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -628,58 +673,12 @@ export function useReorderOfficialPlaylist() {
   });
 }
 
-// Playlist Favorites
-export function useGetPlaylistFavorites() {
-  const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<string[]>({
-    queryKey: ['playlist-favorites'],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getPlaylistFavorites();
-    },
-    enabled: !!actor && !isFetching && !!identity && !identity.getPrincipal().isAnonymous(),
-  });
-}
-
-export function useTogglePlaylistFavorite() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (playlistName: string) => {
-      if (!actor) throw new Error('Actor not initialized');
-      const wasFavorite = await actor.togglePlaylistFavorite(playlistName);
-      return { playlistName, wasFavorite };
-    },
-    onSuccess: ({ playlistName, wasFavorite }) => {
-      queryClient.setQueryData<string[]>(['playlist-favorites'], (old) => {
-        if (!old) return wasFavorite ? [] : [playlistName];
-        if (wasFavorite) {
-          return old.filter((name) => name !== playlistName);
-        } else {
-          return [...old, playlistName];
-        }
-      });
-      
-      const action = wasFavorite ? 'removed from' : 'added to';
-      toast.success(`Playlist ${action} favorites`);
-    },
-    onError: (error: any) => {
-      const message = getAuthErrorMessage(error);
-      toast.error(message);
-      console.error('Toggle playlist favorite error:', error);
-    },
-  });
-}
-
 // Artist Profile
 export function useGetArtistProfile() {
   const { actor, isFetching } = useActor();
 
   return useQuery<ArtistProfile>({
-    queryKey: ['artist-profile'],
+    queryKey: ['artistProfile'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not initialized');
       return actor.getArtistProfile();
@@ -709,7 +708,7 @@ export function useUpdateArtistProfile() {
       return actor.updateArtistProfile(profile, passcode);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['artist-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['artistProfile'] });
       toast.success('Artist profile updated');
     },
     onError: (error: any) => {
@@ -752,12 +751,11 @@ export function useSaveCallerUserProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      toast.success('Profile saved');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
       toast.error(message);
-      console.error('Save profile error:', error);
+      console.error('Save user profile error:', error);
     },
   });
 }
@@ -781,7 +779,7 @@ export function useAddListeningTime() {
   });
 }
 
-// Messaging
+// Messaging (existing code continues...)
 export function useGetMessages() {
   const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
@@ -807,7 +805,6 @@ export function useSendMessage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Message sent');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -840,7 +837,6 @@ export function useSendMessageWithAttachments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Message sent');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -879,7 +875,6 @@ export function useDeleteMessage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Message deleted');
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -910,19 +905,17 @@ export function useClearMessages() {
   });
 }
 
-// Admin Messaging
+// Admin messaging functions
 export function useGetAllConversations() {
   const { actor, isFetching } = useActor();
   const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
 
   return useQuery<string[]>({
-    queryKey: ['admin-conversations'],
+    queryKey: ['conversations'],
     queryFn: async () => {
       if (!actor) return [];
-      
       const passcode = getPasscode();
-      if (!passcode) return [];
-      
+      if (!passcode) throw new Error('Admin passcode not found');
       const principals = await actor.getAllConversations(passcode);
       return principals.map(p => p.toString());
     },
@@ -930,50 +923,43 @@ export function useGetAllConversations() {
   });
 }
 
-export function useGetAdminUnreadCount() {
-  const { actor, isFetching } = useActor();
-  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+export function useGetAllMessages() {
+  const { actor } = useActor();
+  const { getPasscode } = useHiddenAdminMode();
 
-  return useQuery<number>({
-    queryKey: ['admin-unread-count'],
-    queryFn: async () => {
-      if (!actor) return 0;
-      
+  return useMutation({
+    mutationFn: async (userPrincipal: string) => {
+      if (!actor) throw new Error('Actor not initialized');
       const passcode = getPasscode();
-      if (!passcode) return 0;
+      if (!passcode) throw new Error('Admin passcode not found');
       
-      const count = await actor.getUnreadMessagesCount(passcode);
-      return Number(count);
+      const principal = userPrincipal as any;
+      return actor.getAllMessages(principal, passcode);
     },
-    enabled: !!actor && !isFetching && isAdminModeEnabled,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Get all messages error:', error);
+    },
   });
 }
 
 export function useReplyToMessage() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+  const { getPasscode } = useHiddenAdminMode();
 
   return useMutation({
     mutationFn: async (data: { userPrincipal: string; content: string }) => {
       if (!actor) throw new Error('Actor not initialized');
-      
-      if (!isAdminModeEnabled) {
-        throw new Error('You do not have permission to perform this action.');
-      }
-
       const passcode = getPasscode();
-      if (!passcode) {
-        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
-      }
+      if (!passcode) throw new Error('Admin passcode not found');
       
       const principal = data.userPrincipal as any;
       return actor.replyToMessage(principal, data.content, passcode);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-conversations'] });
-      toast.success('Reply sent');
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -983,30 +969,62 @@ export function useReplyToMessage() {
   });
 }
 
+export function useReplyWithAttachments() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { getPasscode } = useHiddenAdminMode();
+
+  return useMutation({
+    mutationFn: async (data: {
+      userPrincipal: string;
+      content: string;
+      audioAttachment: any;
+      imageAttachment: any;
+      pdfAttachment: any;
+      fileAttachment: any;
+    }) => {
+      if (!actor) throw new Error('Actor not initialized');
+      const passcode = getPasscode();
+      if (!passcode) throw new Error('Admin passcode not found');
+      
+      const principal = data.userPrincipal as any;
+      return actor.replyWithAttachments(
+        principal,
+        data.content,
+        data.audioAttachment,
+        data.imageAttachment,
+        data.pdfAttachment,
+        data.fileAttachment,
+        passcode
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (error: any) => {
+      const message = getAuthErrorMessage(error);
+      toast.error(message);
+      console.error('Reply with attachments error:', error);
+    },
+  });
+}
+
 export function useDeleteUserMessage() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+  const { getPasscode } = useHiddenAdminMode();
 
   return useMutation({
     mutationFn: async (data: { userPrincipal: string; messageId: bigint }) => {
       if (!actor) throw new Error('Actor not initialized');
-      
-      if (!isAdminModeEnabled) {
-        throw new Error('You do not have permission to perform this action.');
-      }
-
       const passcode = getPasscode();
-      if (!passcode) {
-        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
-      }
+      if (!passcode) throw new Error('Admin passcode not found');
       
       const principal = data.userPrincipal as any;
       return actor.deleteUserMessage(principal, data.messageId, passcode);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-conversations'] });
-      toast.success('Message deleted');
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
     onError: (error: any) => {
       const message = getAuthErrorMessage(error);
@@ -1019,25 +1037,18 @@ export function useDeleteUserMessage() {
 export function useAdminDeleteConversation() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { isAdminModeEnabled, getPasscode } = useHiddenAdminMode();
+  const { getPasscode } = useHiddenAdminMode();
 
   return useMutation({
-    mutationFn: async (conversationId: string) => {
+    mutationFn: async (data: { conversationId: string }) => {
       if (!actor) throw new Error('Actor not initialized');
-      
-      if (!isAdminModeEnabled) {
-        throw new Error('You do not have permission to perform this action.');
-      }
-
       const passcode = getPasscode();
-      if (!passcode) {
-        throw new Error('Admin passcode not found. Please re-enable Admin Mode.');
-      }
+      if (!passcode) throw new Error('Admin passcode not found');
       
-      return actor.adminDeleteConversation(null, conversationId, passcode);
+      return actor.adminDeleteConversation(null, data.conversationId, passcode);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success('Conversation deleted');
     },
     onError: (error: any) => {

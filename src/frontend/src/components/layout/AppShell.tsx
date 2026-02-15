@@ -3,7 +3,6 @@ import { AppHeader } from '../branding/AppHeader';
 import { Sidebar } from '../navigation/Sidebar';
 import { BottomTabBar } from '../navigation/BottomTabBar';
 import { StarfieldBackground } from '../visual/StarfieldBackground';
-import { A2HSBanner } from '../pwa/A2HSBanner';
 import type { Screen } from '../../App';
 import { featureFlags } from '../../config/featureFlags';
 
@@ -24,13 +23,12 @@ export function AppShell({ children, currentScreen, onNavigate, onOpenMessages }
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <StarfieldBackground />
-      <A2HSBanner />
       
       <div className="relative z-10 flex flex-col min-h-screen">
         <Sidebar 
           currentScreen={currentScreen} 
           onNavigate={onNavigate}
-          open={isSidebarOpen}
+          isOpen={isSidebarOpen}
           onOpenChange={setIsSidebarOpen}
         />
         

@@ -3,6 +3,7 @@
   "short_name": "MVRIO",
   "description": "Premium Music Experience",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#0B0C1A",

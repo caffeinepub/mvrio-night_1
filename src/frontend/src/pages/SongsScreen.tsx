@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useGetAllSongs, useDeleteSong } from '../hooks/useQueries';
-import { SongCard } from '../components/songs/SongCard';
+import { SongListRow } from '../components/songs/SongListRow';
 import { SongsSortBar } from '../components/songs/SongsSortBar';
-import { MusicPlayer } from '../components/player/MusicPlayer';
 import { useAdminContext } from '../context/AdminContext';
+import { usePlayer } from '../context/PlayerContext';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthErrorMessage } from '../utils/authorizationErrors';
 import { sortByNewest, sortByTopSongs, sortByMostHeard } from '../utils/songSort';
+import { useState } from 'react';
 
 type SortOption = 'latest' | 'most-liked' | 'most-heard';
 
@@ -20,21 +21,19 @@ export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenPro
   const { data: songs, isLoading } = useGetAllSongs();
   const deleteSongMutation = useDeleteSong();
   const { isAdmin } = useAdminContext();
-  const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
+  const { currentSong, isPlaying, play } = usePlayer();
   const [sortBy, setSortBy] = useState<SortOption>('latest');
 
   // Handle deep link song ID
   useEffect(() => {
     if (initialSongId && songs && songs.length > 0) {
-      const songExists = songs.some(s => s.id === initialSongId);
-      if (songExists) {
-        setCurrentSongId(initialSongId);
+      const song = songs.find(s => s.id === initialSongId);
+      if (song) {
+        play(song, songs);
       }
       onDeepLinkHandled?.();
     }
-  }, [initialSongId, songs, onDeepLinkHandled]);
-
-  const currentSong = songs?.find(s => s.id === currentSongId) || null;
+  }, [initialSongId, songs, onDeepLinkHandled, play]);
 
   const handleDelete = async (id: bigint) => {
     if (!isAdmin) {
@@ -44,29 +43,12 @@ export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenPro
 
     try {
       await deleteSongMutation.mutateAsync(id);
-      if (currentSongId === id) {
-        setCurrentSongId(null);
-      }
       toast.success('Song deleted successfully');
     } catch (error: any) {
       const errorMessage = getAuthErrorMessage(error);
       toast.error(errorMessage);
       console.error('Delete song error:', error);
     }
-  };
-
-  const handleNext = () => {
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    setCurrentSongId(songs[nextIndex].id);
-  };
-
-  const handlePrevious = () => {
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const prevIndex = currentIndex <= 0 ? songs.length - 1 : currentIndex - 1;
-    setCurrentSongId(songs[prevIndex].id);
   };
 
   if (isLoading) {
@@ -95,28 +77,21 @@ export function SongsScreen({ initialSongId, onDeepLinkHandled }: SongsScreenPro
     <div className="space-y-6">
       <SongsSortBar sortBy={sortBy} onSortChange={setSortBy} />
 
-      <MusicPlayer
-        song={currentSong}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-      />
-
       {sortedSongs.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="space-y-2">
           {sortedSongs.map((song) => (
-            <SongCard
+            <SongListRow
               key={song.id.toString()}
               song={song}
-              isPlaying={currentSongId === song.id}
-              onPlay={() => setCurrentSongId(song.id)}
-              onDelete={() => handleDelete(song.id)}
-              showDelete={isAdmin}
+              isPlaying={currentSong?.id === song.id && isPlaying}
+              onPlay={() => play(song, sortedSongs)}
+              onDelete={isAdmin ? () => handleDelete(song.id) : undefined}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No songs available</p>
+        <div className="text-center py-12 text-muted-foreground">
+          <p>No songs available</p>
         </div>
       )}
     </div>

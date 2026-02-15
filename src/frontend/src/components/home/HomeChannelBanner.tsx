@@ -10,10 +10,10 @@ import { useLongPress } from '../../hooks/useLongPress';
 import { toast } from 'sonner';
 
 export function HomeChannelBanner() {
-  const { displayImage, imageUrl, imageFile, setImageUrl, setImageFile, clearBanner } = useHomeBanner();
+  const { displayImage, setImageUrl, setImageFile, clearBanner, isUploading } = useHomeBanner();
   const { isAdmin } = useAdminContext();
   const { openModal } = useHiddenAdminMode();
-  const [urlInput, setUrlInput] = useState(imageUrl);
+  const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
 
   // Long-press handler for admin mode activation
@@ -25,7 +25,7 @@ export function HomeChannelBanner() {
     movementThreshold: 10,
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAdmin) {
       toast.error('You do not have permission to perform this action.');
       return;
@@ -35,42 +35,42 @@ export function HomeChannelBanner() {
     if (!file) return;
 
     try {
-      setImageFile(file);
+      await setImageFile(file);
       setShowUrlInput(false);
-      toast.success('Banner image uploaded');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload image');
+      // Error already handled by mutation
     }
   };
 
-  const handleUrlSubmit = () => {
+  const handleUrlSubmit = async () => {
     if (!isAdmin) {
       toast.error('You do not have permission to perform this action.');
       return;
     }
 
-    if (!urlInput.trim()) {
-      toast.error('Please enter a valid URL');
-      return;
+    try {
+      await setImageUrl(urlInput.trim());
+      setUrlInput('');
+      setShowUrlInput(false);
+    } catch (error) {
+      // Error already handled by mutation
     }
-    setImageUrl(urlInput.trim());
-    setShowUrlInput(false);
-    toast.success('Banner image updated');
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (!isAdmin) {
       toast.error('You do not have permission to perform this action.');
       return;
     }
 
-    clearBanner();
-    setUrlInput('');
-    setShowUrlInput(false);
-    toast.success('Banner cleared to default');
+    try {
+      await clearBanner();
+      setUrlInput('');
+      setShowUrlInput(false);
+    } catch (error) {
+      // Error already handled by mutation
+    }
   };
-
-  const hasCustomBanner = !!(imageUrl || imageFile);
 
   return (
     <div className="w-full mb-8">
@@ -106,21 +106,21 @@ export function HomeChannelBanner() {
         {/* Controls - Only show to admin users */}
         {isAdmin && (
           <div className="absolute top-2 right-2 flex gap-2 z-10">
-            {hasCustomBanner && (
-              <Button
-                size="icon"
-                variant="secondary"
-                className="rounded-full"
-                onClick={handleClear}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+            <Button
+              size="icon"
+              variant="secondary"
+              className="rounded-full"
+              onClick={handleClear}
+              disabled={isUploading}
+            >
+              <X className="w-4 h-4" />
+            </Button>
             <Button
               size="icon"
               variant="secondary"
               className="rounded-full"
               onClick={() => setShowUrlInput(!showUrlInput)}
+              disabled={isUploading}
             >
               <LinkIcon className="w-4 h-4" />
             </Button>
@@ -132,6 +132,7 @@ export function HomeChannelBanner() {
                   accept="image/*"
                   className="hidden"
                   onChange={handleFileUpload}
+                  disabled={isUploading}
                 />
               </label>
             </Button>
@@ -149,13 +150,14 @@ export function HomeChannelBanner() {
               placeholder="https://example.com/banner.jpg"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
+              disabled={isUploading}
             />
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleUrlSubmit}>
-              Set Banner
+            <Button size="sm" onClick={handleUrlSubmit} disabled={isUploading}>
+              {isUploading ? 'Setting...' : 'Set Banner'}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowUrlInput(false)}>
+            <Button size="sm" variant="outline" onClick={() => setShowUrlInput(false)} disabled={isUploading}>
               Cancel
             </Button>
           </div>

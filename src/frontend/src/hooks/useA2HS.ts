@@ -7,77 +7,70 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function useA2HS() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed (standalone mode)
-    const checkInstalled = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isIOSStandalone = (window.navigator as any).standalone === true;
-      return isStandalone || isIOSStandalone;
-    };
-
-    setIsInstalled(checkInstalled());
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         (window.navigator as any).standalone === true;
+    
+    if (isStandalone) {
+      setIsInstalled(true);
+      setCanInstall(false);
+      return;
+    }
 
     // Listen for beforeinstallprompt event
-    const handler = (e: Event) => {
+    const beforeInstallHandler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
+      setCanInstall(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
-
-    // Listen for app installed event
-    const installedHandler = () => {
+    // Listen for appinstalled event
+    const appInstalledHandler = () => {
       setIsInstalled(true);
+      setCanInstall(false);
       setDeferredPrompt(null);
     };
 
-    window.addEventListener('appinstalled', installedHandler);
+    window.addEventListener('beforeinstallprompt', beforeInstallHandler);
+    window.addEventListener('appinstalled', appInstalledHandler);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', installedHandler);
+      window.removeEventListener('beforeinstallprompt', beforeInstallHandler);
+      window.removeEventListener('appinstalled', appInstalledHandler);
     };
   }, []);
 
-  const promptInstall = async (): Promise<'accepted' | 'dismissed' | null> => {
+  const promptInstall = async (): Promise<'accepted' | 'dismissed' | 'unavailable'> => {
     if (!deferredPrompt) {
-      console.log('Install prompt not available');
-      return null;
+      return 'unavailable';
     }
 
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       
-      console.log(`User ${outcome} the install prompt`);
-      
-      // Clear the deferred prompt after any outcome
-      setDeferredPrompt(null);
-      
       if (outcome === 'accepted') {
         setIsInstalled(true);
       }
       
+      setDeferredPrompt(null);
+      setCanInstall(false);
+      
       return outcome;
     } catch (error) {
-      console.error('Error showing install prompt:', error);
-      // Clear on error as well
-      setDeferredPrompt(null);
-      return null;
+      console.error('Install prompt error:', error);
+      return 'unavailable';
     }
   };
 
-  // Only show install UI when:
-  // 1. beforeinstallprompt event has fired (deferredPrompt exists)
-  // 2. App is not already installed
-  const canInstall = !!deferredPrompt && !isInstalled;
-
-  return { 
-    promptInstall, 
+  return {
     canInstall,
     isInstalled,
-    isSupported: !!deferredPrompt
+    promptInstall,
   };
 }

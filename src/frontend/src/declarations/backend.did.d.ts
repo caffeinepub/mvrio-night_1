@@ -46,7 +46,12 @@ export interface MessagesView {
   'contactInfo' : [] | [ContactInfo],
   'messages' : Array<Message>,
 }
-export interface PlaylistView { 'name' : string, 'songIds' : Array<bigint> }
+export interface PlaylistView {
+  'name' : string,
+  'description' : string,
+  'songIds' : Array<bigint>,
+  'titleImage' : [] | [ExternalBlob],
+}
 export interface SongView {
   'id' : bigint,
   'albumArt' : ExternalBlob,
@@ -111,12 +116,27 @@ export interface _SERVICE {
   'checkAuthorization' : ActorMethod<[], boolean>,
   'clearFavorites' : ActorMethod<[], undefined>,
   'clearMessages' : ActorMethod<[], undefined>,
-  'createOfficialPlaylist' : ActorMethod<[string, string], undefined>,
-  'createPlaylist' : ActorMethod<[string], undefined>,
+  'clearUniversalHomeBanner' : ActorMethod<[], undefined>,
+  'createOfficialPlaylist' : ActorMethod<
+    [string, string, [] | [ExternalBlob], string],
+    undefined
+  >,
+  'createPlaylist' : ActorMethod<
+    [string, string, [] | [ExternalBlob]],
+    undefined
+  >,
   'deleteMessage' : ActorMethod<[bigint], undefined>,
   'deletePlaylist' : ActorMethod<[string, [] | [string]], undefined>,
   'deleteSong' : ActorMethod<[bigint, string], undefined>,
   'deleteUserMessage' : ActorMethod<[Principal, bigint, string], undefined>,
+  'editOfficialPlaylist' : ActorMethod<
+    [string, string, string, [] | [ExternalBlob], string],
+    undefined
+  >,
+  'editPlaylist' : ActorMethod<
+    [string, string, string, [] | [ExternalBlob]],
+    undefined
+  >,
   'getAllConversations' : ActorMethod<[string], Array<Principal>>,
   'getAllConversationsByUserIdPasscode' : ActorMethod<
     [string],
@@ -128,6 +148,7 @@ export interface _SERVICE {
   'getArtistProfile' : ActorMethod<[], ArtistProfile>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfileRecord]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getDefaultBannerPath' : ActorMethod<[], string>,
   'getFavorites' : ActorMethod<[], Array<bigint>>,
   'getHiddenAdminModeStatus' : ActorMethod<[string], boolean>,
   'getMessages' : ActorMethod<[], [] | [MessagesView]>,
@@ -139,6 +160,7 @@ export interface _SERVICE {
   'getPlaylistFavoritesLegacy' : ActorMethod<[], Array<string>>,
   'getSong' : ActorMethod<[bigint], SongView>,
   'getTotalListeningTime' : ActorMethod<[], bigint>,
+  'getUniversalHomeBanner' : ActorMethod<[], [] | [ExternalBlob]>,
   'getUnreadMessagesCount' : ActorMethod<[string], bigint>,
   'getUserPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfileRecord]>,
@@ -187,11 +209,21 @@ export interface _SERVICE {
     bigint
   >,
   'setHiddenAdminMode' : ActorMethod<[boolean, string], undefined>,
+  'setUniversalHomeBanner' : ActorMethod<[ExternalBlob], undefined>,
+  'setUniversalHomeBannerFromURL' : ActorMethod<[string], undefined>,
   'toggleFavorite' : ActorMethod<[bigint], boolean>,
   'toggleLikeSong' : ActorMethod<[bigint], bigint>,
   'togglePlaylistFavorite' : ActorMethod<[string], boolean>,
   'updateAdminInfo' : ActorMethod<[[] | [ContactInfo], string], undefined>,
   'updateArtistProfile' : ActorMethod<[ArtistProfile, string], undefined>,
+  'updateOfficialPlaylist' : ActorMethod<
+    [string, string, string, [] | [ExternalBlob], string],
+    undefined
+  >,
+  'updatePlaylist' : ActorMethod<
+    [string, string, string, [] | [ExternalBlob]],
+    undefined
+  >,
   'updateTotalListeningTime' : ActorMethod<[bigint], undefined>,
   'verifyAdminPasscodeForHiddenAdminMode' : ActorMethod<[string], undefined>,
 }

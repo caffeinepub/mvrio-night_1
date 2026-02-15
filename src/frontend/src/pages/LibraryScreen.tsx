@@ -1,22 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useGetAllSongs, useGetFavorites } from '../hooks/useQueries';
-import { MusicPlayer } from '../components/player/MusicPlayer';
-import { LibraryTopTabs, type LibraryTab } from '../components/library/LibraryTopTabs';
+import { LibraryTopTabs } from '../components/library/LibraryTopTabs';
 import { LibraryPlaylistsPanel } from '../components/library/LibraryPlaylistsPanel';
 import { PlaylistDetailView } from '../components/library/PlaylistDetailView';
 import { SongListRow } from '../components/songs/SongListRow';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useAuth } from '../context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Loader2, Heart } from 'lucide-react';
-import { toast } from 'sonner';
+import { useGetFavorites, useGetAllSongs } from '../hooks/useQueries';
+import { usePlayer } from '../context/PlayerContext';
+import { Loader2, Music } from 'lucide-react';
 import type { SongView } from '../backend';
-
-type PlaylistContext = {
-  type: 'user' | 'official';
-  name: string;
-  songs: SongView[];
-};
 
 type PlaylistDeepLink = {
   name: string;
@@ -29,248 +19,86 @@ interface LibraryScreenProps {
 }
 
 export function LibraryScreen({ initialPlaylistDeepLink, onPlaylistDeepLinkHandled }: LibraryScreenProps) {
-  const [activeTab, setActiveTab] = useState<LibraryTab>('songs');
-  const [currentSongId, setCurrentSongId] = useState<bigint | null>(null);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistContext | null>(null);
-  const [playlistQueue, setPlaylistQueue] = useState<SongView[]>([]);
-  const [isShuffled, setIsShuffled] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<'off' | 'all'>('off');
-  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists'>('songs');
+  const [selectedPlaylist, setSelectedPlaylist] = useState<{ name: string; type: 'user' | 'official' } | null>(null);
   
-  const { data: songs, isLoading: songsLoading } = useGetAllSongs();
-  const { data: favorites, isLoading: favoritesLoading } = useGetFavorites();
-  const { identity } = useInternetIdentity();
-  const { requireAuth } = useAuth();
-  
-  const isAuthenticated = !!identity;
-  const currentSong = songs?.find(s => s.id === currentSongId) || null;
+  const { data: favoriteIds, isLoading: favoritesLoading } = useGetFavorites();
+  const { data: allSongs, isLoading: songsLoading } = useGetAllSongs();
+  const { currentSong, isPlaying, play } = usePlayer();
 
   // Handle playlist deep link
   useEffect(() => {
-    if (initialPlaylistDeepLink && !deepLinkProcessed) {
-      setDeepLinkProcessed(true);
+    if (initialPlaylistDeepLink) {
       setActiveTab('playlists');
-      
-      // Trigger playlist opening via a callback that will be set by LibraryPlaylistsPanel
-      // We'll pass the deep link info down and let the panel handle it
+      setSelectedPlaylist(initialPlaylistDeepLink);
+      onPlaylistDeepLinkHandled?.();
     }
-  }, [initialPlaylistDeepLink, deepLinkProcessed]);
+  }, [initialPlaylistDeepLink, onPlaylistDeepLinkHandled]);
 
-  const handleNext = () => {
-    // If we're in a playlist context, use playlist queue
-    if (playlistQueue.length > 0) {
-      const currentIndex = playlistQueue.findIndex(s => s.id === currentSongId);
-      if (currentIndex === -1) {
-        // Start from beginning
-        setCurrentSongId(playlistQueue[0].id);
-        return;
-      }
-      
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < playlistQueue.length) {
-        setCurrentSongId(playlistQueue[nextIndex].id);
-      } else if (repeatMode === 'all') {
-        // Loop back to start
-        setCurrentSongId(playlistQueue[0].id);
-      }
-      return;
-    }
-    
-    // Default behavior: use all songs
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    setCurrentSongId(songs[nextIndex].id);
-  };
+  const favoriteSongs = allSongs?.filter(song => 
+    favoriteIds?.some(id => id === song.id)
+  ) || [];
 
-  const handlePrevious = () => {
-    // If we're in a playlist context, use playlist queue
-    if (playlistQueue.length > 0) {
-      const currentIndex = playlistQueue.findIndex(s => s.id === currentSongId);
-      if (currentIndex === -1) {
-        // Start from end
-        setCurrentSongId(playlistQueue[playlistQueue.length - 1].id);
-        return;
-      }
-      
-      const prevIndex = currentIndex - 1;
-      if (prevIndex >= 0) {
-        setCurrentSongId(playlistQueue[prevIndex].id);
-      } else if (repeatMode === 'all') {
-        // Loop to end
-        setCurrentSongId(playlistQueue[playlistQueue.length - 1].id);
-      }
-      return;
-    }
-    
-    // Default behavior: use all songs
-    if (!songs || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSongId);
-    const prevIndex = currentIndex <= 0 ? songs.length - 1 : currentIndex - 1;
-    setCurrentSongId(songs[prevIndex].id);
-  };
-
-  const handleOpenPlaylist = (playlist: PlaylistContext) => {
-    setSelectedPlaylist(playlist);
-    setPlaylistQueue(playlist.songs);
-    setIsShuffled(false);
-    setRepeatMode('off');
-    
-    // Mark deep link as handled if this was triggered by a deep link
-    if (initialPlaylistDeepLink && onPlaylistDeepLinkHandled) {
-      onPlaylistDeepLinkHandled();
+  const handlePlaylistRenamed = (oldName: string, newName: string) => {
+    if (selectedPlaylist && selectedPlaylist.name === oldName) {
+      setSelectedPlaylist({ ...selectedPlaylist, name: newName });
     }
   };
 
-  const handleBackToPlaylists = () => {
-    setSelectedPlaylist(null);
-    setPlaylistQueue([]);
-    setIsShuffled(false);
-    setRepeatMode('off');
+  const handlePlaySong = (song: SongView, queue: SongView[], shuffle: boolean, repeat: boolean) => {
+    play(song, queue, shuffle, repeat);
   };
 
-  const handlePlaylistPlay = (songs: SongView[]) => {
-    if (songs.length === 0) return;
-    setCurrentSongId(songs[0].id);
-  };
-
-  const handleShuffleToggle = (songs: SongView[]) => {
-    const newShuffled = !isShuffled;
-    setIsShuffled(newShuffled);
-    
-    if (newShuffled) {
-      // Shuffle the queue
-      const shuffled = [...songs].sort(() => Math.random() - 0.5);
-      setPlaylistQueue(shuffled);
-    } else {
-      // Restore original order
-      setPlaylistQueue(songs);
-    }
-  };
-
-  const handleRepeatToggle = () => {
-    setRepeatMode(prev => prev === 'off' ? 'all' : 'off');
-  };
-
-  if (songsLoading) {
+  if (selectedPlaylist) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <PlaylistDetailView
+        playlistName={selectedPlaylist.name}
+        playlistType={selectedPlaylist.type}
+        onBack={() => setSelectedPlaylist(null)}
+        onPlaySong={handlePlaySong}
+        currentSongId={currentSong?.id || null}
+        isPlaying={isPlaying}
+        onPlaylistRenamed={handlePlaylistRenamed}
+      />
     );
   }
 
-  // Get favorite songs
-  const favoriteSongs = songs?.filter(song => favorites?.includes(song.id)) || [];
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold neon-glow">Library</h1>
-        <p className="text-muted-foreground mt-1">Your music collection</p>
-      </div>
-
+      <h1 className="text-3xl font-bold neon-glow">Library</h1>
+      
       <LibraryTopTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {activeTab === 'songs' && (
-        <div className="space-y-6">
-          {/* Favorites Section */}
-          {isAuthenticated ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary fill-current" />
-                <h2 className="text-xl font-semibold">Favorites</h2>
-              </div>
-              
-              {favoritesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : favoriteSongs.length > 0 ? (
-                <div className="space-y-2">
-                  {favoriteSongs.map((song) => (
-                    <SongListRow
-                      key={song.id.toString()}
-                      song={song}
-                      isPlaying={currentSongId === song.id}
-                      onPlay={() => setCurrentSongId(song.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No favorite songs yet. Add songs to your favorites from the overflow menu!</p>
-                </div>
-              )}
+      {activeTab === 'songs' ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Favorite Songs</h2>
+          {favoritesLoading || songsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : favoriteSongs.length > 0 ? (
+            <div className="space-y-2">
+              {favoriteSongs.map((song) => (
+                <SongListRow
+                  key={song.id.toString()}
+                  song={song}
+                  isPlaying={currentSong?.id === song.id && isPlaying}
+                  onPlay={() => play(song, favoriteSongs)}
+                />
+              ))}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary fill-current" />
-                <h2 className="text-xl font-semibold">Favorites</h2>
-              </div>
-              <div className="text-center py-8 space-y-4">
-                <p className="text-muted-foreground">Sign in to view your favorite songs</p>
-                <Button
-                  onClick={() => requireAuth({ type: 'like', songId: BigInt(0) })}
-                  variant="default"
-                >
-                  Sign In
-                </Button>
-              </div>
+            <div className="text-center py-12">
+              <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No favorite songs yet</p>
             </div>
           )}
-
-          {/* All Songs Section */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">All Songs</h2>
-            {songs && songs.length > 0 ? (
-              <div className="space-y-2">
-                {songs.map((song) => (
-                  <SongListRow
-                    key={song.id.toString()}
-                    song={song}
-                    isPlaying={currentSongId === song.id}
-                    onPlay={() => setCurrentSongId(song.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <p>No songs in your library yet</p>
-              </div>
-            )}
-          </div>
         </div>
+      ) : (
+        <LibraryPlaylistsPanel
+          onSelectPlaylist={(name, type) => setSelectedPlaylist({ name, type })}
+        />
       )}
-
-      {activeTab === 'playlists' && (
-        selectedPlaylist ? (
-          <PlaylistDetailView
-            playlist={selectedPlaylist}
-            onBack={handleBackToPlaylists}
-            onPlay={handlePlaylistPlay}
-            onSongSelect={setCurrentSongId}
-            currentSongId={currentSongId}
-            isShuffled={isShuffled}
-            onShuffleToggle={handleShuffleToggle}
-            repeatMode={repeatMode}
-            onRepeatToggle={handleRepeatToggle}
-            playlistQueue={playlistQueue}
-          />
-        ) : (
-          <LibraryPlaylistsPanel
-            onOpenPlaylist={handleOpenPlaylist}
-            initialDeepLink={initialPlaylistDeepLink}
-          />
-        )
-      )}
-
-      <MusicPlayer
-        song={currentSong}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-      />
     </div>
   );
 }

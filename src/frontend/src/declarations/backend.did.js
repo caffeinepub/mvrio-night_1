@@ -80,7 +80,9 @@ export const UserProfileRecord = IDL.Record({
 });
 export const PlaylistView = IDL.Record({
   'name' : IDL.Text,
+  'description' : IDL.Text,
   'songIds' : IDL.Vec(IDL.Nat),
+  'titleImage' : IDL.Opt(ExternalBlob),
 });
 
 export const idlService = IDL.Service({
@@ -136,12 +138,31 @@ export const idlService = IDL.Service({
   'checkAuthorization' : IDL.Func([], [IDL.Bool], ['query']),
   'clearFavorites' : IDL.Func([], [], []),
   'clearMessages' : IDL.Func([], [], []),
-  'createOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
-  'createPlaylist' : IDL.Func([IDL.Text], [], []),
+  'clearUniversalHomeBanner' : IDL.Func([], [], []),
+  'createOfficialPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+      [],
+      [],
+    ),
+  'createPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+      [],
+      [],
+    ),
   'deleteMessage' : IDL.Func([IDL.Nat], [], []),
   'deletePlaylist' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [], []),
   'deleteSong' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'deleteUserMessage' : IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [], []),
+  'editOfficialPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+      [],
+      [],
+    ),
+  'editPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+      [],
+      [],
+    ),
   'getAllConversations' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(IDL.Principal)],
@@ -166,6 +187,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getDefaultBannerPath' : IDL.Func([], [IDL.Text], ['query']),
   'getFavorites' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
   'getHiddenAdminModeStatus' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'getMessages' : IDL.Func([], [IDL.Opt(MessagesView)], ['query']),
@@ -185,6 +207,7 @@ export const idlService = IDL.Service({
   'getPlaylistFavoritesLegacy' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
   'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
   'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
+  'getUniversalHomeBanner' : IDL.Func([], [IDL.Opt(ExternalBlob)], ['query']),
   'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
   'getUserPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
   'getUserProfile' : IDL.Func(
@@ -253,11 +276,23 @@ export const idlService = IDL.Service({
       [],
     ),
   'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
+  'setUniversalHomeBanner' : IDL.Func([ExternalBlob], [], []),
+  'setUniversalHomeBannerFromURL' : IDL.Func([IDL.Text], [], []),
   'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
   'togglePlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo), IDL.Text], [], []),
   'updateArtistProfile' : IDL.Func([ArtistProfile, IDL.Text], [], []),
+  'updateOfficialPlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+      [],
+      [],
+    ),
+  'updatePlaylist' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+      [],
+      [],
+    ),
   'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
   'verifyAdminPasscodeForHiddenAdminMode' : IDL.Func([IDL.Text], [], []),
 });
@@ -337,7 +372,9 @@ export const idlFactory = ({ IDL }) => {
   });
   const PlaylistView = IDL.Record({
     'name' : IDL.Text,
+    'description' : IDL.Text,
     'songIds' : IDL.Vec(IDL.Nat),
+    'titleImage' : IDL.Opt(ExternalBlob),
   });
   
   return IDL.Service({
@@ -393,12 +430,31 @@ export const idlFactory = ({ IDL }) => {
     'checkAuthorization' : IDL.Func([], [IDL.Bool], ['query']),
     'clearFavorites' : IDL.Func([], [], []),
     'clearMessages' : IDL.Func([], [], []),
-    'createOfficialPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
-    'createPlaylist' : IDL.Func([IDL.Text], [], []),
+    'clearUniversalHomeBanner' : IDL.Func([], [], []),
+    'createOfficialPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+        [],
+        [],
+      ),
+    'createPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+        [],
+        [],
+      ),
     'deleteMessage' : IDL.Func([IDL.Nat], [], []),
     'deletePlaylist' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [], []),
     'deleteSong' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'deleteUserMessage' : IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [], []),
+    'editOfficialPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+        [],
+        [],
+      ),
+    'editPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+        [],
+        [],
+      ),
     'getAllConversations' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(IDL.Principal)],
@@ -423,6 +479,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getDefaultBannerPath' : IDL.Func([], [IDL.Text], ['query']),
     'getFavorites' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
     'getHiddenAdminModeStatus' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'getMessages' : IDL.Func([], [IDL.Opt(MessagesView)], ['query']),
@@ -442,6 +499,7 @@ export const idlFactory = ({ IDL }) => {
     'getPlaylistFavoritesLegacy' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
     'getSong' : IDL.Func([IDL.Nat], [SongView], ['query']),
     'getTotalListeningTime' : IDL.Func([], [IDL.Nat], ['query']),
+    'getUniversalHomeBanner' : IDL.Func([], [IDL.Opt(ExternalBlob)], ['query']),
     'getUnreadMessagesCount' : IDL.Func([IDL.Text], [IDL.Nat], []),
     'getUserPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
     'getUserProfile' : IDL.Func(
@@ -510,11 +568,23 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'setHiddenAdminMode' : IDL.Func([IDL.Bool, IDL.Text], [], []),
+    'setUniversalHomeBanner' : IDL.Func([ExternalBlob], [], []),
+    'setUniversalHomeBannerFromURL' : IDL.Func([IDL.Text], [], []),
     'toggleFavorite' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'toggleLikeSong' : IDL.Func([IDL.Nat], [IDL.Nat], []),
     'togglePlaylistFavorite' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'updateAdminInfo' : IDL.Func([IDL.Opt(ContactInfo), IDL.Text], [], []),
     'updateArtistProfile' : IDL.Func([ArtistProfile, IDL.Text], [], []),
+    'updateOfficialPlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob), IDL.Text],
+        [],
+        [],
+      ),
+    'updatePlaylist' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Opt(ExternalBlob)],
+        [],
+        [],
+      ),
     'updateTotalListeningTime' : IDL.Func([IDL.Nat], [], []),
     'verifyAdminPasscodeForHiddenAdminMode' : IDL.Func([IDL.Text], [], []),
   });

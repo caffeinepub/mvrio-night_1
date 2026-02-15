@@ -1,87 +1,120 @@
 {
   "kind": "build_request",
-  "title": "Restore header icon to neon-green music note (white outline) without changing header layout",
-  "priority": "normal",
+  "title": "Make the app fully installable as a PWA on desktop and mobile (install prompt + full-screen behavior)",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
+      "text": "Ensure the service worker is registered in the running app so the browser can recognize the app as installable (PWA). Registration must occur once on app startup without editing any files in frontend/src/main.tsx or other immutable paths.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "recent-18",
+          "recent-19",
+          "recent-20"
         ],
         "quotes": [
-          "yeah add that music icon as the header icon (neon green with white outline )",
+          "no it's fine then make it like a PWA app , which can be installed in mobile and desktop",
           "build it now"
         ]
       },
       "acceptanceCriteria": [
-        "The header icon renders as a neon-green music note with a white outline.",
-        "The icon occupies the same space as before (same container size, same alignment, same spacing).",
-        "No other header elements (title/subtitle/messages button/menu button) visually shift due to this change."
+        "On first load, the app registers /service-worker.js successfully (verify in DevTools > Application > Service Workers).",
+        "The registration code is placed in an editable file (e.g., frontend/src/App.tsx) and does not modify any immutable paths listed in SYSTEM_CONTEXT.",
+        "Reloading the app does not register multiple duplicate workers (single registration per load)."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
+      "text": "Update the PWA manifest to satisfy installability requirements for modern desktop/mobile browsers, keeping existing app name/branding intact. Ensure the manifest includes correct start_url/scope, standalone display, theme/background colors, and valid icon entries that resolve at runtime.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-14",
+          "recent-18"
         ],
         "quotes": [
-          "yeah add that music icon as the header icon (neon green with white outline )"
+          "make it like a PWA app , which can be installed in mobile and desktop",
+          "yeah"
         ]
       },
       "acceptanceCriteria": [
-        "A new PNG icon file exists at `frontend/public/assets/generated/` and is used by `AppHeader`.",
-        "The header icon loads reliably (no broken image placeholder)."
+        "frontend/public/manifest.webmanifest contains valid JSON and loads without console errors in DevTools.",
+        "Manifest uses display \"standalone\" (or more appropriate full-screen capable mode) and a scope/start_url combination that matches the deployed routing.",
+        "Both icons referenced in the manifest load successfully (no 404s) and meet required sizes (192x192 and 512x512).",
+        "Chrome DevTools > Application > Manifest shows the app as installable when served over HTTPS and service worker is active."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Do not modify navigation behavior or any other header functionality; only change the header icon image source to the new music-note icon.",
+      "text": "Add iOS-friendly PWA meta/link tags in the root HTML to improve install and full-screen behavior on iPhone/iPad (Add to Home Screen flow), without changing the core app UI.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-0"
+          "recent-14",
+          "recent-18"
         ],
         "quotes": [
-          "Do NOT modify navigation or functionality."
+          "make it like a PWA app , which can be installed in mobile and desktop"
         ]
       },
       "acceptanceCriteria": [
-        "All header buttons (menu toggle if present, messages button) behave exactly as before.",
-        "No routes, screen navigation, or click handlers are changed as part of this update."
+        "frontend/index.html includes iOS PWA metadata (e.g., apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style) and an apple-touch-icon reference to an existing icon file.",
+        "After adding to Home Screen on iOS Safari, the app launches in an app-like standalone window (no browser chrome), subject to iOS limitations."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Fix and harden the custom install UX so users can install from both desktop and mobile when eligible, and receive clear guidance when not eligible. Use the existing A2HSBanner and Sidebar “Install App” entry points and ensure they behave consistently once the app becomes installable.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-12",
+          "recent-14",
+          "recent-18"
+        ],
+        "quotes": [
+          "in PWA ,  but it should be installable",
+          "yeah same as desktop",
+          "no it's fine then make it like a PWA app , which can be installed in mobile and desktop"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When the browser fires beforeinstallprompt (eligible environments), clicking Install from the banner or sidebar triggers the native install prompt.",
+        "When not eligible (e.g., iOS Chrome, already-installed, or unsupported browser), the install dialog provides accurate, English instructions (including iOS Safari Add to Home Screen guidance already present).",
+        "After the app is installed (appinstalled event) the banner no longer appears in the same session and the install action no longer prompts."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Improve the service worker caching behavior for the app shell so the PWA remains functional when offline for previously visited pages/assets, while preserving the existing special handling that avoids auto-caching audio files (audio caching remains explicit via the existing offline cache utilities).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-14",
+          "recent-18"
+        ],
+        "quotes": [
+          "make it like a PWA app , which can be installed in mobile and desktop"
+        ]
+      },
+      "acceptanceCriteria": [
+        "frontend/public/service-worker.js continues to route audio requests to the dedicated audio cache logic and does not start auto-caching audio responses.",
+        "For same-origin navigation requests, the service worker serves a cached app shell when offline (at minimum the root HTML and essential static assets).",
+        "Static assets required to render the UI (JS/CSS/images requested by the app) are cached with a predictable strategy and do not break normal online updates (cache versioning or invalidation is handled)."
       ]
     }
   ],
   "constraints": [
-    "Do not change any other header layout beyond swapping the icon image source.",
-    "Do not modify `frontend/src/hooks/useInternetIdentity.ts` / `frontend/src/hooks/useActor.ts` / `frontend/src/main.tsx` or anything in `frontend/src/components/ui` (immutable paths).",
-    "Do not change PWA manifest icons or favicon unless explicitly required for the header icon swap."
+    "Do not edit any immutable frontend paths listed in SYSTEM_CONTEXT (including frontend/src/main.tsx and frontend/src/hooks/useInternetIdentity.ts[x], frontend/src/hooks/useActor.ts, and anything under frontend/src/components/ui).",
+    "Backend must remain single-actor; no new backend services or external databases."
   ],
   "nonGoals": [
-    "Fixing the previously uploaded custom app icon display issue globally (outside of removing it from the header).",
-    "Changing app name, header text, or overall branding theme.",
-    "Adding new navigation items or altering sidebar behavior."
+    "Generate or provide a real Android APK download (PWA only).",
+    "Copy or restore user-uploaded songs/playlists from an older live canister into the current draft/live build automatically."
   ],
   "imageRequirements": {
-    "required": [
-      "Neon-green music note icon with white outline on transparent background (header-music-note.dim_128x128.png)"
-    ],
+    "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

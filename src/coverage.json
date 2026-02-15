@@ -1,47 +1,81 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-11T05:12:05.432Z",
+  "generatedAt": "2026-02-13T07:18:12.367Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 2,
+    "total": 5,
+    "implemented": 5,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Replace the current header logo image in `frontend/src/components/branding/AppHeader.tsx` with a neon-green music note icon that has a white outline, while keeping the header’s existing sizing, alignment, spacing, and layout unchanged (do not change wrapper classes like `w-10 h-10`, padding, flex layout, or gaps).",
+        "summary": "Ensure the service worker is registered in the running app so the browser can recognize the app as installable (PWA). Registration must occur once on app startup without editing any files in frontend/src/main.tsx or other immutable paths.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/branding/AppHeader.tsx"
+          "frontend/src/App.tsx",
+          "frontend/src/pwa/registerServiceWorker.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/branding/AppHeader.tsx"
+          "frontend/src/App.tsx",
+          "frontend/src/pwa/registerServiceWorker.ts"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Add the new music-note icon image as a static asset under `frontend/public/assets/generated/` and reference it directly from the header `<img src=...>` (do not route image loading through the backend).",
+        "summary": "Update the PWA manifest to satisfy installability requirements for modern desktop/mobile browsers, keeping existing app name/branding intact. Ensure the manifest includes correct start_url/scope, standalone display, theme/background colors, and valid icon entries that resolve at runtime.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/public/assets/generated/header-music-note.dim_128x128.png",
-          "frontend/src/components/branding/AppHeader.tsx"
+          "frontend/public/manifest.webmanifest",
+          "frontend/public/assets/icon-192.png",
+          "frontend/public/assets/icon-512.png"
         ],
         "matchedFiles": [
-          "frontend/public/assets/generated/header-music-note.dim_128x128.png",
-          "frontend/src/components/branding/AppHeader.tsx"
+          "frontend/public/manifest.webmanifest"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Do not modify navigation behavior or any other header functionality; only change the header icon image source to the new music-note icon.",
-        "status": "missing",
+        "summary": "Add iOS-friendly PWA meta/link tags in the root HTML to improve install and full-screen behavior on iPhone/iPad (Add to Home Screen flow), without changing the core app UI.",
+        "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/branding/AppHeader.icon-swap.note.md"
+          "frontend/index.html"
         ],
-        "matchedFiles": []
+        "matchedFiles": [
+          "frontend/index.html"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Fix and harden the custom install UX so users can install from both desktop and mobile when eligible, and receive clear guidance when not eligible. Use the existing A2HSBanner and Sidebar “Install App” entry points and ensure they behave consistently once the app becomes installable.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useA2HS.ts",
+          "frontend/src/components/pwa/A2HSBanner.tsx",
+          "frontend/src/components/navigation/Sidebar.tsx",
+          "frontend/src/components/pwa/PWAInstallDialog.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useA2HS.ts",
+          "frontend/src/components/pwa/A2HSBanner.tsx",
+          "frontend/src/components/navigation/Sidebar.tsx",
+          "frontend/src/components/pwa/PWAInstallDialog.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Improve the service worker caching behavior for the app shell so the PWA remains functional when offline for previously visited pages/assets, while preserving the existing special handling that avoids auto-caching audio files (audio caching remains explicit via the existing offline cache utilities).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/public/service-worker.js",
+          "frontend/public/manifest.webmanifest"
+        ],
+        "matchedFiles": [
+          "frontend/public/service-worker.js",
+          "frontend/public/manifest.webmanifest"
+        ]
       }
     ]
   },
@@ -50,8 +84,15 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/public/assets/generated/header-music-note.dim_128x128.png",
-    "frontend/src/components/branding/AppHeader.tsx",
+    "frontend/index.html",
+    "frontend/public/manifest.webmanifest",
+    "frontend/public/service-worker.js",
+    "frontend/src/App.tsx",
+    "frontend/src/components/navigation/Sidebar.tsx",
+    "frontend/src/components/pwa/A2HSBanner.tsx",
+    "frontend/src/components/pwa/PWAInstallDialog.tsx",
+    "frontend/src/hooks/useA2HS.ts",
+    "frontend/src/pwa/registerServiceWorker.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

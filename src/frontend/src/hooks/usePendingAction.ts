@@ -56,7 +56,11 @@ export function usePendingAction() {
 
             case 'create-playlist':
               if (pendingAction.playlistName) {
-                await createPlaylistMutation.mutateAsync(pendingAction.playlistName);
+                await createPlaylistMutation.mutateAsync({
+                  name: pendingAction.playlistName,
+                  description: '',
+                  titleImage: null,
+                });
                 toast.success(`Created "${pendingAction.playlistName}"`);
                 // If songId is present, add the song to the newly created playlist
                 if (pendingAction.songId) {

@@ -1,56 +1,120 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Swap AppHeader logo to generated neon-green music note icon (no layout/functionality changes)",
+  "title": "Enable full PWA installability (service worker + manifest + iOS tags + install UX + offline app-shell caching)",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Swap the AppHeader logo image to a neon-green music note (white outline) while keeping all existing header layout/sizing classes unchanged.",
+      "summary": "Register the service worker once on app startup from an editable file (not main.tsx) so the app is recognized as installable.",
       "acceptanceCriteria": [
-        "The header icon renders as a neon-green music note with a white outline.",
-        "The icon occupies the same space as before (same container size, same alignment, same spacing).",
-        "No other header elements (title/subtitle/messages button/menu button) visually shift due to this change."
+        "On first load, the app registers /service-worker.js successfully (verify in DevTools > Application > Service Workers).",
+        "The registration code is placed in an editable file (e.g., frontend/src/App.tsx) and does not modify any immutable paths listed in SYSTEM_CONTEXT.",
+        "Reloading the app does not register multiple duplicate workers (single registration per load)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/branding/AppHeader.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Update only the header <img> src to point to the new static asset (frontend/public/assets/generated/header-music-note.dim_128x128.png) while keeping the existing wrapper and image classes (e.g., w-10 h-10, flex layout, gaps, padding) and all click handlers/props untouched."
+          "description": "Invoke the existing service worker registration once during app startup (e.g., in a top-level useEffect) without touching immutable entry files; ensure it runs only once per load."
+        },
+        {
+          "path": "frontend/src/pwa/registerServiceWorker.ts",
+          "operation": "modify",
+          "description": "Harden service worker registration to be idempotent (avoid adding duplicate load listeners / multiple registrations) and ensure it targets /service-worker.js."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Add the new music-note PNG under frontend/public/assets/generated and reference it directly from AppHeader without backend involvement.",
+      "summary": "Update the web app manifest for installability (correct start_url/scope, standalone/fullscreen-capable display, theme/background colors, and valid runtime icon paths) while keeping existing branding.",
       "acceptanceCriteria": [
-        "A new PNG icon file exists at `frontend/public/assets/generated/` and is used by `AppHeader`.",
-        "The header icon loads reliably (no broken image placeholder)."
+        "frontend/public/manifest.webmanifest contains valid JSON and loads without console errors in DevTools.",
+        "Manifest uses display \"standalone\" (or more appropriate full-screen capable mode) and a scope/start_url combination that matches the deployed routing.",
+        "Both icons referenced in the manifest load successfully (no 404s) and meet required sizes (192x192 and 512x512).",
+        "Chrome DevTools > Application > Manifest shows the app as installable when served over HTTPS and service worker is active."
       ],
       "file_operations": [
         {
-          "path": "frontend/public/assets/generated/header-music-note.dim_128x128.png",
-          "operation": "create",
-          "description": "Add the generated PNG asset (transparent background; neon-green music note with white outline) at this exact path/filename so AppHeader can reference it directly via <img src=...> (no backend routing)."
+          "path": "frontend/public/manifest.webmanifest",
+          "operation": "modify",
+          "description": "Adjust manifest fields for installability: ensure start_url and scope match deployed routing, keep name/short_name intact, set standalone/fullscreen-capable display, include theme/background colors, and ensure icon entries resolve to valid 192x192 and 512x512 files."
         },
         {
-          "path": "frontend/src/components/branding/AppHeader.tsx",
-          "operation": "modify",
-          "description": "Ensure the <img> src references /assets/generated/header-music-note.dim_128x128.png directly (static public asset) and does not change any other header structure or styling."
+          "path": "frontend/public/assets/icon-192.png",
+          "operation": "create",
+          "description": "Add the 192x192 PWA icon at the runtime path referenced by the manifest (/assets/icon-192.png)."
+        },
+        {
+          "path": "frontend/public/assets/icon-512.png",
+          "operation": "create",
+          "description": "Add the 512x512 PWA icon at the runtime path referenced by the manifest (/assets/icon-512.png)."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Ensure no header navigation behavior or functionality changes occur as part of the icon swap.",
+      "summary": "Add iOS-friendly PWA meta/link tags in the root HTML to improve Add to Home Screen and standalone/full-screen behavior without altering core UI.",
       "acceptanceCriteria": [
-        "All header buttons (menu toggle if present, messages button) behave exactly as before.",
-        "No routes, screen navigation, or click handlers are changed as part of this update."
+        "frontend/index.html includes iOS PWA metadata (e.g., apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style) and an apple-touch-icon reference to an existing icon file.",
+        "After adding to Home Screen on iOS Safari, the app launches in an app-like standalone window (no browser chrome), subject to iOS limitations."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/branding/AppHeader.icon-swap.note.md",
-          "operation": "create",
-          "description": "Add a short implementation note documenting that this change must remain a src-only icon swap in AppHeader (no changes to navigation, routes, or click handlers), to prevent accidental functional regressions in future edits."
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Add iOS PWA meta/link tags (apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style, apple-touch-icon) referencing an existing icon under frontend/public/assets/; do not change core app UI."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Harden and unify install UX across the existing A2HSBanner and Sidebar 'Install App' entry points with accurate guidance when not eligible and consistent behavior after install.",
+      "acceptanceCriteria": [
+        "When the browser fires beforeinstallprompt (eligible environments), clicking Install from the banner or sidebar triggers the native install prompt.",
+        "When not eligible (e.g., iOS Chrome, already-installed, or unsupported browser), the install dialog provides accurate, English instructions (including iOS Safari Add to Home Screen guidance already present).",
+        "After the app is installed (appinstalled event) the banner no longer appears in the same session and the install action no longer prompts."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useA2HS.ts",
+          "operation": "modify",
+          "description": "Enhance the installability hook to track eligibility more reliably across desktop/mobile (including iOS standalone detection) and to react to appinstalled so install CTAs stop prompting and banners stop showing in-session."
+        },
+        {
+          "path": "frontend/src/components/pwa/A2HSBanner.tsx",
+          "operation": "modify",
+          "description": "Align banner behavior with improved install state: when eligible, trigger the native prompt via the hook; when installed (appinstalled / standalone), ensure the banner does not appear in-session."
+        },
+        {
+          "path": "frontend/src/components/navigation/Sidebar.tsx",
+          "operation": "modify",
+          "description": "Use the improved useA2HS behavior for the Sidebar 'Install App' entry: trigger the native prompt when eligible; otherwise open the existing help dialog with accurate, English guidance (including iOS Safari Add to Home Screen)."
+        },
+        {
+          "path": "frontend/src/components/pwa/PWAInstallDialog.tsx",
+          "operation": "modify",
+          "description": "Harden guidance messaging for non-eligible environments (already installed vs unsupported vs iOS limitations) while keeping the dialog as the single source of install instructions."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Improve service worker app-shell caching for offline functionality of previously visited pages/assets while preserving the existing rule that audio is not auto-cached.",
+      "acceptanceCriteria": [
+        "frontend/public/service-worker.js continues to route audio requests to the dedicated audio cache logic and does not start auto-caching audio responses.",
+        "For same-origin navigation requests, the service worker serves a cached app shell when offline (at minimum the root HTML and essential static assets).",
+        "Static assets required to render the UI (JS/CSS/images requested by the app) are cached with a predictable strategy and do not break normal online updates (cache versioning or invalidation is handled)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/public/service-worker.js",
+          "operation": "modify",
+          "description": "Update caching strategy: keep explicit audio handling (no auto-caching), add navigation request handling to serve cached app shell when offline, apply a predictable strategy for static assets (e.g., stale-while-revalidate / network-first where appropriate), and bump cache versioning/cleanup to avoid breaking updates."
+        },
+        {
+          "path": "frontend/public/manifest.webmanifest",
+          "operation": "modify",
+          "description": "Ensure any assets required for offline app-shell rendering that are referenced by the manifest (e.g., icons) remain consistent with the service worker precache list and runtime paths."
         }
       ]
     }

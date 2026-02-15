@@ -1,62 +1,63 @@
-import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useA2HS } from '../../hooks/useA2HS';
-
-const SESSION_KEY = 'a2hs-banner-hidden';
+import { useState, useEffect } from 'react';
 
 export function A2HSBanner() {
-  const [visible, setVisible] = useState(true);
-  const { promptInstall, canInstall } = useA2HS();
+  const { canInstall, isInstalled, promptInstall } = useA2HS();
+  const [isVisible, setIsVisible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    const isHidden = sessionStorage.getItem(SESSION_KEY);
-    if (isHidden === 'true') {
-      setVisible(false);
+    const dismissed = sessionStorage.getItem('a2hs-banner-dismissed');
+    if (dismissed) {
+      setIsDismissed(true);
     }
   }, []);
 
+  useEffect(() => {
+    // Show banner only when eligible and not dismissed/installed
+    setIsVisible(canInstall && !isDismissed && !isInstalled);
+  }, [canInstall, isDismissed, isInstalled]);
+
   const handleInstall = async () => {
-    const outcome = await promptInstall();
-    // Hide banner after user interacts with install prompt (regardless of outcome)
-    if (outcome !== null) {
-      setVisible(false);
-      sessionStorage.setItem(SESSION_KEY, 'true');
+    const result = await promptInstall();
+    if (result === 'accepted' || result === 'dismissed') {
+      setIsVisible(false);
+      sessionStorage.setItem('a2hs-banner-dismissed', 'true');
     }
   };
 
-  const handleClose = () => {
-    setVisible(false);
-    sessionStorage.setItem(SESSION_KEY, 'true');
+  const handleDismiss = () => {
+    setIsVisible(false);
+    setIsDismissed(true);
+    sessionStorage.setItem('a2hs-banner-dismissed', 'true');
   };
 
-  // Don't render if:
-  // - User manually closed it
-  // - Install is not supported/available
-  // - App is already installed
-  if (!visible || !canInstall) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className="banner-gradient-stars w-full border-b border-border/30">
-      <div className="flex items-center justify-between gap-4 px-4 py-3 relative z-10">
-        <p className="flex-1 text-sm text-white/90 text-center">
-          🌌 Add MVRIO Night to your Home Screen — One tap for full offline experience
+    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary/90 to-primary/70 backdrop-blur-sm">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <p className="text-sm font-medium text-primary-foreground">
+          Add to Home Screen
         </p>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
+            variant="secondary"
             onClick={handleInstall}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+            className="text-xs"
           >
-            Add to Home Screen
+            Install
           </Button>
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            onClick={handleClose}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            onClick={handleDismiss}
+            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>

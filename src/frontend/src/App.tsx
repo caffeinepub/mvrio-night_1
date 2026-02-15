@@ -14,9 +14,12 @@ import { SettingsProvider } from './hooks/useSettings';
 import { AuthProvider } from './context/AuthContext';
 import { HiddenAdminModeProvider } from './context/HiddenAdminModeContext';
 import { AdminProvider } from './context/AdminContext';
+import { PlayerProvider } from './context/PlayerContext';
 import { AdminPasscodeModal } from './components/admin/AdminPasscodeModal';
 import { UnifiedMessagesDrawer } from './components/messaging/UnifiedMessagesDrawer';
 import { ProfileCompletionModal } from './components/account/ProfileCompletionModal';
+import { PersistentMusicPlayer } from './components/player/PersistentMusicPlayer';
+import { A2HSBanner } from './components/pwa/A2HSBanner';
 import { Toaster } from '@/components/ui/sonner';
 import { parseSongIdFromUrl, clearSongParamFromUrl, parsePlaylistFromUrl, clearPlaylistParamFromUrl } from './utils/deepLinks';
 import { useFirstLaunchWelcome } from './hooks/useFirstLaunchWelcome';
@@ -27,6 +30,7 @@ import { useInternetIdentity } from './hooks/useInternetIdentity';
 import { useProfileHelpers } from './hooks/useUserProfile';
 import { useAuth } from './context/AuthContext';
 import { toast } from 'sonner';
+import { registerServiceWorker } from './pwa/registerServiceWorker';
 
 export type Screen = 'home' | 'songs' | 'library' | 'search' | 'about' | 'themes' | 'settings' | 'support' | 'contact';
 
@@ -53,6 +57,11 @@ function AppContent() {
 
   const isAuthenticated = !!identity;
   const showProfileSetup = isAuthenticated && !profileLoading && profileFetched && !isProfileComplete;
+
+  // Register service worker once on app startup
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   // Handle song deep links
   useEffect(() => {
@@ -144,12 +153,16 @@ function AppContent() {
     <>
       {isWelcomeOpen && <FirstLaunchWelcomePopup onDismiss={dismissWelcome} />}
       {showProfileSetup && <ProfileCompletionModal open={true} />}
+      <A2HSBanner />
       <AppShell 
         currentScreen={currentScreen} 
         onNavigate={setCurrentScreen}
         onOpenMessages={() => handleOpenMessages()}
       >
-        {renderScreen()}
+        <div className="space-y-6">
+          {renderScreen()}
+          <PersistentMusicPlayer />
+        </div>
       </AppShell>
       <UnifiedMessagesDrawer 
         open={isMessagesOpen} 
@@ -172,7 +185,9 @@ function App() {
         <AuthProvider currentScreen={currentScreen} onNavigate={setCurrentScreen}>
           <HiddenAdminModeProvider>
             <AdminProvider>
-              <AppContent />
+              <PlayerProvider>
+                <AppContent />
+              </PlayerProvider>
             </AdminProvider>
           </HiddenAdminModeProvider>
         </AuthProvider>
